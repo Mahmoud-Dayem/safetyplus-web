@@ -87,6 +87,22 @@ const HomeScreen = () => {
           </button>
 
           <button
+            className="audit-button"
+            onClick={() => navigate('/reports')}
+          >
+            <svg className="button-icon" viewBox="0 0 24 24" fill="#FFFFFF">
+              <path d="M9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm2-7h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z" />
+            </svg>
+            <div className="button-text-container">
+              <span className="button-title">Conduct Audit Report</span>
+              <span className="button-subtitle">Comprehensive safety audit assessment</span>
+            </div>
+            <svg className="chevron-icon" viewBox="0 0 24 24" fill="#FFFFFF">
+              <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
+            </svg>
+          </button>
+
+          <button
             className="reports-button"
             onClick={() => navigate('/reports')}
           >
@@ -103,8 +119,10 @@ const HomeScreen = () => {
           </button>
           {
             user?.isAdmin && (
+              <>
+            
               <button
-                className="reports-button-all"
+                className="reports-button"
                 onClick={() => navigate('/reports')}
               >
                 <svg className="button-icon" viewBox="0 0 24 24" fill={colors.primary || '#FF9500'}>
@@ -118,8 +136,27 @@ const HomeScreen = () => {
                   <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
                 </svg>
               </button>
+               <button
+            className="analytics-button"
+            onClick={() => navigate('/reports')}
+          >
+            <svg className="button-icon" viewBox="0 0 24 24" fill={colors.primary || '#FF9500'}>
+              <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z" />
+            </svg>
+            <div className="button-text-container">
+              <span className="reports-button-title">Data Analytics</span>
+              <span className="reports-button-subtitle">View insights and statistics</span>
+            </div>
+            <svg className="chevron-icon" viewBox="0 0 24 24" fill={colors.primary || '#FF9500'}>
+              <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
+            </svg>
+          </button>
+          </>
+              
             )
           }
+
+         
         </div>
 
         <div className="footer-section">
