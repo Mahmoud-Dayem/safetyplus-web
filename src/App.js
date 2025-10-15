@@ -1,28 +1,63 @@
-import logo from './logo.svg';
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { useSelector } from 'react-redux';
+import AuthScreen from './pages/AuthScreen';
+import HomeScreen from './pages/HomeScreen';
+import StopCard from './pages/StopCard';
+import ReportHistory from './pages/ReportHistory';
 import './App.css';
 
-function App() {
-  const apiUrl = process.env.REACT_APP_API_URL;
+// Protected Route component
+const ProtectedRoute = ({ children }) => {
+  const user = useSelector(state => state.auth.user);
+  
+  if (!user) {
+    return <Navigate to="/auth" replace />;
+  }
+  
+  return children;
+};
 
-  console.log(apiUrl)
+function App() {
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-{         apiUrl
-}
-        </a>
-      </header>
-    </div>
+    <Router>
+      <Routes>
+        {/* Public Route */}
+        <Route path="/auth" element={<AuthScreen />} />
+        
+        {/* Protected Routes */}
+        <Route 
+          path="/home" 
+          element={
+            <ProtectedRoute>
+              <HomeScreen />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/stopcard" 
+          element={
+            <ProtectedRoute>
+              <StopCard />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/reports" 
+          element={
+            <ProtectedRoute>
+              <ReportHistory />
+            </ProtectedRoute>
+          } 
+        />
+        
+        {/* Default Route */}
+        <Route path="/" element={<Navigate to="/auth" replace />} />
+        
+        {/* Catch all - redirect to auth */}
+        <Route path="*" element={<Navigate to="/auth" replace />} />
+      </Routes>
+    </Router>
   );
 }
 

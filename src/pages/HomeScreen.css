@@ -1,0 +1,326 @@
+/* Main Container */
+.home-container {
+  min-height: 100vh;
+  background-color: #ffffff;
+  display: flex;
+  flex-direction: column;
+}
+
+.home-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 00px 20px;
+}
+
+/* Header Section */
+.header-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 60px;
+  position: relative;
+}
+
+/* Logout Button */
+.logout-button {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 20px;
+  background-color: #f8f9fa;
+  border: 1px solid #ff9500;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.logout-button:hover {
+  background-color: #fff3e6;
+  transform: translateY(-2px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.logout-button:active {
+  transform: translateY(0);
+}
+
+.logout-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.logout-text {
+  font-size: 14px;
+  color: #ff9500;
+  font-weight: 600;
+}
+
+/* Compact User Info */
+.compact-user-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.welcome-text {
+  font-size: 16px;
+  color: #8e8e93;
+  margin-bottom: 4px;
+}
+
+.user-name-compact {
+  font-size: 20px;
+  font-weight: bold;
+  color: #1c1c1e;
+  margin: 0 0 2px 0;
+}
+
+.company-id-compact {
+  font-size: 14px;
+  color: #ff9500;
+  font-weight: 600;
+  background-color: #fff3e6;
+  padding: 4px 10px;
+  border-radius: 8px;
+}
+
+/* Shield Icon */
+.shield-checkmark {
+  width: 70px;
+  height: 70px;
+  margin-bottom: 10px;
+}
+
+/* Title and Subtitle */
+.app-title {
+  font-size: 32px;
+  font-weight: bold;
+  color: #1c1c1e;
+  margin: 20px 0 0 0;
+  text-align: center;
+}
+
+.subtitle {
+  font-size: 16px;
+  color: #8e8e93;
+  margin: 8px 0 0 0;
+  text-align: center;
+}
+
+/* Button Section */
+.button-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 15px;
+}
+
+/* Stop Card Button */
+.stop-card-button {
+  background-color: #ff9500;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: 20px 24px;
+  border-radius: 16px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  border: none;
+  width: 100%;
+  max-width: 320px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.stop-card-button:hover {
+  background-color: #e68600;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+}
+
+.stop-card-button:active {
+  transform: translateY(0);
+}
+
+/* Reports Button */
+.reports-button {
+  background-color: #ffffff;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: 18px 24px;
+  border-radius: 16px;
+  border: 2px solid #ff9500;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 340px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.reports-button-all {
+  background-color: #545453;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: 18px 24px;
+  border-radius: 16px;
+  border: 2px solid #ff9500;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 340px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.reports-button:hover {
+  background-color: #fff3e6;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+.reports-button-all:hover {
+  background-color: #787674;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.reports-button:active,
+.reports-button-all:active {
+  transform: translateY(0);
+}
+
+.reports-button-all .button-icon,
+.reports-button-all .chevron-icon {
+  filter: brightness(0) invert(1);
+}
+
+/* Button Content */
+.button-icon {
+  width: 28px;
+  height: 28px;
+  margin-right: 16px;
+  flex-shrink: 0;
+}
+
+.button-text-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.button-title {
+  font-size: 18px;
+  font-weight: bold;
+  color: #ffffff;
+  display: block;
+}
+
+.button-subtitle {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.9);
+  margin-top: 2px;
+  display: block;
+}
+
+.reports-button-title {
+  font-size: 18px;
+  font-weight: bold;
+  color: #ff9500;
+  display: block;
+}
+
+.reports-button-all .reports-button-title {
+  color: #ffffff;
+}
+
+.reports-button-subtitle {
+  font-size: 14px;
+  color: #8e8e93;
+  margin-top: 2px;
+  display: block;
+}
+
+.reports-button-all .reports-button-subtitle {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.chevron-icon {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+/* Footer Section */
+.footer-section {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.footer-text {
+  font-size: 14px;
+  color: #8e8e93;
+  text-align: center;
+  line-height: 20px;
+  margin: 0;
+}
+
+/* Responsive Design */
+@media (max-width: 480px) {
+  .home-content {
+    padding: 30px 15px;
+  }
+
+  .header-section {
+    margin-top: 40px;
+  }
+
+  .app-title {
+    font-size: 28px;
+  }
+
+  .subtitle {
+    font-size: 14px;
+  }
+
+  .stop-card-button,
+  .reports-button,
+  .reports-button-all {
+    max-width: 100%;
+  }
+
+  .button-title,
+  .reports-button-title {
+    font-size: 16px;
+  }
+
+  .button-subtitle,
+  .reports-button-subtitle {
+    font-size: 12px;
+  }
+
+  .logout-button {
+    top: 0;
+    right: 0;
+  }
+}
+
+@media (min-width: 768px) {
+  .home-content {
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  .stop-card-button,
+  .reports-button {
+    max-width: 400px;
+  }
+}

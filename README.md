@@ -1,6 +1,55 @@
-# Getting Started with Create React App
-test
+# Safety Plus Web Application
+
+A workplace safety management web application converted from React Native to standard React. This app provides STOP Card (Safety Task Observation Program) functionality for conducting and tracking safety observations.
+
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+
+## Features
+
+- **User Authentication**: Secure login and signup with Firebase Authentication
+- **STOP Card Creation**: Comprehensive safety observation forms with:
+  - Actions assessment (6 categories)
+  - Conditions assessment (4 categories)
+  - Report submission to Google Sheets and Firestore
+  - Real-time validation and progress tracking
+- **Report History**: View and manage past safety observations
+- **Cloud Sync**: Data synchronization with Firebase Firestore
+- **Offline Cache**: Local storage for viewing reports offline
+
+## Tech Stack
+
+- **React**: 19.2.0 (Web)
+- **React Router DOM**: 7.9.4 for navigation
+- **Redux Toolkit**: 2.9.0 for state management
+- **Firebase**: Firestore for database and Authentication
+- **CSS**: Custom styling with color theme constants
+
+## Prerequisites
+
+- Node.js (v14 or higher)
+- npm or yarn
+- Firebase project with Firestore enabled
+- Google Apps Script for data submission (optional)
+
+## Environment Setup
+
+1. Copy `.env.example` to `.env`:
+   ```bash
+   cp .env.example .env
+   ```
+
+2. Configure environment variables in `.env`:
+   ```
+   REACT_APP_GOOGLE_SHEETS_URL=your_google_script_url
+   ```
+
+3. Update Firebase configuration in `src/firebase/firebaseConfig.js` with your Firebase project credentials.
+
+## Installation
+
+```bash
+npm install
+```
 
 ## Available Scripts
 
