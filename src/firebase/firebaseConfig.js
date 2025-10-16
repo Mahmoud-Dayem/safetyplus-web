@@ -14,11 +14,11 @@ const getEnvVar = (key, fallback = '') => {
   }
 };
 
- 
+
 
 const firebaseConfig = {
   apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
-  authDomain:process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
+  authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
   projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID,
   storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
@@ -29,7 +29,7 @@ const firebaseConfig = {
 const validateConfig = () => {
   const required = ['apiKey', 'authDomain', 'projectId', 'storageBucket', 'messagingSenderId', 'appId'];
   const missing = required.filter(key => !firebaseConfig[key]);
-  
+
   if (missing.length > 0) {
     console.error('Missing Firebase configuration:', missing);
     throw new Error(`Missing Firebase config: ${missing.join(', ')}`);
@@ -44,7 +44,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 
 
-export async function signup({ displayName,email, password,  companyId }) {
+export async function signup({ displayName, email, password, companyId }) {
 
   try {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
@@ -53,14 +53,15 @@ export async function signup({ displayName,email, password,  companyId }) {
     await updateProfile(user, {
       displayName: displayName,
     });
-    await setDoc(doc(db, "users", user.uid), {
+    await setDoc(doc(db, "users", companyId), {
       uid: user.uid,
       email,
-      displayName,
+      displayName: displayName.toUpperCase(),
       companyId,
       createdAt: new Date().toISOString(),
-      isAdmin:false ,
-      isPrivileged:false
+      isAdmin: false,
+      isPrivileged: false,
+
     });
 
 
@@ -79,20 +80,22 @@ export async function signup({ displayName,email, password,  companyId }) {
   }
 }
 
-export async function signin({ email, password }) {
-
+export async function signin({ email, password, companyId }) {
+  const companyIdString = companyId.toString();
+  console.log(companyIdString);
   const auth = getAuth();
   try {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
-    const docRef = doc(db, "users", user.uid);
+
+    const docRef = doc(db, "users", companyIdString);
     const docSnap = await getDoc(docRef);
     const companyId = docSnap.data().companyId;
     const isAdmin = docSnap.data().isAdmin;
     const isPrivileged = docSnap.data().isPrivileged;
     // await AsyncStorage.setItem("companyId", companyId);
 
- 
+
     return {
       status: 'ok',
       error: false,
@@ -220,12 +223,12 @@ export const storeFavorites = async (key, value) => {
  */
 export async function loadCompanyId() {
   const auth = getAuth();
- 
+
   try {
     // 1️⃣ Check localStorage first
     const cachedId = localStorage.getItem("companyId");
     if (cachedId) {
-       return cachedId;
+      return cachedId;
     }
 
     // 2️⃣ Get from Firestore if not cached
@@ -249,7 +252,7 @@ export async function loadCompanyId() {
     // 3️⃣ Save to localStorage for future use
     localStorage.setItem("companyId", companyId);
 
-     return companyId;
+    return companyId;
   } catch (error) {
     console.error("Error loading companyId:", error);
     return null;

@@ -46,6 +46,13 @@ const AuthScreen = () => {
     } else if (!isLogin && formData.password.length < 6) {
       newErrors.password = 'Password must be at least 6 characters';
     }
+    //
+    const companyIdRegex = /^3[0-9]{4}$/;
+      if (!formData.companyId) {
+        newErrors.companyId = 'Company ID is required';
+      } else if (!companyIdRegex.test(formData.companyId)) {
+        newErrors.companyId = 'Company ID must be 5 digits starting with 3 (e.g., 31234)';
+      }
 
     // Signup-only validations
     if (!isLogin) {
@@ -79,25 +86,12 @@ const AuthScreen = () => {
       setLoading(true);
       const email = formData.email;
       const password = formData.password;
-      const result = await signin({ email, password });
+      const companyId = formData.companyId;
+      const result = await signin({ email, password, companyId });
       console.log(result);
       
       setLoading(false);
       if (result.status === "ok") {
-        const user = {
-          uid: result.message.uid,
-          email: result.message.email,
-          token: result.message.accessToken,
-          displayName: result.message.displayName,
-          companyId: result.companyId,
-          isAdmin: result.isAdmin,
-          isPrivileged: result.isPrivileged,
-        };
-        // store user in async cached
-        storeUser(user);
-
-        // Navigate to home or update Redux state
-
         const dispatchPayload = {
           uid: result.message.uid,
           email: result.message.email,
@@ -109,9 +103,15 @@ const AuthScreen = () => {
           isAdmin: result.isAdmin,
           isPrivileged: result.isPrivileged,
         };
+        
+        // Store user in localStorage
+        await storeUser(dispatchPayload);
 
-        dispatch(login(dispatchPayload)); // result.message contains user object
-        navigate('/home'); // Navigate to home screen after successful login
+        // Update Redux state
+        dispatch(login(dispatchPayload));
+        
+        // Navigate to home screen after successful login
+        navigate('/home');
     
       } else if (result.error && result.message.includes("user not found")) {
         window.alert("User not found. Please sign up first.");
@@ -147,9 +147,12 @@ const AuthScreen = () => {
           companyId
         };
 
+        // Store user in localStorage
+        await storeUser(dispatchPayload);
 
-
-        dispatch(login(dispatchPayload)); // result.message contains user object
+        // Update Redux state
+        dispatch(login(dispatchPayload));
+        
         window.alert(`Success! Welcome ${formData.name}! Your account has been created.`);
         navigate('/home'); // Navigate to home screen after successful signup
       } else if (result.error && result.message.includes("already in use")) {
@@ -313,7 +316,7 @@ const AuthScreen = () => {
           )}
 
           {/* Company ID Input - Only for Signup */}
-          {!isLogin && (
+          {true && (
             <div className="input-group">
               <label className="input-label">Company ID</label>
               <div className={`input-container ${errors.companyId ? 'input-error' : ''}`}>

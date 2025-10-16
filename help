@@ -1,0 +1,8 @@
+            Update available 14.17.0 → 14.20.0                 │        
+   │           To update to the latest version using npm, run           │        
+   │                   npm install -g firebase-tools                    │        
+   │   For other CLI management options, visit the CLI documentation    │        
+   │         (https://firebase.google.com/docs/cli#update-cli)  
+
+https://safetyplus-1b045.web.app/auth
+npm run deploy:hosting

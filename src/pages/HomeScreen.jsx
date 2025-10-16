@@ -10,8 +10,7 @@ const HomeScreen = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const user = useSelector((state) => state.auth.user);
-  console.log('xxxxxx', user);
-
+ 
   const name = user?.displayName;
   const id = user?.companyId;
 
@@ -58,7 +57,7 @@ const HomeScreen = () => {
           {/* Compact User Info */}
           <div className="compact-user-info">
             <p className="welcome-text">Welcome back!</p>
-            <h2 className="user-name-compact">{name}</h2>
+            <h2 className="user-name-compact">{name.toUpperCase()}</h2>
             <span className="company-id-compact">ID: {id}</span>
           </div>
 

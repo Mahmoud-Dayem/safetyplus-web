@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
+import { login } from './store/authSlice';
+import { getUser } from './helper/authStorage';
 import AuthScreen from './pages/AuthScreen';
 import HomeScreen from './pages/HomeScreen';
 import StopCard from './pages/StopCard';
@@ -19,6 +21,42 @@ const ProtectedRoute = ({ children }) => {
 };
 
 function App() {
+  const dispatch = useDispatch();
+  const [loading, setLoading] = useState(true);
+
+  // Restore user from localStorage on app mount
+  useEffect(() => {
+    const restoreUser = async () => {
+      try {
+        const storedUser = await getUser();
+        if (storedUser) {
+          console.log('Restoring user from localStorage:', storedUser);
+          dispatch(login(storedUser));
+        }
+      } catch (error) {
+        console.error('Error restoring user:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    restoreUser();
+  }, [dispatch]);
+
+  // Show loading state while checking localStorage
+  if (loading) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        minHeight: '100vh' 
+      }}>
+        <div>Loading...</div>
+      </div>
+    );
+  }
+
   return (
     <Router>
       <Routes>
