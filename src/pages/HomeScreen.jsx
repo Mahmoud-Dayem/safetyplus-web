@@ -105,11 +105,11 @@ import './HomeScreen.css';
             onClick={() => navigate('/reports')}
           >
             <svg className="button-icon" viewBox="0 0 24 24" fill={colors.primary || '#FF9500'}>
-              <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z" />
+              <path d="M19 3H4.99c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.88 2 2 2h15c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 12h-4c0 1.66-1.35 3-3 3s-3-1.34-3-3H5V5h14v10z" />
             </svg>
             <div className="button-text-container">
-              <span className="reports-button-title">View Report History</span>
-              <span className="reports-button-subtitle">Review past safety observations</span>
+              <span className="reports-button-title">Inbox</span>
+              <span className="reports-button-subtitle">Check Assigned Reports </span>
             </div>
             <svg className="chevron-icon" viewBox="0 0 24 24" fill={colors.primary || '#FF9500'}>
               <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />

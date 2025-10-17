@@ -5,7 +5,7 @@
 
 // Service worker for PWA functionality
 
-const CACHE_NAME = 'safetyplus-cache-v1';
+const CACHE_NAME = 'safetyplus-cache-v2';
 const urlsToCache = [
   '/',
   '/static/js/bundle.js',

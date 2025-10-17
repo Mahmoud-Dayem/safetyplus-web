@@ -72,11 +72,12 @@ const ReportHistory = () => {
       {/* Header */}
       <div className="report-history-header">
         <button
-          className="back-button"
+          className="report-history-back-button"
           onClick={() => navigate(-1)}
+          style={{ backgroundColor: colors.primary }}
         >
-          <svg viewBox="0 0 24 24" fill="#FFFFFF" width="24" height="24">
-            <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+          <svg viewBox="0 0 24 24" fill="#FFFFFF" width="36" height="36">
+            <path d="M19 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
           </svg>
         </button>
         <div className="header-title-container">
@@ -117,8 +118,11 @@ const ReportHistory = () => {
             </svg>
           </button> */}
           <button
-            className="home-button"
-            onClick={() => navigate('/home')}
+            className="report-history-home-button"
+            onClick={() => {
+              console.log('Home button clicked');
+              navigate('/home');
+            }}
           >
             <svg viewBox="0 0 24 24" fill="#FFFFFF" width="20" height="20">
               <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>

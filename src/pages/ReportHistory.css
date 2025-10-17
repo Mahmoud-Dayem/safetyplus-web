@@ -33,7 +33,7 @@
   border-radius: 50%;
 }
 
-.back-button {
+.report-history-back-button {
   padding: 8px;
   border-radius: 20px;
   background-color: rgba(255, 255, 255, 0.2);
@@ -45,14 +45,15 @@
   justify-content: center;
   width: 36px;
   height: 36px;
+  z-index: 1000;
 }
 
-.back-button:hover {
+.report-history-back-button:hover {
   background-color: rgba(255, 255, 255, 0.3);
   transform: translateX(-2px);
 }
 
-.back-button:active {
+.report-history-back-button:active {
   background-color: rgba(255, 255, 255, 0.4);
   transform: translateX(0);
 }
@@ -130,7 +131,7 @@
 }
 
 .refresh-button,
-.home-button {
+.report-history-home-button {
   padding: 8px;
   border-radius: 20px;
   background-color: rgba(255, 255, 255, 0.2);
@@ -142,16 +143,19 @@
   justify-content: center;
   width: 36px;
   height: 36px;
+  pointer-events: auto;
+  position: relative;
+  z-index: 10;
 }
 
 .refresh-button:hover,
-.home-button:hover {
+.report-history-home-button:hover {
   background-color: rgba(255, 255, 255, 0.3);
   transform: translateY(-1px);
 }
 
 .refresh-button:active,
-.home-button:active {
+.report-history-home-button:active {
   background-color: rgba(255, 255, 255, 0.4);
   transform: translateY(0);
 }
@@ -579,9 +583,9 @@
     font-size: 11px;
   }
 
-  .back-button,
+  .report-history-back-button,
   .refresh-button,
-  .home-button,
+  .report-history-home-button,
   .header-create-button {
     padding: 6px;
     width: 32px;
