@@ -1,6 +1,6 @@
 .audit-report-container {
   min-height: 100vh;
-  background: linear-gradient(135deg, #ff9500 0%, #ff3b30 100%);
+background:  #ff9500 ;
   padding: 15px;
 }
 
@@ -8,8 +8,15 @@
   max-width: 700px;
   margin: 0 auto 20px;
   display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.audit-report-topbar {
+  display: flex;
   align-items: center;
-  gap: 15px;
+  justify-content: space-between;
+  gap: 10px;
 }
 
 .back-button {
@@ -29,7 +36,7 @@
 
 .history-button {
   padding: 8px 16px;
-  border: none;
+  border: 1px solid;
   border-radius: 6px;
   color: white;
   font-size: 14px;
@@ -37,10 +44,12 @@
   cursor: pointer;
   transition: opacity 0.2s;
   white-space: nowrap;
+  border-color: #E5E5EA;
+
 }
 
 .history-button:hover {
-  opacity: 0.9;
+  opacity: 0.5;
 }
 
 .audit-report-header h1 {
@@ -48,7 +57,13 @@
   font-size: 22px;
   font-weight: 600;
   margin: 0;
-  flex: 1;
+}
+
+.audit-report-title {
+  text-align: center;
+  margin-top: 4px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
 }
 
 .audit-report-form {
@@ -235,6 +250,10 @@
     font-size: 24px;
   }
 
+  .audit-report-title {
+    font-size: 24px;
+  }
+
   .audit-report-form {
     padding: 20px;
   }
@@ -242,17 +261,27 @@
   .back-button {
     padding: 8px 16px;
     font-size: 14px;
+     border-color: #E5E5EA;
+     border:1px solid;
   }
 }
 
 @media (max-width: 480px) {
-  .audit-report-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 15px;
+  .audit-report-topbar {
+    gap: 8px;
+  }
+
+  .back-button,
+  .history-button {
+    padding: 8px 12px;
+    font-size: 13px;
   }
 
   .audit-report-header h1 {
+    font-size: 20px;
+  }
+
+  .audit-report-title {
     font-size: 20px;
   }
 

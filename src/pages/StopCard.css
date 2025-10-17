@@ -81,6 +81,7 @@
   min-width: 48px;
   display: flex;
   justify-content: flex-end;
+  gap: 8px;
 }
 
 .home-button {
@@ -847,7 +848,7 @@
   .home-button {
     width: 36px;
     height: 36px;
-  }
+   }
 
   .header-icon,
   .nav-icon {

@@ -600,13 +600,14 @@ const StopCard = () => {
         </div>
         <div className="header-title-container">
           <h1 className="header-main-title">STOP Card</h1>
-          <div className="header-user-info-row">
-            <span className="header-user-name">{name || 'User'}</span>
-            <span className="header-separator">•</span>
-            <span className="header-company-id">ID: {id || 'N/A'}</span>
-          </div>
+ 
         </div>
         <div className="header-right-container">
+          <button className="home-button" onClick={() => navigate('/reports')} aria-label="History">
+            <svg className="nav-icon" viewBox="0 0 24 24" fill="#fff">
+              <path d="M3 6h18v2H3V6zm0 5h18v2H3v-2zm0 5h18v2H3v-2z"/>
+            </svg>
+          </button>
           <button className="home-button" onClick={() => navigate('/home')}>
             <svg className="nav-icon" viewBox="0 0 24 24" fill="#fff">
               <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>

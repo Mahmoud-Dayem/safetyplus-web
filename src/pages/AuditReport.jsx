@@ -8,7 +8,6 @@ import { useSelector } from 'react-redux';
 function AuditReport() {
   const navigate = useNavigate();
   const user = useSelector((state) => state.auth.user);
-  const name = user?.displayName;
   const id = user?.companyId;
 
   useEffect(() => {
@@ -27,7 +26,7 @@ function AuditReport() {
     }
 
     fetchEmployees()
-  }, [])
+  }, [id])
 
 
   const [formData, setFormData] = useState({
@@ -171,21 +170,23 @@ function AuditReport() {
   return (
     <div className="audit-report-container">
       <div className="audit-report-header">
-        <button
-          className="back-button"
-          onClick={() => navigate('/home')}
-          style={{ backgroundColor: colors.primary }}
-        >
-          ← Back
-        </button>
-        <h1 style={{ color: colors.text }}>Conduct Audit Report</h1>
-        <button
-          className="history-button"
-          onClick={() => navigate('/AuditHistoryReports')}
-          style={{ backgroundColor: colors.primary }}
-        >
-          History
-        </button>
+        <div className="audit-report-topbar">
+          <button
+            className="back-button"
+            onClick={() => navigate('/home')}
+            style={{ backgroundColor: colors.primary }}
+          >
+            ← Back
+          </button>
+          <button
+            className="history-button"
+            onClick={() => navigate('/AuditHistoryReports')}
+            style={{ backgroundColor: colors.primary }}
+          >
+            History
+          </button>
+        </div>
+  <h1 className="audit-report-title" style={{ color: colors.text }}>Conduct Audit Report</h1>
       </div>
 
       <div className="audit-report-form">
