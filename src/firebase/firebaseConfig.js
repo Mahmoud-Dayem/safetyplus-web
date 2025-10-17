@@ -5,14 +5,14 @@ import { collection, getDocs, setDoc, doc, getDoc } from "firebase/firestore";
 import { getAuth, createUserWithEmailAndPassword, updateProfile, signInWithEmailAndPassword } from "firebase/auth";
 
 // Get environment variables (for web)
-const getEnvVar = (key, fallback = '') => {
-  try {
-    return process.env[`REACT_APP_${key}`] || fallback;
-  } catch (error) {
-    console.warn(`Failed to load environment variable: ${key}`, error);
-    return fallback;
-  }
-};
+// const getEnvVar = (key, fallback = '') => {
+//   try {
+//     return process.env[`REACT_APP_${key}`] || fallback;
+//   } catch (error) {
+//     console.warn(`Failed to load environment variable: ${key}`, error);
+//     return fallback;
+//   }
+// };
 
 
 
@@ -82,29 +82,54 @@ export async function signup({ displayName, email, password, companyId }) {
 
 export async function signin({ email, password, companyId }) {
   const companyIdString = companyId.toString();
-  console.log(companyIdString);
   const auth = getAuth();
   try {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
-
+ 
+    // Fetch user document by company ID
     const docRef = doc(db, "users", companyIdString);
     const docSnap = await getDoc(docRef);
-    const companyId = docSnap.data().companyId;
-    const isAdmin = docSnap.data().isAdmin;
-    const isPrivileged = docSnap.data().isPrivileged;
-    // await AsyncStorage.setItem("companyId", companyId);
 
+    // Check if document exists
+    if (!docSnap.exists()) {
+      await auth.signOut(); // Sign out the user
+      return {
+        status: 'error',
+        error: true,
+        message: "Company ID not found. Please check your Company ID and try again.",
+      };
+    }
 
-    return {
-      status: 'ok',
-      error: false,
-      message: user,
-      companyId,
-      isAdmin,
-      isPrivileged
-    };
+    const userData = docSnap.data();
+    const storedCompanyId = userData?.companyId;
+    const isAdmin = userData?.isAdmin || false;
+    const isPrivileged = userData?.isPrivileged || false;
+    const userId = userData?.uid;
+
+ 
+    // Verify user email matches the company ID
+    if (userId === user.uid) {
+       return {
+        status: 'ok',
+        error: false,
+        message: user,
+        companyId: storedCompanyId,
+        isAdmin,
+        isPrivileged
+      };
+    } else {
+      // Sign out the user since they're not authorized for this company ID
+      await auth.signOut();
+      return {
+        status: 'error',
+        error: true,
+        message: "Email address does not match the provided Company ID. Please verify your credentials.",
+      };
+    }
+
   } catch (error) {
+    console.error('Sign in error:', error);
     return {
       status: 'error',
       error: true,
