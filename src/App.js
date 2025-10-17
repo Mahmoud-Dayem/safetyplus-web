@@ -9,7 +9,7 @@ import StopCard from './pages/StopCard';
 import ReportHistory from './pages/ReportHistory';
 import './App.css';
 import AuditReport from './pages/AuditReport';
-
+import AuditHistoryReports from './pages/AuditHistoryReports'
 // Protected Route component
 const ProtectedRoute = ({ children }) => {
   const user = useSelector(state => state.auth.user);
@@ -94,6 +94,14 @@ function App() {
           element={
             <ProtectedRoute>
               <AuditReport/>
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/AuditHistoryReports" 
+          element={
+            <ProtectedRoute>
+              <AuditHistoryReports/>
             </ProtectedRoute>
           } 
         />

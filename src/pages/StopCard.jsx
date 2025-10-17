@@ -793,8 +793,21 @@ const StopCard = () => {
                         onClick={() => {
                           const newDate = new Date(reportForm.date);
                           newDate.setDate(newDate.getDate() + 1);
-                          updateReportForm('date', newDate);
+                          const today = new Date();
+                          today.setHours(0, 0, 0, 0);
+                          newDate.setHours(0, 0, 0, 0);
+                          if (newDate <= today) {
+                            updateReportForm('date', newDate);
+                          }
                         }}
+                        disabled={(() => {
+                          const tomorrow = new Date(reportForm.date);
+                          tomorrow.setDate(tomorrow.getDate() + 1);
+                          const today = new Date();
+                          today.setHours(0, 0, 0, 0);
+                          tomorrow.setHours(0, 0, 0, 0);
+                          return tomorrow > today;
+                        })()}
                       >
                         <span className="date-button-text">+</span>
                       </button>
