@@ -1,0 +1,152 @@
+.audit-report-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #ff9500 0%, #ff3b30 100%);
+  padding: 20px;
+}
+
+.audit-report-header {
+  max-width: 800px;
+  margin: 0 auto 30px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.back-button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.back-button:hover {
+  opacity: 0.9;
+}
+
+.audit-report-header h1 {
+  color: white;
+  font-size: 28px;
+  font-weight: 600;
+  margin: 0;
+  flex: 1;
+}
+
+.audit-report-form {
+  max-width: 800px;
+  margin: 0 auto;
+  background: white;
+  border-radius: 12px;
+  padding: 30px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.form-group {
+  margin-bottom: 24px;
+}
+
+.form-group label {
+  display: block;
+  font-size: 16px;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+.form-group input,
+.form-group textarea {
+  width: 100%;
+  padding: 12px 16px;
+  font-size: 16px;
+  border: 2px solid #D1D1D6;
+  border-radius: 8px;
+  font-family: inherit;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: #FF9500;
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 120px;
+}
+
+.error-text {
+  display: block;
+  font-size: 14px;
+  margin-top: 6px;
+}
+
+.submit-button {
+  width: 100%;
+  padding: 16px;
+  font-size: 18px;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  margin-top: 10px;
+}
+
+.submit-button:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.submit-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .audit-report-container {
+    padding: 15px;
+  }
+
+  .audit-report-header {
+    margin-bottom: 20px;
+  }
+
+  .audit-report-header h1 {
+    font-size: 24px;
+  }
+
+  .audit-report-form {
+    padding: 20px;
+  }
+
+  .back-button {
+    padding: 8px 16px;
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .audit-report-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 15px;
+  }
+
+  .audit-report-header h1 {
+    font-size: 20px;
+  }
+
+  .form-group input,
+  .form-group textarea {
+    font-size: 14px;
+  }
+
+  .submit-button {
+    font-size: 16px;
+  }
+}

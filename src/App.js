@@ -8,6 +8,7 @@ import HomeScreen from './pages/HomeScreen';
 import StopCard from './pages/StopCard';
 import ReportHistory from './pages/ReportHistory';
 import './App.css';
+import AuditReport from './pages/AuditReport';
 
 // Protected Route component
 const ProtectedRoute = ({ children }) => {
@@ -85,6 +86,14 @@ function App() {
           element={
             <ProtectedRoute>
               <ReportHistory />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/audits" 
+          element={
+            <ProtectedRoute>
+              <AuditReport/>
             </ProtectedRoute>
           } 
         />
