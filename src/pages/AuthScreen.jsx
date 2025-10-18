@@ -4,11 +4,12 @@ import { storeUser } from "../helper/authStorage";
 import { useDispatch } from "react-redux";
 import { colors } from '../constants/color';
 import { useNavigate } from 'react-router-dom';
-import { signup, signin } from "../firebase/firebaseConfig";
+import { signup, signin, resetPassword } from "../firebase/firebaseConfig";
 import './AuthScreen.css';
 const AuthScreen = () => {
   const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(true); // Start with login mode
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -88,8 +89,7 @@ const AuthScreen = () => {
       const password = formData.password;
       const companyId = formData.companyId;
       const result = await signin({ email, password, companyId });
-      console.log(result);
-      
+       
       setLoading(false);
       if (result.status === "ok") {
         const dispatchPayload = {
@@ -120,6 +120,31 @@ const AuthScreen = () => {
         window.alert("Login failed: " + result.message);
       }
      
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!formData.email.trim()) {
+      setErrors({ email: 'Please enter your email address' });
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      setErrors({ email: 'Please enter a valid email address' });
+      return;
+    }
+
+    setLoading(true);
+    const result = await resetPassword(formData.email);
+    setLoading(false);
+
+    if (result.status === "ok") {
+      window.alert("Password reset email sent! Please check your inbox and spam/junk folder. If you don't see it, please wait a few minutes and check again.");
+      setIsForgotPassword(false);
+      setIsLogin(true);
+    } else {
+      window.alert("Error: " + result.message);
     }
   };
 
@@ -165,8 +190,8 @@ const AuthScreen = () => {
   };
 
   const toggleAuthMode = () => {
-
     setIsLogin(!isLogin);
+    setIsForgotPassword(false);
     setErrors({});
     // Clear form data when switching modes
     setFormData({
@@ -176,6 +201,11 @@ const AuthScreen = () => {
       confirmPassword: '',
       companyId: '',
     });
+  };
+
+  const toggleForgotPassword = () => {
+    setIsForgotPassword(!isForgotPassword);
+    setErrors({});
   };
 
   const formatCompanyId = (text) => {
@@ -202,7 +232,7 @@ const AuthScreen = () => {
           </svg>
           <h1 className="app-title">Safety Plus</h1>
           <p className="subtitle">
-            {isLogin ? 'Welcome Back' : 'Create Your Account'}
+            {isForgotPassword ? 'Reset Your Password' : (isLogin ? 'Welcome Back' : 'Create Your Account')}
           </p>
         </div>
 
@@ -210,7 +240,7 @@ const AuthScreen = () => {
         <div className="form-container-auth">
 
           {/* Name Input - Only for Signup */}
-          {!isLogin && (
+          {!isLogin && !isForgotPassword && (
             <div className="input-group">
               <label className="input-label">Full Name</label>
               <div className={`input-container ${errors.name ? 'input-error' : ''}`}>
@@ -249,40 +279,42 @@ const AuthScreen = () => {
             {errors.email && <span className="error-text">{errors.email}</span>}
           </div>
 
-          {/* Password Input */}
-          <div className="input-group">
-            <label className="input-label">Password</label>
-            <div className={`input-container ${errors.password ? 'input-error' : ''}`}>
-              <svg className="input-icon" viewBox="0 0 24 24" fill={colors.textSecondary}>
-                <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
-              </svg>
-              <input
-                type={showPassword ? "text" : "password"}
-                className="text-input"
-                value={formData.password}
-                onChange={(e) => updateFormData('password', e.target.value)}
-                placeholder="Enter password (min 6 characters)"
-                autoComplete="current-password"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="eye-icon"
-              >
-                <svg viewBox="0 0 24 24" fill={colors.textSecondary}>
-                  {showPassword ? (
-                    <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
-                  ) : (
-                    <path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z"/>
-                  )}
+          {/* Password Input - Hide in forgot password mode */}
+          {!isForgotPassword && (
+            <div className="input-group">
+              <label className="input-label">Password</label>
+              <div className={`input-container ${errors.password ? 'input-error' : ''}`}>
+                <svg className="input-icon" viewBox="0 0 24 24" fill={colors.textSecondary}>
+                  <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
                 </svg>
-              </button>
+                <input
+                  type={showPassword ? "text" : "password"}
+                  className="text-input"
+                  value={formData.password}
+                  onChange={(e) => updateFormData('password', e.target.value)}
+                  placeholder="Enter password (min 6 characters)"
+                  autoComplete="current-password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="eye-icon"
+                >
+                  <svg viewBox="0 0 24 24" fill={colors.textSecondary}>
+                    {showPassword ? (
+                      <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+                    ) : (
+                      <path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z"/>
+                    )}
+                  </svg>
+                </button>
+              </div>
+              {errors.password && <span className="error-text">{errors.password}</span>}
             </div>
-            {errors.password && <span className="error-text">{errors.password}</span>}
-          </div>
+          )}
 
           {/* Confirm Password Input - Only for Signup */}
-          {!isLogin && (
+          {!isLogin && !isForgotPassword && (
             <div className="input-group">
               <label className="input-label">Confirm Password</label>
               <div className={`input-container ${errors.confirmPassword ? 'input-error' : ''}`}>
@@ -315,8 +347,8 @@ const AuthScreen = () => {
             </div>
           )}
 
-          {/* Company ID Input - Only for Signup */}
-          {true && (
+          {/* Company ID Input - Hide in forgot password mode */}
+          {!isForgotPassword && (
             <div className="input-group">
               <label className="input-label">Company ID</label>
               <div className={`input-container ${errors.companyId ? 'input-error' : ''}`}>
@@ -340,22 +372,43 @@ const AuthScreen = () => {
           {/* Auth Button */}
           <button
             className="auth-button"
-            onClick={isLogin ? handleLogin : handleSignup}
+            onClick={isForgotPassword ? handleForgotPassword : (isLogin ? handleLogin : handleSignup)}
           >
-            {isLogin ? 'Sign In' : 'Create Account'}
+            {isForgotPassword ? 'Send Reset Email' : (isLogin ? 'Sign In' : 'Create Account')}
           </button>
 
+          {/* Forgot Password Link - Only show in login mode */}
+          {isLogin && !isForgotPassword && (
+            <div className="forgot-password-container">
+              <button type="button" onClick={toggleForgotPassword} className="forgot-password-link">
+                Forgot Password?
+              </button>
+            </div>
+          )}
+
           {/* Toggle Auth Mode */}
-          <div className="toggle-container">
-            <span className="toggle-text">
-              {isLogin ? "Don't have an account? " : "Already have an account? "}
-            </span>
-            <button type="button" onClick={toggleAuthMode} className="toggle-link-btn">
-              <span className="toggle-link">
-                {isLogin ? 'Sign Up' : 'Sign In'}
+          {!isForgotPassword && (
+            <div className="toggle-container">
+              <span className="toggle-text">
+                {isLogin ? "Don't have an account? " : "Already have an account? "}
               </span>
-            </button>
-          </div>
+              <button type="button" onClick={toggleAuthMode} className="toggle-link-btn">
+                <span className="toggle-link">
+                  {isLogin ? 'Sign Up' : 'Sign In'}
+                </span>
+              </button>
+            </div>
+          )}
+
+          {/* Back to Login from Forgot Password */}
+          {isForgotPassword && (
+            <div className="toggle-container">
+              <span className="toggle-text">Remember your password? </span>
+              <button type="button" onClick={toggleForgotPassword} className="toggle-link-btn">
+                <span className="toggle-link">Back to Sign In</span>
+              </button>
+            </div>
+          )}
 
           {/* Footer */}
           {!isLogin && (

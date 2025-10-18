@@ -57,8 +57,7 @@ function Inbox() {
   const getAuditReports = useCallback(async () => {
     try {
       // Fetch audit reports with status and completed fields that are sent to current user
-      console.log('Fetching reports for user ID:', id, 'as string:', String(id));
-      const { data: reportsData, error: reportsError } = await supabase
+       const { data: reportsData, error: reportsError } = await supabase
         .from('audit_reports')
         .select('*, status, completed, sent_to')
         .contains('sent_to', [String(id)]) // Filter reports where sent_to array contains current user's ID as string
@@ -69,9 +68,7 @@ function Inbox() {
         setError('Failed to load assigned reports');
         return [];
       }
-
-      console.log('Filtered reports for user:', reportsData.length, 'reports found');
-      console.log('Sample report sent_to data:', reportsData[0]?.sent_to);
+ 
 
       // Fetch employees data
       const { data: employeesData, error: employeesError } = await supabase
@@ -100,8 +97,7 @@ function Inbox() {
       // Apply default filters (assigned status, all months, current year)
       const filteredReports = applyFilters(reportsWithEmployees, 'assigned', 'All', '2025');
       setFilteredReports(filteredReports);
-      console.log('Inbox reports with employees:', reportsWithEmployees);
-      return reportsWithEmployees;
+       return reportsWithEmployees;
     } catch (err) {
       console.error('Error fetching inbox reports:', err);
       setError('Failed to load inbox reports');

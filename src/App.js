@@ -15,6 +15,7 @@ import AllStopReports from './pages/AllStopReports'
 import AllAuditReports from './pages/AllAuditReports'
 import AuditReportDetails from './pages/AuditReportDetails'
 import AuditReportDetailsInbox from './pages/AuditReportDetailsInbox'
+import DataAnalytics from './pages/DataAnalytics'
 
 // Protected Route component
 const ProtectedRoute = ({ children }) => {
@@ -37,8 +38,7 @@ function App() {
       try {
         const storedUser = await getUser();
         if (storedUser) {
-          console.log('Restoring user from localStorage:', storedUser);
-          dispatch(login(storedUser));
+           dispatch(login(storedUser));
         }
       } catch (error) {
         console.error('Error restoring user:', error);
@@ -148,6 +148,14 @@ function App() {
           element={
             <ProtectedRoute>
               <AuditReportDetailsInbox/>
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/data-analytics" 
+          element={
+            <ProtectedRoute>
+              <DataAnalytics/>
             </ProtectedRoute>
           } 
         />

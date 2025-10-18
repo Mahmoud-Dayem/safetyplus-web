@@ -2,7 +2,7 @@ import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { collection, getDocs, setDoc, doc, getDoc } from "firebase/firestore";
 
-import { getAuth, createUserWithEmailAndPassword, updateProfile, signInWithEmailAndPassword } from "firebase/auth";
+import { getAuth, createUserWithEmailAndPassword, updateProfile, signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
 
 // Get environment variables (for web)
 // const getEnvVar = (key, fallback = '') => {
@@ -281,5 +281,39 @@ export async function loadCompanyId() {
   } catch (error) {
     console.error("Error loading companyId:", error);
     return null;
+  }
+}
+
+// Password reset function with custom settings
+export async function resetPassword(email) {
+  try {
+    // Custom action code settings to reduce spam likelihood
+    const actionCodeSettings = {
+      // URL the user will be redirected to after clicking the email link
+      url: `${window.location.origin}/login?mode=resetPassword`,
+      handleCodeInApp: false,
+    };
+
+    await sendPasswordResetEmail(auth, email, actionCodeSettings);
+    return {
+      status: "ok",
+      message: "Password reset email sent successfully. Please check your inbox and spam folder."
+    };
+  } catch (error) {
+    console.error("Password reset error:", error);
+    let errorMessage = "Failed to send password reset email.";
+    
+    if (error.code === 'auth/user-not-found') {
+      errorMessage = "No account found with this email address.";
+    } else if (error.code === 'auth/invalid-email') {
+      errorMessage = "Invalid email address.";
+    } else if (error.code === 'auth/too-many-requests') {
+      errorMessage = "Too many reset attempts. Please try again later.";
+    }
+    
+    return {
+      status: "error",
+      message: errorMessage
+    };
   }
 }

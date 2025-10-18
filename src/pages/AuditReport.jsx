@@ -1,4 +1,4 @@
-import React, { useState ,useEffect} from 'react'
+import React, { useState } from 'react'
 import { supabase } from './supabaseClient'
 import { colors } from '../constants/color';
 import { useNavigate } from 'react-router-dom';
@@ -8,25 +8,23 @@ import { useSelector } from 'react-redux';
 function AuditReport() {
   const navigate = useNavigate();
   const user = useSelector((state) => state.auth.user);
-  const id = user?.companyId;
+  // const id = user?.companyId;
 
-  useEffect(() => {
-    const fetchEmployees = async () => {
-      const { data, error } = await supabase
-        .from('employees')     // 👈 your table name
-        .select('*')
-        .eq('emp_code', id)
-        .single();           // fetch all columns
+  // useEffect(() => {
+  //   const fetchEmployees = async () => {
+  //     const { error } = await supabase
+  //       .from('employees')     // 👈 your table name
+  //       .select('*')
+  //       .eq('emp_code', id)
+  //       .single();           // fetch all columns
 
-      if (error) {
-        console.error('Error fetching data:', error)
-      } else {
-        console.log('Employees table data:', data)
-      }
-    }
+  //     if (error) {
+  //       console.error('Error fetching data:', error)
+  //     } 
+  //   }
 
-    fetchEmployees()
-  }, [id])
+  //   fetchEmployees()
+  // }, [id])
 
 
   const [formData, setFormData] = useState({

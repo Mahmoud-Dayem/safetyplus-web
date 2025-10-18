@@ -120,8 +120,7 @@ const ReportHistory = () => {
           <button
             className="report-history-home-button"
             onClick={() => {
-              console.log('Home button clicked');
-              navigate('/home');
+               navigate('/home');
             }}
           >
             <svg viewBox="0 0 24 24" fill="#FFFFFF" width="20" height="20">

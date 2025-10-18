@@ -38,14 +38,10 @@ const AuditReportDetailsInbox = () => {
       }
 
       setMessages(reportData?.messages || []);
-      // console.log('=========reportData=================');
-      // console.log(reportData.status);
-      // console.log('====================================');
+ 
 
       setReportStatus(reportData?.status || 'pending');
-      console.log('===========reportStatus===============');
-      console.log(reportStatus);
-      console.log('====================================');
+ 
       setAssignedDepartment(reportData?.assigned_department || '');
       setIsCompleted(reportData?.completed || false);
     } catch (err) {
@@ -69,8 +65,7 @@ const AuditReportDetailsInbox = () => {
         }
 
         const isChiefInDepartments = departmentsData && departmentsData.length > 0;
-        console.log('User is chief in departments:', isChiefInDepartments);
-
+ 
         // Fetch supervisors data
         const { data: supervisorsData, error: supervisorsError } = await supabase
           .from('supervisors')
@@ -81,8 +76,7 @@ const AuditReportDetailsInbox = () => {
           return;
         }
 
-        console.log('Supervisors fetched:', supervisorsData?.length || 0);
-
+ 
         // Check if current user ID is a chief_code in supervisors table
         const userIsChiefInSupervisors = supervisorsData.some(supervisor =>
           String(supervisor.chief_code) === String(user?.companyId)
@@ -98,13 +92,9 @@ const AuditReportDetailsInbox = () => {
             String(supervisor.chief_code) === String(user?.companyId)
           );
           setEmployeesUnderChief(employeesUnderMe);
-          console.log('User is a chief! Employees under them:', employeesUnderMe);
-        } else {
-          console.log('User is not a chief');
-        }
+         }  
 
-        console.log('Supervisors data:', supervisorsData);
-      } catch (err) {
+       } catch (err) {
         console.error('Error fetching supervisors:', err);
       } finally {
         setLoading(false);
@@ -374,9 +364,8 @@ const AuditReportDetailsInbox = () => {
                       value={safetyOfficer}
                       onChange={(e) => {
                         setSafetyOfficer(e.target.value);
-                        console.log('Safety Officer Message:', e.target.value);
-                      }}
-                      placeholder={isCompleted ? "Report completed - messaging disabled" : " Safety officer message..."}
+                       }}
+                      placeholder={isCompleted ? "Report completed - messaging disabled" : " write a message..."}
                       disabled={isCompleted}
                     />
                   </div>
@@ -471,8 +460,7 @@ const AuditReportDetailsInbox = () => {
                   return;
                 }
 
-                console.log('Message sent successfully:', newMessage);
-                alert('Message sent successfully!');
+                 alert('Message sent successfully!');
                 setSafetyOfficer(''); // Clear the input
                 fetchMessages(); // Refresh message history
 
@@ -539,8 +527,7 @@ const AuditReportDetailsInbox = () => {
                   return;
                 }
 
-                console.log('Report marked as completed with message:', newMessage);
-                alert('Report marked as completed successfully!');
+                 alert('Report marked as completed successfully!');
                 setSafetyOfficer(''); // Clear the input
                 fetchMessages(); // Refresh message history
 

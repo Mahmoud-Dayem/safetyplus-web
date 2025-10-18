@@ -85,8 +85,7 @@ const AuditReportDetails = () => {
                 }
 
                 setDepartments(deptData || []);
-                console.log('Departments:', deptData);
-            } catch (err) {
+             } catch (err) {
                 console.error('Error fetching departments:', err);
             } finally {
                 setLoading(false);
@@ -420,8 +419,7 @@ const AuditReportDetails = () => {
                                 value={safetyOfficer}
                                 onChange={(e) => {
                                     setSafetyOfficer(e.target.value);
-                                    console.log('Safety Officer Message:', e.target.value);
-                                }}
+                                 }}
                                 placeholder={isCompleted ? "Report completed - messaging disabled" : " Safety officer message..."}
                                 disabled={isCompleted}
                             />
@@ -504,9 +502,7 @@ const AuditReportDetails = () => {
                                         alert('Failed to send message.');
                                         return;
                                     }
-
-                                    console.log('Message sent successfully:', newMessage);
-                                    console.log('Updated sent_to array:', currentSentTo);
+ 
                                     alert('Message sent successfully!');
                                     setSafetyOfficer(''); // Clear the input
                                     fetchMessages(); // Refresh message history
@@ -577,8 +573,7 @@ const AuditReportDetails = () => {
                                             alert('Failed to accept report.');
                                             return;
                                         }
-
-                                        console.log('Report accepted successfully:', newMessage);
+ 
                                         alert('Report accepted and completed successfully!');
                                         setSafetyOfficer(''); // Clear the input
                                         fetchMessages(); // Refresh message history
@@ -653,8 +648,7 @@ const AuditReportDetails = () => {
                                             return;
                                         }
 
-                                        console.log('Report rejected successfully:', newMessage);
-                                        alert('Report rejected and sent back for revision.');
+                                         alert('Report rejected and sent back for revision.');
                                         setSafetyOfficer(''); // Clear the input
                                         fetchMessages(); // Refresh message history
 
@@ -743,9 +737,7 @@ const AuditReportDetails = () => {
                                         alert('Failed to reassign report.');
                                         return;
                                     }
-
-                                    console.log('Report reassigned successfully:', newMessage);
-                                    console.log('Updated sent_to array:', currentSentTo);
+ 
                                     alert('Report reassigned successfully!');
                                     setSafetyOfficer(''); // Clear the input
                                     setIsReassigning(false); // Exit reassignment mode

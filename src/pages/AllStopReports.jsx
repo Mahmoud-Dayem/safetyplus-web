@@ -58,10 +58,7 @@ const AllStopReports = () => {
         // Calculate reporter summary
         const summary = calculateReporterSummary(userReports);
         setReporterSummary(summary);
-        
-        console.log('====================================');
-        console.log(reports);
-        console.log('====================================');
+ 
       }
     } catch (error) {
       window.alert('Error: Failed to fetch reports from cloud. Please try again.');
@@ -158,8 +155,7 @@ const AllStopReports = () => {
           <button
             className="report-history-home-button"
             onClick={() => {
-              console.log('Home button clicked');
-              navigate('/home');
+               navigate('/home');
             }}
           >
             <svg viewBox="0 0 24 24" fill="#FFFFFF" width="20" height="20">

@@ -12,17 +12,14 @@ function AllAuditReports() {
   const navigate = useNavigate();
   const user = useSelector((state) => state.auth.user);
   const id = user?.companyId;
-  const [reports, setReports] = useState([]);
   const [selectedMonth, setSelectedMonth] = useState('All');
   const [selectedYear, setSelectedYear] = useState('2025');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [safetyofficers, setSafetyOfficers] = useState([]);
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [auditReports, setAuditReports] = useState([]);
   const [filteredReports, setFilteredReports] = useState([]);
   const [selectedFilter, setSelectedFilter] = useState('pending');
-  const [employees, setEmployees] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
 
   const applyFilters = useCallback((reports, statusFilter, monthFilter, yearFilter) => {
@@ -94,13 +91,11 @@ function AllAuditReports() {
         employee: employeeMap[report.emp_code] || null
       }));
 
-      setEmployees(employeesData);
       setAuditReports(reportsWithEmployees);
       // Apply default filters (pending status, all months, current year)
       const filteredReports = applyFilters(reportsWithEmployees, 'pending', 'All', '2025');
       setFilteredReports(filteredReports);
-      console.log('Audit reports with employees:', reportsWithEmployees);
-      return reportsWithEmployees;
+       return reportsWithEmployees;
     } catch (err) {
       console.error('Error fetching audit reports:', err);
       setError('Failed to load audit reports');
@@ -121,16 +116,11 @@ function AllAuditReports() {
           return []
         }
 
-        setSafetyOfficers(data)
-        console.log('Safety officers:', data)
-        
+         
         // Check if current user's company ID exists in safety officers array
 
         const userAuthorized = data.some(officer => {
-          console.log('===========officer===============');
-          console.log('Officer emp_code:', officer.emp_code, 'type:', typeof officer.emp_code);
-          console.log('User ID:', id, 'type:', typeof id);
-          console.log('====================================');
+ 
           
         // Convert both to strings for comparison or use parseInt on id
         return String(officer.emp_code) === String(id) || officer.emp_code === parseInt(id);

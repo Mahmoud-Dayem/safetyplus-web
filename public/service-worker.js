@@ -5,7 +5,7 @@
 
 // Service worker for PWA functionality
 
-const CACHE_NAME = 'safetyplus-cache-v3';
+const CACHE_NAME = 'safetyplus-cache-v5'; // Increment version to force update
 const urlsToCache = [
   '/',
   '/static/js/bundle.js',
@@ -13,8 +13,16 @@ const urlsToCache = [
   '/manifest.json'
 ];
 
+// Skip waiting and claim clients immediately during development
+const isDevelopment = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+
 // Install a service worker
 self.addEventListener('install', event => {
+  // Skip waiting during development for immediate updates
+  if (isDevelopment) {
+    self.skipWaiting();
+  }
+  
   // Perform install steps
   event.waitUntil(
     caches.open(CACHE_NAME)
@@ -63,6 +71,11 @@ self.addEventListener('fetch', event => {
 
 // Update a service worker
 self.addEventListener('activate', event => {
+  // Claim clients immediately during development
+  if (isDevelopment) {
+    event.waitUntil(self.clients.claim());
+  }
+  
   var cacheWhitelist = [CACHE_NAME];
   event.waitUntil(
     caches.keys().then(cacheNames => {
