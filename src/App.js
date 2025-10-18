@@ -14,6 +14,8 @@ import Inbox from './pages/Inbox';
 import AllStopReports from './pages/AllStopReports'
 import AllAuditReports from './pages/AllAuditReports'
 import AuditReportDetails from './pages/AuditReportDetails'
+import AuditReportDetailsInbox from './pages/AuditReportDetailsInbox'
+
 // Protected Route component
 const ProtectedRoute = ({ children }) => {
   const user = useSelector(state => state.auth.user);
@@ -138,6 +140,14 @@ function App() {
           element={
             <ProtectedRoute>
               <AuditReportDetails/>
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/audit-report-details-assigned" 
+          element={
+            <ProtectedRoute>
+              <AuditReportDetailsInbox/>
             </ProtectedRoute>
           } 
         />

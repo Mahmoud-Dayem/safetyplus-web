@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { supabase } from './supabaseClient'
 import { colors } from '../constants/color';
 import { useNavigate } from 'react-router-dom';
@@ -14,20 +14,54 @@ function AllAuditReports() {
   const id = user?.companyId;
   const [reports, setReports] = useState([]);
   const [selectedMonth, setSelectedMonth] = useState('All');
-  const [selectedYear, setSelectedYear] = useState(String(new Date().getFullYear()));
+  const [selectedYear, setSelectedYear] = useState('2025');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [safetyofficers, setSafetyOfficers] = useState([]);
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [auditReports, setAuditReports] = useState([]);
+  const [filteredReports, setFilteredReports] = useState([]);
+  const [selectedFilter, setSelectedFilter] = useState('pending');
   const [employees, setEmployees] = useState([]);
 
-  const getAuditReports = async () => {
+  const applyFilters = useCallback((reports, statusFilter, monthFilter, yearFilter) => {
+    let filtered = reports;
+    
+    // Apply status filter
+    if (statusFilter === 'pending') {
+      filtered = filtered.filter(report => !report.completed && (!report.status || report.status === 'pending'));
+    } else if (statusFilter === 'assigned') {
+      filtered = filtered.filter(report => !report.completed && report.status === 'assigned');
+    } else if (statusFilter === 'verifying') {
+      filtered = filtered.filter(report => !report.completed && report.status === 'verifying');
+    } else if (statusFilter === 'completed') {
+      filtered = filtered.filter(report => report.completed);
+    }
+    
+    // Apply date filters
+    if (yearFilter !== 'all' || monthFilter !== 'All') {
+      filtered = filtered.filter(report => {
+        if (!report.date) return false;
+        const reportDate = new Date(report.date);
+        const reportYear = reportDate.getFullYear();
+        const reportMonth = reportDate.getMonth() + 1; // 1-12
+        
+        const yearMatch = yearFilter === 'all' || reportYear === parseInt(yearFilter);
+        const monthMatch = monthFilter === 'All' || reportMonth === parseInt(monthFilter);
+        
+        return yearMatch && monthMatch;
+      });
+    }
+    
+    return filtered;
+  }, []);
+
+  const getAuditReports = useCallback(async () => {
     try {
-      // Fetch audit reports
+      // Fetch audit reports with status and completed fields
       const { data: reportsData, error: reportsError } = await supabase
         .from('audit_reports')
-        .select('*')
+        .select('*, status, completed')
         .order('date', { ascending: false });
 
       if (reportsError) {
@@ -61,13 +95,16 @@ function AllAuditReports() {
 
       setEmployees(employeesData);
       setAuditReports(reportsWithEmployees);
+      // Apply default filters (pending status, all months, current year)
+      const filteredReports = applyFilters(reportsWithEmployees, 'pending', 'All', '2025');
+      setFilteredReports(filteredReports);
       console.log('Audit reports with employees:', reportsWithEmployees);
       return reportsWithEmployees;
     } catch (err) {
       console.error('Error fetching audit reports:', err);
       setError('Failed to load audit reports');
     }
-  };
+  }, [applyFilters]);
 
   useEffect(() => {
     const getSafetyOfficers = async () => {
@@ -113,7 +150,7 @@ function AllAuditReports() {
     if (id) {
       getSafetyOfficers()
     }
-  }, [id]);
+  }, [id, getAuditReports]);
 
   // Show loading screen while fetching data
   if (loading) {
@@ -198,16 +235,122 @@ function AllAuditReports() {
         </button>
       </div>
 
+      {/* Filter Buttons */}
+      <div className="filter-buttons-container">
+        <button
+          className={`filter-button ${selectedFilter === 'pending' ? 'active' : ''}`}
+          onClick={() => {
+            setSelectedFilter('pending');
+            const filteredReports = applyFilters(auditReports, 'pending', selectedMonth, selectedYear);
+            setFilteredReports(filteredReports);
+          }}
+        >
+          Pending ({applyFilters(auditReports, 'pending', selectedMonth, selectedYear).length})
+        </button>
+        <button
+          className={`filter-button ${selectedFilter === 'assigned' ? 'active' : ''}`}
+          onClick={() => {
+            setSelectedFilter('assigned');
+            const filteredReports = applyFilters(auditReports, 'assigned', selectedMonth, selectedYear);
+            setFilteredReports(filteredReports);
+          }}
+        >
+          Assigned ({applyFilters(auditReports, 'assigned', selectedMonth, selectedYear).length})
+        </button>
+        <button
+          className={`filter-button ${selectedFilter === 'verifying' ? 'active' : ''}`}
+          onClick={() => {
+            setSelectedFilter('verifying');
+            const filteredReports = applyFilters(auditReports, 'verifying', selectedMonth, selectedYear);
+            setFilteredReports(filteredReports);
+          }}
+        >
+          Waiting for Verification ({applyFilters(auditReports, 'verifying', selectedMonth, selectedYear).length})
+        </button>
+        <button
+          className={`filter-button ${selectedFilter === 'completed' ? 'active' : ''}`}
+          onClick={() => {
+            setSelectedFilter('completed');
+            const filteredReports = applyFilters(auditReports, 'completed', selectedMonth, selectedYear);
+            setFilteredReports(filteredReports);
+          }}
+        >
+          Completed ({applyFilters(auditReports, 'completed', selectedMonth, selectedYear).length})
+        </button>
+        <button
+          className={`filter-button ${selectedFilter === 'all' ? 'active' : ''}`}
+          onClick={() => {
+            setSelectedFilter('all');
+            const filteredReports = applyFilters(auditReports, 'all', selectedMonth, selectedYear);
+            setFilteredReports(filteredReports);
+          }}
+        >
+          All ({applyFilters(auditReports, 'all', selectedMonth, selectedYear).length})
+        </button>
+        
+        {/* Date Filters in same row */}
+        <div className="date-filters-inline">
+          <div className="filter-group">
+            <label className="filter-label">Year:</label>
+            <select 
+              className="date-filter-select"
+              value={selectedYear}
+              onChange={(e) => {
+                setSelectedYear(e.target.value);
+                const filteredReports = applyFilters(auditReports, selectedFilter, selectedMonth, e.target.value);
+                setFilteredReports(filteredReports);
+              }}
+            >
+              <option value="all">All Years</option>
+              <option value="2025">2025</option>
+              <option value="2026">2026</option>
+            </select>
+          </div>
+          
+          <div className="filter-group">
+            <label className="filter-label">Month:</label>
+            <select 
+              className="date-filter-select"
+              value={selectedMonth}
+              onChange={(e) => {
+                setSelectedMonth(e.target.value);
+                const filteredReports = applyFilters(auditReports, selectedFilter, e.target.value, selectedYear);
+                setFilteredReports(filteredReports);
+              }}
+            >
+              <option value="All">All Months</option>
+              <option value="1">January</option>
+              <option value="2">February</option>
+              <option value="3">March</option>
+              <option value="4">April</option>
+              <option value="5">May</option>
+              <option value="6">June</option>
+              <option value="7">July</option>
+              <option value="8">August</option>
+              <option value="9">September</option>
+              <option value="10">October</option>
+              <option value="11">November</option>
+              <option value="12">December</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
       {/* Reports Cards */}
-      {auditReports.length === 0 ? (
+      {filteredReports.length === 0 ? (
         <div className="empty-state">
-          <h3>No Audit Reports Found</h3>
-          <p>No audit reports have been submitted yet.</p>
+          <h3>No {selectedFilter === 'all' ? 'Audit Reports' : selectedFilter.charAt(0).toUpperCase() + selectedFilter.slice(1) + ' Reports'} Found</h3>
+          <p>{selectedFilter === 'all' ? 'No audit reports have been submitted yet.' : `No ${selectedFilter} reports found. Try selecting a different filter.`}</p>
         </div>
       ) : (
         <div className="reports-cards-container">
-          {auditReports.map((report, index) => (
+          {filteredReports.map((report, index) => (
             <div key={index} className="audit-report-card">
+              <div className="card-status-bar">
+                <span className={`card-status-badge ${  report.status }`}>
+                  {report.status}
+                </span>
+              </div>
               <div 
                 className="card-clickable-area"
                 onClick={() => navigate('/audit-report-details', { state: { report } })}
