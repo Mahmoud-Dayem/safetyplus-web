@@ -37,6 +37,7 @@ function AuditReport() {
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [showImageOptions, setShowImageOptions] = useState(false);
 
   const updateFormData = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -66,16 +67,45 @@ function AuditReport() {
         setImagePreview(reader.result);
       };
       reader.readAsDataURL(file);
-      // Clear error
+      // Clear error and hide options
       if (errors.image) {
         setErrors(prev => ({ ...prev, image: null }));
       }
+      setShowImageOptions(false);
+    }
+  };
+
+  const handleCameraCapture = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Same validation as file upload
+      if (!file.type.startsWith('image/')) {
+        alert('Please capture a valid image');
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        alert('Image size must be less than 5MB');
+        return;
+      }
+      setSelectedImage(file);
+      // Create preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+      // Clear error and hide options
+      if (errors.image) {
+        setErrors(prev => ({ ...prev, image: null }));
+      }
+      setShowImageOptions(false);
     }
   };
 
   const removeImage = () => {
     setSelectedImage(null);
     setImagePreview(null);
+    setShowImageOptions(false);
   };
 
   const validateForm = () => {
@@ -258,20 +288,59 @@ function AuditReport() {
           
           {!imagePreview ? (
             <div className="image-upload-container">
-              <input
-                id="image"
-                type="file"
-                accept="image/*"
-                onChange={handleImageSelect}
-                style={{ display: 'none' }}
-              />
-              <label htmlFor="image" className="image-upload-button">
-                <svg viewBox="0 0 24 24" fill={colors.primary} width="24" height="24">
-                  <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
-                </svg>
-                <span>Click to upload image</span>
-                <span className="upload-hint">Max 5MB • JPG, PNG, GIF</span>
-              </label>
+              {!showImageOptions ? (
+                <button
+                  type="button"
+                  className="image-upload-button"
+                  onClick={() => setShowImageOptions(true)}
+                >
+                  <svg viewBox="0 0 24 24" fill={colors.primary} width="24" height="24">
+                    <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
+                  </svg>
+                  <span>Add Image</span>
+                  <span className="upload-hint">Max 5MB • JPG, PNG, GIF</span>
+                </button>
+              ) : (
+                <div className="image-options">
+                  <input
+                    id="image-file"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageSelect}
+                    style={{ display: 'none' }}
+                  />
+                  <input
+                    id="image-camera"
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    onChange={handleCameraCapture}
+                    style={{ display: 'none' }}
+                  />
+                  
+                  <label htmlFor="image-file" className="option-button file-option">
+                    <svg viewBox="0 0 24 24" fill={colors.primary} width="20" height="20">
+                      <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
+                    </svg>
+                    <span>Choose File</span>
+                  </label>
+                  
+                  <label htmlFor="image-camera" className="option-button camera-option">
+                    <svg viewBox="0 0 24 24" fill={colors.primary} width="20" height="20">
+                      <path d="M4,4H7L9,2H15L17,4H20A2,2 0 0,1 22,6V18A2,2 0 0,1 20,20H4A2,2 0 0,1 2,18V6A2,2 0 0,1 4,4M12,7A5,5 0 0,0 7,12A5,5 0 0,0 12,17A5,5 0 0,0 17,12A5,5 0 0,0 12,7M12,9A3,3 0 0,1 15,12A3,3 0 0,1 12,15A3,3 0 0,1 9,12A3,3 0 0,1 12,9Z"/>
+                    </svg>
+                    <span>Take Photo</span>
+                  </label>
+                  
+                  <button
+                    type="button"
+                    className="cancel-option"
+                    onClick={() => setShowImageOptions(false)}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
             </div>
           ) : (
             <div className="image-preview-container">
