@@ -5,7 +5,7 @@
 
 // Service worker for PWA functionality
 
-const CACHE_NAME = 'safetyplus-cache-v5'; // Increment version to force update
+const CACHE_NAME = 'safetyplus-cache-v6'; // Increment version to force update
 const urlsToCache = [
   '/',
   '/static/js/bundle.js',

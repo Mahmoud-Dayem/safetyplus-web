@@ -559,6 +559,7 @@
 
   .content {
     padding: 16px;
+    overflow-x: hidden;
   }
 
   .section-title {
@@ -591,6 +592,9 @@
 
   .header-user-info-row {
     font-size: 11px;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 3px;
   }
 
   .report-history-back-button,
@@ -639,15 +643,19 @@
   /* Table responsive styles */
   .reports-table-container {
     overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 8px;
+    box-shadow: inset 0 0 10px rgba(0,0,0,0.1);
   }
 
   .reports-table {
-    min-width: 800px;
+    min-width: 850px;
+    font-size: 13px;
   }
 
   .reports-table th,
   .reports-table td {
-    padding: 8px 6px;
+    padding: 10px 8px;
     font-size: 12px;
   }
 
@@ -991,5 +999,112 @@
   
   .summary-table {
     min-width: 400px;
+  }
+  
+  /* Enhanced table responsiveness for small screens */
+  .reports-table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 8px;
+    margin: 0 -12px;
+  }
+  
+  .reports-table {
+    min-width: 900px;
+    font-size: 12px;
+  }
+  
+  .reports-table th {
+    padding: 10px 6px;
+    font-size: 11px;
+    white-space: nowrap;
+  }
+  
+  .reports-table td {
+    padding: 12px 6px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  
+  /* Header improvements for mobile */
+  .header-user-info-row {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 4px;
+  }
+  
+  .header-reports-count {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.95);
+  }
+  
+  /* Better table visual hierarchy on mobile */
+  .reports-table tbody tr {
+    border-bottom: 2px solid #f0f0f0;
+  }
+  
+  .reports-table tbody tr:hover {
+    background-color: rgba(255, 149, 0, 0.05);
+    transform: none; /* Remove transform on mobile for better performance */
+  }
+}
+
+/* Extra small screens (very small phones) */
+@media (max-width: 360px) {
+  .report-history-container {
+    min-height: 100vh;
+  }
+  
+  .report-history-header {
+    padding: 10px;
+    min-height: 55px;
+  }
+  
+  .header-title {
+    font-size: 14px;
+  }
+  
+  .header-user-info-row {
+    font-size: 10px;
+  }
+  
+  .header-user-name,
+  .header-company-id,
+  .header-reports-count {
+    font-size: 10px;
+  }
+  
+  .report-history-back-button,
+  .header-create-button {
+    width: 32px;
+    height: 32px;
+    padding: 4px;
+  }
+  
+  .content {
+    padding: 12px;
+  }
+  
+  .reports-table-container {
+    margin: 0 -12px;
+  }
+  
+  .reports-table {
+    min-width: 800px;
+    font-size: 11px;
+  }
+  
+  .reports-table th,
+  .reports-table td {
+    padding: 8px 4px;
+    font-size: 10px;
+  }
+  
+  .empty-title {
+    font-size: 18px;
+  }
+  
+  .empty-subtitle {
+    font-size: 13px;
   }
 }
