@@ -23,6 +23,7 @@ function AllAuditReports() {
   const [filteredReports, setFilteredReports] = useState([]);
   const [selectedFilter, setSelectedFilter] = useState('pending');
   const [employees, setEmployees] = useState([]);
+  const [refreshing, setRefreshing] = useState(false);
 
   const applyFilters = useCallback((reports, statusFilter, monthFilter, yearFilter) => {
     let filtered = reports;
@@ -223,16 +224,43 @@ function AllAuditReports() {
         </button>
         <div className="header-title-section">
           <h1 className="page-title">All Audit Reports</h1>
-          <span className="total-reports-count">Total: {auditReports.length} Reports</span>
+          <div className="header-info">
+            <span className="user-name">Welcome, {user?.displayName || user?.email || 'User'}</span>
+            <span className="total-reports-count">Total: {auditReports.length} Reports</span>
+          </div>
         </div>
-        <button
-          className="home-button"
-          onClick={() => navigate('/home')}
-        >
-          <svg viewBox="0 0 24 24" fill="#FFFFFF" width="20" height="20">
-            <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
-          </svg>
-        </button>
+        <div className="header-buttons">
+          <button
+            className="refresh-button"
+            onClick={async () => {
+              setRefreshing(true);
+              try {
+                await getAuditReports();
+                // Re-apply current filters after refresh
+                const filteredReports = applyFilters(auditReports, selectedFilter, selectedMonth, selectedYear);
+                setFilteredReports(filteredReports);
+              } catch (error) {
+                console.error('Error refreshing data:', error);
+              } finally {
+                setRefreshing(false);
+              }
+            }}
+            disabled={refreshing}
+            title="Refresh Data"
+          >
+            <svg viewBox="0 0 24 24" fill="#FFFFFF" width="20" height="20" className={refreshing ? 'spinning' : ''}>
+              <path d="M17.65,6.35C16.2,4.9 14.21,4 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20C15.73,20 18.84,17.45 19.73,14H17.65C16.83,16.33 14.61,18 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6C13.66,6 15.14,6.69 16.22,7.78L13,11H20V4L17.65,6.35Z"/>
+            </svg>
+          </button>
+          <button
+            className="home-button"
+            onClick={() => navigate('/home')}
+          >
+            <svg viewBox="0 0 24 24" fill="#FFFFFF" width="20" height="20">
+              <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+            </svg>
+          </button>
+        </div>
       </div>
 
       {/* Filter Buttons */}

@@ -426,7 +426,7 @@ const AuditReportDetailsInbox = () => {
 
                 // Create new message object
                 const newMessage = {
-                  id: user?.companyId || user?.id || 'unknown',
+                  id: user?.displayName || user?.id || 'unknown',
                   message: safetyOfficer.trim(),
                   timestamp: new Date().toISOString()
                 };

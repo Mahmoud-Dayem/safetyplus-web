@@ -17,7 +17,7 @@
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
 }
 
-.back-button, .home-button {
+.back-button, .home-button, .refresh-button {
   background: rgba(255, 255, 255, 0.1);
   border: none;
   border-radius: 8px;
@@ -26,9 +26,31 @@
   transition: all 0.3s ease;
 }
 
-.back-button:hover, .home-button:hover {
+.back-button:hover, .home-button:hover, .refresh-button:hover:not(:disabled) {
   background: rgba(255, 255, 255, 0.2);
   transform: translateY(-2px);
+}
+
+.refresh-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.header-buttons {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* Spinning animation for refresh button */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.spinning {
+  animation: spin 1s linear infinite;
 }
 
 .header-title-section {
@@ -38,11 +60,24 @@
   gap: 4px;
 }
 
+.header-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
 .page-title {
   color: white;
   margin: 0;
   font-size: 24px;
   font-weight: 700;
+}
+
+.user-name {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 14px;
+  font-weight: 500;
 }
 
 .total-reports-count {
@@ -94,6 +129,15 @@
 .filter-button.active:hover {
   background: #1a1a1a;
   border-color: #1a1a1a;
+}
+
+/* Filter button text responsive styles */
+.filter-text-full {
+  display: inline;
+}
+
+.filter-text-short {
+  display: none;
 }
 
 /* Date Filters Inline */
@@ -311,16 +355,30 @@
 /* Responsive Card Layout */
 @media (max-width: 768px) {
   .filter-buttons-container {
-    gap: 8px;
+    gap: 6px;
     justify-content: center;
+    flex-wrap: wrap;
   }
   
   .filter-button {
-    padding: 8px 12px;
-    font-size: 11px;
+    padding: 8px 10px;
+    font-size: 10px;
     flex: 1;
-    min-width: 70px;
+    min-width: 65px;
     text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin: 0 2px;
+  }
+
+  /* Show short text on tablet/mobile */
+  .filter-text-full {
+    display: none;
+  }
+  
+  .filter-text-short {
+    display: inline;
   }
   
   .date-filters-inline {
@@ -636,5 +694,74 @@
   .unauthorized-button {
     padding: 12px 24px;
     font-size: 14px;
+  }
+}
+
+/* Header Responsive Styles */
+@media (max-width: 768px) {
+  .audit-reports-header {
+    padding: 8px 12px;
+    flex-wrap: nowrap;
+    gap: 8px;
+    height: auto;
+    min-height: 60px;
+  }
+
+  .header-title-section {
+    flex: 1;
+    margin: 0;
+  }
+
+  .page-title {
+    font-size: 18px;
+    margin-bottom: 2px;
+  }
+
+  .user-name {
+    font-size: 11px;
+  }
+
+  .total-reports-count {
+    font-size: 10px;
+  }
+
+  .header-buttons {
+    order: 3;
+    gap: 6px;
+  }
+
+  .back-button {
+    order: 1;
+  }
+
+  .header-info {
+    gap: 1px;
+  }
+}
+
+@media (max-width: 480px) {
+  .audit-reports-header {
+    padding: 6px 10px;
+    min-height: 50px;
+  }
+
+  .page-title {
+    font-size: 16px;
+  }
+
+  .user-name {
+    font-size: 10px;
+  }
+
+  .total-reports-count {
+    font-size: 9px;
+  }
+
+  .back-button, .home-button, .refresh-button {
+    padding: 8px;
+  }
+
+  .header-buttons {
+    gap: 4px;
   }
 }

@@ -182,12 +182,24 @@ const AuditReportDetails = () => {
                                 <button
                                     className="mark-complete-button"
                                     onClick={async () => {
+                                        // Show confirmation dialog
+                                        const confirmed = window.confirm(
+                                            'Are you sure you want to mark this report as completed? This action cannot be undone.'
+                                        );
+                                        
+                                        if (!confirmed) {
+                                            return; // User cancelled
+                                        }
+
                                         try {
                                             setMarkingComplete(true);
 
                                             const { error } = await supabase
                                                 .from('audit_reports')
-                                                .update({ completed: true })
+                                                .update({ 
+                                                    completed: true,
+                                                    status: 'completed'
+                                                })
                                                 .eq('id', report.id);
 
                                             if (error) {
