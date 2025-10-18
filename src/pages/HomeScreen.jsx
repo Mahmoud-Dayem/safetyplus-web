@@ -5,11 +5,11 @@ import { colors } from '../constants/color';
 import { useNavigate } from 'react-router-dom';
 import { logout } from '../store/authSlice';
 import './HomeScreen.css';
- const HomeScreen = () => {
+const HomeScreen = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const user = useSelector((state) => state.auth.user);
- 
+
   const name = user?.displayName;
   const id = user?.companyId;
 
@@ -102,7 +102,7 @@ import './HomeScreen.css';
 
           <button
             className="reports-button"
-            onClick={() => navigate('/reports')}
+            onClick={() => navigate('/inbox')}
           >
             <svg className="button-icon" viewBox="0 0 24 24" fill={colors.primary || '#FF9500'}>
               <path d="M19 3H4.99c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.88 2 2 2h15c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 12h-4c0 1.66-1.35 3-3 3s-3-1.34-3-3H5V5h14v10z" />
@@ -118,43 +118,58 @@ import './HomeScreen.css';
           {
             user?.isAdmin && (
               <>
-            
-              <button
-                className="reports-button"
-                onClick={() => navigate('/reports')}
-              >
-                <svg className="button-icon" viewBox="0 0 24 24" fill={colors.primary || '#FF9500'}>
-                  <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z" />
-                </svg>
-                <div className="button-text-container">
-                  <span className="reports-button-title">All Report History</span>
-                  <span className="reports-button-subtitle">Review All past safety observations</span>
-                </div>
-                <svg className="chevron-icon" viewBox="0 0 24 24" fill={colors.primary || '#FF9500'}>
-                  <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
-                </svg>
-              </button>
-               <button
-            className="analytics-button"
-            onClick={() => navigate('/reports')}
-          >
-            <svg className="button-icon" viewBox="0 0 24 24" fill={colors.primary || '#FF9500'}>
-              <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z" />
-            </svg>
-            <div className="button-text-container">
-              <span className="reports-button-title">Data Analytics</span>
-              <span className="reports-button-subtitle">View insights and statistics</span>
-            </div>
-            <svg className="chevron-icon" viewBox="0 0 24 24" fill={colors.primary || '#FF9500'}>
-              <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
-            </svg>
-          </button>
-          </>
-              
+
+                <button
+                  className="reports-button"
+                  onClick={() => navigate('/viewallstopreports')}
+                >
+                  <svg className="button-icon" viewBox="0 0 24 24" fill={colors.primary || '#FF9500'}>
+                    <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z" />
+                  </svg>
+                  <div className="button-text-container">
+                    <span className="reports-button-title">Plant STOP Reports </span>
+                    <span className="reports-button-subtitle">Review All past safety observations</span>
+                  </div>
+                  <svg className="chevron-icon" viewBox="0 0 24 24" fill={colors.primary || '#FF9500'}>
+                    <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
+                  </svg>
+                </button>
+                         <button
+                  className="reports-button"
+                  onClick={() => navigate('/viewallauditreports')}
+                >
+                  <svg className="button-icon" viewBox="0 0 24 24" fill={colors.primary || '#FF9500'}>
+                    <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z" />
+                  </svg>
+                  <div className="button-text-container">
+                    <span className="reports-button-title">Plant Audit Reports </span>
+                    <span className="reports-button-subtitle">Check All Audit Safety Observations</span>
+                  </div>
+                  <svg className="chevron-icon" viewBox="0 0 24 24" fill={colors.primary || '#FF9500'}>
+                    <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
+                  </svg>
+                </button>
+                <button
+                  className="analytics-button"
+                  onClick={() => navigate('/reports')}
+                >
+                  <svg className="button-icon" viewBox="0 0 24 24" fill={colors.primary || '#FF9500'}>
+                    <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z" />
+                  </svg>
+                  <div className="button-text-container">
+                    <span className="reports-button-title">Data Analytics</span>
+                    <span className="reports-button-subtitle">View insights and statistics</span>
+                  </div>
+                  <svg className="chevron-icon" viewBox="0 0 24 24" fill={colors.primary || '#FF9500'}>
+                    <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
+                  </svg>
+                </button>
+              </>
+
             )
           }
 
-         
+
         </div>
 
         <div className="footer-section">

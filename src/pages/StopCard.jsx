@@ -553,26 +553,22 @@ const StopCard = () => {
       const sheetData = prepareSheetData();
 
       const [sheetsResult, firestoreResult] = await Promise.allSettled([
-        sendToGoogleSheets(sheetData),
+        // sendToGoogleSheets(sheetData),
         sendToFirestore(sheetData)
       ]);
 
-      const sheetsSuccess = sheetsResult.status === 'fulfilled' && sheetsResult.value.success;
+      // const sheetsSuccess = sheetsResult.status === 'fulfilled' && sheetsResult.value.success;
       const firestoreSuccess = firestoreResult.status === 'fulfilled' && firestoreResult.value.success;
 
       let alertTitle, alertMessage;
 
-      if (sheetsSuccess && firestoreSuccess) {
+      if (  firestoreSuccess) {
         alertTitle = 'Success!';
         alertMessage = 'Your STOP Card report has been submitted successfully.';
-      } else if (sheetsSuccess || firestoreSuccess) {
-        alertTitle = 'Partial Success';
-        const successfulSystem = sheetsSuccess ? 'Google Sheets' : 'Firestore database';
-        const failedSystem = sheetsSuccess ? 'Firestore' : 'Google Sheets';
-        alertMessage = `Report saved to ${successfulSystem} successfully, but failed to save to ${failedSystem}. Your data is secure.`;
+      
       } else {
         alertTitle = 'Submission Error';
-        alertMessage = 'Failed to submit report to both systems. Please check your internet connection and try again.';
+        alertMessage = 'Failed to submit report to   systems. Please check your internet connection and try again.';
       }
 
       if (window.confirm(`${alertTitle}\n\n${alertMessage}\n\nView Summary?`)) {

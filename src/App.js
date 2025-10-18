@@ -10,6 +10,10 @@ import ReportHistory from './pages/ReportHistory';
 import './App.css';
 import AuditReport from './pages/AuditReport';
 import AuditHistoryReports from './pages/AuditHistoryReports'
+import Inbox from './pages/Inbox';
+import AllStopReports from './pages/AllStopReports'
+import AllAuditReports from './pages/AllAuditReports'
+import AuditReportDetails from './pages/AuditReportDetails'
 // Protected Route component
 const ProtectedRoute = ({ children }) => {
   const user = useSelector(state => state.auth.user);
@@ -102,6 +106,38 @@ function App() {
           element={
             <ProtectedRoute>
               <AuditHistoryReports/>
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/inbox" 
+          element={
+            <ProtectedRoute>
+              <Inbox/>
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/viewallstopreports" 
+          element={
+            <ProtectedRoute>
+              <AllStopReports/>
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/viewallauditreports" 
+          element={
+            <ProtectedRoute>
+              <AllAuditReports/>
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/audit-report-details" 
+          element={
+            <ProtectedRoute>
+              <AuditReportDetails/>
             </ProtectedRoute>
           } 
         />

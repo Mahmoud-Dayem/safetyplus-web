@@ -1,0 +1,442 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useSelector } from 'react-redux';
+import { supabase } from './supabaseClient';
+import { colors } from '../constants/color';
+import './AuditReportDetails.css';
+
+const AuditReportDetails = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const report = location.state?.report;
+  const [departments, setDepartments] = useState([]);
+  const [selectedDepartment, setSelectedDepartment] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [chiefs, setChiefs] = useState({});
+  const [safetyOfficer, setSafetyOfficer] = useState('');
+  const [sending, setSending] = useState(false);
+  const [messages, setMessages] = useState([]);
+  const [reportStatus, setReportStatus] = useState('pending');
+  const user = useSelector(state => state.auth.user);
+
+  const fetchMessages = useCallback(async () => {
+    try {
+      // Fetch current messages and status from the report
+      const { data: reportData, error } = await supabase
+        .from('audit_reports')
+        .select('messages, status')
+        .eq('id', report.id)
+        .single();
+      
+      if (error) {
+        console.error('Error fetching messages:', error);
+        return;
+      }
+      
+      setMessages(reportData?.messages || []);
+      setReportStatus(reportData?.status || 'pending');
+    } catch (err) {
+      console.error('Error fetching messages:', err);
+    }
+  }, [report.id]);
+
+  useEffect(() => {
+    const fetchDepartments = async () => {
+      try {
+        setLoading(true);
+        
+        // Fetch departments
+        const { data: deptData, error: deptError } = await supabase
+          .from('departments')
+          .select('dept_code, name, chief_code')
+          .order('name', { ascending: true });
+
+        if (deptError) {
+          console.error('Error fetching departments:', deptError);
+          return;
+        }
+
+        // Get unique chief codes
+        const chiefCodes = [...new Set(deptData.filter(dept => dept.chief_code).map(dept => dept.chief_code))];
+        
+        // Fetch chiefs information
+        if (chiefCodes.length > 0) {
+          const { data: chiefsData, error: chiefsError } = await supabase
+            .from('employees')
+            .select('emp_code, first_name, last_name')
+            .in('emp_code', chiefCodes);
+
+          if (chiefsError) {
+            console.error('Error fetching chiefs:', chiefsError);
+          } else {
+            // Create chiefs lookup object
+            const chiefsMap = {};
+            chiefsData.forEach(chief => {
+              chiefsMap[chief.emp_code] = chief;
+            });
+            setChiefs(chiefsMap);
+          }
+        }
+
+        setDepartments(deptData || []);
+        console.log('Departments:', deptData);
+      } catch (err) {
+        console.error('Error fetching departments:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDepartments();
+    fetchMessages();
+  }, [report.id, fetchMessages]);
+
+  if (!report) {
+    return (
+      <div className="details-container">
+        <div className="error-message">
+          <h2>Report not found</h2>
+          <p>The requested audit report could not be found.</p>
+          <button onClick={() => navigate(-1)} className="back-btn">
+            Go Back
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="details-container">
+      {/* Header */}
+      <div className="details-header">
+        <button
+          className="details-back-button"
+          onClick={() => navigate(-1)}
+          style={{ backgroundColor: colors.primary }}
+        >
+          <svg viewBox="0 0 24 24" fill="#FFFFFF" width="24" height="24">
+            <path d="M19 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+          </svg>
+        </button>
+        <h1 className="details-title">Audit Report Details</h1>
+        <button
+          className="details-home-button"
+          onClick={() => navigate('/home')}
+        >
+          <svg viewBox="0 0 24 24" fill="#FFFFFF" width="20" height="20">
+            <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+          </svg>
+        </button>
+      </div>
+
+      {/* Report Content */}
+      <div className="details-content">
+        <div className="details-card">
+          {/* Employee Information */}
+          <div className="details-section">
+            <h3 className="section-title">Employee Information</h3>
+            <div className="info-row">
+              <span className="info-label">Employee Name:</span>
+              <span className="info-value">
+                {report.employee ? 
+                  `${report.employee.first_name} ${report.employee.last_name}` : 
+                  'N/A'
+                }
+              </span>
+            </div>
+            <div className="info-row">
+              <span className="info-label">Job Title:</span>
+              <span className="info-value">
+                {report.employee?.job_title || 'N/A'}
+              </span>
+            </div>
+            <div className="info-row">
+              <span className="info-label">Employee Code:</span>
+              <span className="employee-code-badge">{report.emp_code || 'N/A'}</span>
+            </div>
+          </div>
+
+          {/* Report Status */}
+          <div className="details-section">
+            <h3 className="section-title">Report Status</h3>
+            <div className="info-row">
+              <span className="info-label">Status:</span>
+              <span className={`status-badge ${reportStatus}`}>
+                {reportStatus === 'assigned' ? 'Assigned' : 'Pending'}
+              </span>
+            </div>
+          </div>
+
+          {/* Location & Date */}
+          <div className="details-section">
+            <h3 className="section-title">Location & Date</h3>
+            <div className="info-row">
+              <span className="info-label">Location:</span>
+              <span className="info-value">
+                <svg viewBox="0 0 24 24" fill="#666" width="16" height="16" className="location-icon">
+                  <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                </svg>
+                {report.location || 'N/A'}
+              </span>
+            </div>
+            <div className="info-row">
+              <span className="info-label">Date:</span>
+              <span className="info-value">
+                <svg viewBox="0 0 24 24" fill="#666" width="16" height="16" className="date-icon">
+                  <path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/>
+                </svg>
+                {report.date ? new Date(report.date).toLocaleDateString('en-US', {
+                  weekday: 'long',
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric'
+                }) : 'N/A'}
+              </span>
+            </div>
+          </div>
+
+          {/* Description */}
+          <div className="details-section">
+            <h3 className="section-title">Description</h3>
+            <div className="description-content">
+              <p className="full-description">
+                {report.description || 'No description available'}
+              </p>
+            </div>
+          </div>
+
+          {/* Image Section */}
+          {report.image_url && (
+            <div className="details-section">
+              <h3 className="section-title">Attached Image</h3>
+              <div className="image-container">
+                <img 
+                  src={report.image_url} 
+                  alt="Audit report" 
+                  className="details-image"
+                  onClick={() => window.open(report.image_url, '_blank')}
+                />
+                <p className="image-caption">Click image to view full size</p>
+              </div>
+            </div>
+          )}
+
+          {/* Report Metadata */}
+          <div className="details-section">
+            <h3 className="section-title">Report Information</h3>
+            <div className="metadata-grid">
+              <div className="metadata-item">
+                <span className="metadata-label">Report ID:</span>
+                <span className="metadata-value">{report.id || 'N/A'}</span>
+              </div>
+              <div className="metadata-item">
+                <span className="metadata-label">Created:</span>
+                <span className="metadata-value">
+                  {report.created_at ? new Date(report.created_at).toLocaleString() : 'N/A'}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Department Selector */}
+          <div className="details-section">
+            <h3 className="section-title">Department Assignment</h3>
+            <div className="department-selector-container">
+              <label className="selector-label" htmlFor="department-select">
+                Select Department:
+              </label>
+              <select
+                id="department-select"
+                className="department-select"
+                value={selectedDepartment}
+                onChange={(e) => setSelectedDepartment(e.target.value)}
+                disabled={loading}
+              >
+                <option value="">Choose a department...</option>
+                {departments.map((dept) => (
+                  <option key={dept.dept_code} value={dept.dept_code}>
+                    {dept.name} 
+                  </option>
+                ))}
+              </select>
+              
+              {selectedDepartment && (
+                <div className="selected-department-info">
+                  {(() => {
+                    const selected = departments.find(d => d.dept_code === selectedDepartment);
+                    return selected ? (
+                      <div className="department-details">
+                        <div className="dept-info-row">
+                          <span className="dept-label">Department:</span>
+                          <span className="dept-value">{selected.name}</span>
+                        </div>
+                 
+                        <div className="dept-info-row">
+                          <span className="dept-label">Department Chief:</span>
+                          <span className="dept-value">
+                            {selected.chief_code && chiefs[selected.chief_code] ? 
+                              `${chiefs[selected.chief_code].first_name} ${chiefs[selected.chief_code].last_name}` : 
+                              (selected.chief_code ? `Code: ${selected.chief_code}` : 'N/A')
+                            }
+                          </span>
+                        </div>
+                      </div>
+                    ) : null;
+                  })()}
+                </div>
+              )}
+              
+              {loading && (
+                <div className="loading-departments">
+                  Loading departments...
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Safety Officer Input */}
+
+
+          {/* Message History */}
+          <div className="details-section">
+            <h3 className="section-title">Message History</h3>
+            <div className="message-history-container">
+              {messages.length === 0 ? (
+                <p className="no-messages">No messages yet.</p>
+              ) : (
+                messages.map((msg, index) => (
+                  <div key={index} className="message-item">
+                    <div className="message-header">
+                      <span className="message-sender">Sender: {msg.id}</span>
+                      <span className="message-date">
+                        {new Date(msg.timestamp).toLocaleDateString()} {new Date(msg.timestamp).toLocaleTimeString()}
+                      </span>
+                    </div>
+                    <div className="message-content">{msg.message}</div>
+                    {msg.department && (
+                      <div className="message-department">
+                        Department: {msg.department.name} ({msg.department.dept_code})
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+                     <div className="details-section">
+            <h3 className="section-title">Safety Officer Assignment</h3>
+            <div className="safety-officer-container">
+              <label className="selector-label" htmlFor="safety-officer-input">
+                Safety Officer Comment:
+              </label>
+              <input
+                id="safety-officer-input"
+                type="text"
+                className="safety-officer-input"
+                value={safetyOfficer}
+                onChange={(e) => {
+                  setSafetyOfficer(e.target.value);
+                  console.log('Safety Officer Message:', e.target.value);
+                }}
+                placeholder=" Safety officer message..."
+              />
+            </div>
+          </div>
+        </div>
+        
+      </div>
+     
+      
+      {/* Send Message Button - Fixed at Bottom */}
+      <div className="send-message-bottom">
+        <button
+          className="send-message-button-bottom"
+          onClick={async () => {
+            if (!selectedDepartment) {
+              alert('Please select a department before sending the message.');
+              return;
+            }
+            
+            if (!safetyOfficer.trim()) {
+              alert('Please enter a message before sending.');
+              return;
+            }
+            
+            try {
+              setSending(true);
+              
+              // Get current messages and sent_to arrays from the report
+              const { data: currentReport, error: fetchError } = await supabase
+                .from('audit_reports')
+                .select('messages, sent_to')
+                .eq('id', report.id)
+                .single();
+              
+              if (fetchError) {
+                console.error('Error fetching current report:', fetchError);
+                alert('Failed to fetch current report data.');
+                return;
+              }
+              
+              // Get selected department info
+              const selectedDept = departments.find(d => d.dept_code === selectedDepartment);
+              
+              // Create new message object
+              const newMessage = {
+                id: user?.displayName || user?.id || 'unknown',
+                message: safetyOfficer.trim(),
+                timestamp: new Date().toISOString()
+              };
+              
+              // Add new message to existing messages array
+              const updatedMessages = currentReport.messages || [];
+              updatedMessages.push(newMessage);
+              
+              // Update sent_to array with chief_code
+              const currentSentTo = currentReport.sent_to || [];
+              const chiefCode = selectedDept?.chief_code;
+              
+              // Add chief_code to sent_to array if it exists and isn't already there
+              if (chiefCode && !currentSentTo.includes(parseInt(chiefCode))) {
+                currentSentTo.push(parseInt(chiefCode));
+              }
+              
+              // Update the report with new messages array, sent_to array, and status
+              const { error: updateError } = await supabase
+                .from('audit_reports')
+                .update({ 
+                  messages: updatedMessages,
+                  sent_to: currentSentTo,
+                  status: 'assigned'
+                })
+                .eq('id', report.id);
+              
+              if (updateError) {
+                console.error('Error updating report:', updateError);
+                alert('Failed to send message.');
+                return;
+              }
+              
+              console.log('Message sent successfully:', newMessage);
+              console.log('Updated sent_to array:', currentSentTo);
+              alert('Message sent successfully!');
+              setSafetyOfficer(''); // Clear the input
+              fetchMessages(); // Refresh message history
+              
+            } catch (error) {
+              console.error('Error sending message:', error);
+              alert('An error occurred while sending the message.');
+            } finally {
+              setSending(false);
+            }
+          }}
+          disabled={sending || !safetyOfficer.trim() || !selectedDepartment}
+        >
+          {sending ? 'Sending...' : 'Send Message'}
+        </button>
+      </div>
+    </div>
+  );
+};
+
+export default AuditReportDetails;

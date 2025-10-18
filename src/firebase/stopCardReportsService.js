@@ -165,6 +165,33 @@ export class StopCardReportsService {
       throw error;
     }
   }
+  //get all STOP reports by only safety supervisor
+  static async getAllStopCardReports(limitCount = 50) {
+    try {
+      const q = query(
+        collection(db, this.collectionName)
+        // No where clause - fetch all reports from all companies
+      );
+      
+      const querySnapshot = await getDocs(q);
+      const reports = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+
+      // Sort by timestamp in JavaScript and limit results
+      return reports
+        .sort((a, b) => {
+          const timestampA = a.timestamp ? new Date(a.timestamp.seconds * 1000) : new Date(0);
+          const timestampB = b.timestamp ? new Date(b.timestamp.seconds * 1000) : new Date(0);
+          return timestampB - timestampA;
+        })
+        .slice(0, limitCount);
+    } catch (error) {
+      console.error('Error getting all reports:', error);
+      throw error;
+    }
+  }
 }
 
 export default StopCardReportsService;
