@@ -5,13 +5,13 @@
 
 // Service worker for PWA functionality
 
-const CACHE_NAME = 'safetyplus-cache-v6'; // Increment version to force update
+const CACHE_NAME = 'safetyplus-cache-v7'; // Increment for auth fix
 const urlsToCache = [
-  '/',
   '/static/js/bundle.js',
   '/static/css/main.css',
-  '/manifest.json'
-];
+  '/manifest.json',
+  '/favicon.ico'
+]; // Removed '/' to avoid caching main HTML
 
 // Skip waiting and claim clients immediately during development
 const isDevelopment = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
@@ -35,6 +35,18 @@ self.addEventListener('install', event => {
 
 // Cache and return requests
 self.addEventListener('fetch', event => {
+  // Never cache HTML pages or auth-related requests
+  const url = new URL(event.request.url);
+  const isHTML = event.request.headers.get('accept')?.includes('text/html');
+  const isAuthRequest = url.pathname.includes('/auth') || url.pathname === '/';
+  const isApiRequest = url.hostname !== location.hostname;
+  
+  // Skip caching for HTML, auth pages, and external API calls
+  if (isHTML || isAuthRequest || isApiRequest) {
+    event.respondWith(fetch(event.request));
+    return;
+  }
+  
   event.respondWith(
     caches.match(event.request)
       .then(function(response) {

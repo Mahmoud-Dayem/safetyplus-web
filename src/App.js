@@ -32,13 +32,29 @@ function App() {
   const dispatch = useDispatch();
   const [loading, setLoading] = useState(true);
 
+  // Check if app is running as PWA
+  useEffect(() => {
+    const isPWA = window.matchMedia('(display-mode: standalone)').matches || 
+                  window.navigator.standalone || 
+                  document.referrer.includes('android-app://');
+    
+    if (isPWA) {
+      console.log('App is running as PWA');
+      // Add PWA-specific initialization here if needed
+    }
+  }, []);
+
   // Restore user from localStorage on app mount
   useEffect(() => {
     const restoreUser = async () => {
       try {
+        console.log('Attempting to restore user from storage...');
         const storedUser = await getUser();
         if (storedUser) {
-           dispatch(login(storedUser));
+          console.log('User found in storage:', storedUser.email);
+          dispatch(login(storedUser));
+        } else {
+          console.log('No user found in storage - redirecting to auth');
         }
       } catch (error) {
         console.error('Error restoring user:', error);
@@ -48,6 +64,24 @@ function App() {
     };
     
     restoreUser();
+    
+    // Also listen for storage changes (in case user logs in from another tab)
+    const handleStorageChange = (e) => {
+      if (e.key === 'safetyplus_user_auth' && e.newValue) {
+        try {
+          const user = JSON.parse(e.newValue);
+          dispatch(login(user));
+        } catch (error) {
+          console.error('Error parsing storage user:', error);
+        }
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
   }, [dispatch]);
 
   // Show loading state while checking localStorage
