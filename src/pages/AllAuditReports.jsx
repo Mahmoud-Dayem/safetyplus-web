@@ -105,11 +105,11 @@ function AllAuditReports() {
         const docRef = doc(db, "safetyofficers", id);
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
-          console.log("Document data:", docSnap.data());
+          // console.log("Document data:", docSnap.data());
           setIsAuthorized(true);
    
         } else {
-          console.log("No such document!");
+          // console.log("No such document!");
           setIsAuthorized(false);
         }
 

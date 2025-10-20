@@ -55,10 +55,7 @@ const AuditReportDetails = () => {
                 const deptData = deptSnapshot.docs.map(doc => doc.data());
                
                 setDepartments(deptData || []);
-                console.log('===========departments=================');
-                console.log(departments);
-                console.log('====================================');
-             } catch (err) {
+              } catch (err) {
                 console.error('Error fetching departments:', err);
             } finally {
                 setLoading(false);
@@ -444,21 +441,12 @@ const AuditReportDetails = () => {
 
                                     // Update sent_to array with chief_code
                                     const currentSentTo = currentReport.send_to || [];
-                                    console.log('=============selectedDept===============');
-                                    console.log(selectedDept?.dept_name);
-                                    console.log('====================================');
-                                    const chiefCode = selectedDept?.chief_code;
-                                    console.log('=========chiefCode=================');
-                                    console.log(chiefCode);
-                                    console.log('====================================');
-
+                                     const chiefCode = selectedDept?.chief_code;
+ 
                                     // Add chief_code to sent_to array if it exists and isn't already there
                                     if (chiefCode && !currentSentTo.includes(parseInt(chiefCode))) {
                                         currentSentTo.push(parseInt(chiefCode));
-                                        console.log('=============currentSentTo array===============');
-                                        console.log(currentSentTo);
-                                        console.log('====================================');
-                                    }
+                                     }
 
                                     // Update the report with new messages array, sent_to array, status, and assigned department
 

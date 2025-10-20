@@ -39,8 +39,7 @@ function App() {
                   document.referrer.includes('android-app://');
     
     if (isPWA) {
-      console.log('App is running as PWA');
-      // Add PWA-specific initialization here if needed
+       // Add PWA-specific initialization here if needed
     }
   }, []);
 
@@ -48,13 +47,11 @@ function App() {
   useEffect(() => {
     const restoreUser = async () => {
       try {
-        console.log('Attempting to restore user from storage...');
-        const storedUser = await getUser();
+         const storedUser = await getUser();
         if (storedUser) {
-          console.log('User found in storage:', storedUser.email);
-          dispatch(login(storedUser));
+           dispatch(login(storedUser));
         } else {
-          console.log('No user found in storage - redirecting to auth');
+          // console.log('No user found in storage - redirecting to auth');
         }
       } catch (error) {
         console.error('Error restoring user:', error);

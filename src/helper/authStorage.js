@@ -14,8 +14,7 @@ export async function storeUser(user) {
     // Also store in sessionStorage as additional backup
     sessionStorage.setItem(USER_KEY, userData);
     
-    console.log('User stored successfully in localStorage and sessionStorage');
-  } catch (e) {
+   } catch (e) {
     console.error('Error storing user:', e);
   }
 }
@@ -47,11 +46,10 @@ export async function getUser() {
     }
     
     if (userData) {
-      console.log('User data found and restored');
-      return JSON.parse(userData);
+       return JSON.parse(userData);
     }
     
-    console.log('No user data found in any storage');
+    // console.log('No user data found in any storage');
     return null;
   } catch (e) {
     console.error('Error getting user:', e);
@@ -64,7 +62,7 @@ export async function removeUser() {
     localStorage.removeItem(USER_KEY);
     localStorage.removeItem(BACKUP_KEY);
     sessionStorage.removeItem(USER_KEY);
-    console.log('User data cleared from all storage');
+    // console.log('User data cleared from all storage');
   } catch (e) {
     console.error('Error removing user:', e);
   }

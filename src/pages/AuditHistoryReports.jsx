@@ -34,7 +34,7 @@ function AuditHistoryReports() {
 
     // Loop through results
     querySnapshot.forEach((doc) => {
-      console.log(`${doc.id} =>`, doc.data());
+      // console.log(`${doc.id} =>`, doc.data());
     });
   }
   ////
@@ -61,12 +61,9 @@ function AuditHistoryReports() {
 
       // Run the query
       const data = await getDocs(q);
-      console.log('============data=============');
-      data.forEach((doc) => {
-        console.log(doc.id, '=>', doc.data());
-      });
-      console.log('====================================');
-
+       data.forEach((doc) => {
+       });
+ 
 
       // if (error) throw error;
 

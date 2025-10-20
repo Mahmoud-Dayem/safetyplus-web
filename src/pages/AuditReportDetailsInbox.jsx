@@ -39,10 +39,7 @@ const navigate = useNavigate();
       setReportStatus(reportData?.status || 'pending');
       setAssignedDepartment(reportData?.assigned_department || '');
       setIsCompleted(reportData?.completed || false);
-      console.log('==========assignedDepartment=====================');
-      console.log(assignedDepartment);
-      console.log('====================================');
-    } catch (err) {
+       } catch (err) {
       console.error('Error fetching messages from Firestore:', err);
     }
   }, [report.id,assignedDepartment]);
@@ -52,9 +49,7 @@ const navigate = useNavigate();
       if (!assignedDepartment) {
         setIsChief(false);
         setEmployeesUnderChief([]);
-        console.log('====================================');
-        console.log('NONNNNNNNNNNNNNNNNNNNNNNN');
-        console.log('====================================');
+ 
         return;
       }
       setLoading(true);
@@ -67,8 +62,7 @@ const navigate = useNavigate();
           const isChiefInDepartments = String(deptData.chief_code) === String(user?.companyId);
           setIsChief(isChiefInDepartments);
     
-          console.log('====================================');
-          setEmployeesUnderChief(isChiefInDepartments && Array.isArray(deptData.supervisors) ? deptData.supervisors : []);
+           setEmployeesUnderChief(isChiefInDepartments && Array.isArray(deptData.supervisors) ? deptData.supervisors : []);
  
         } else {
           setIsChief(false);
@@ -211,8 +205,7 @@ const navigate = useNavigate();
                 onChange={(e) => {
                   setSelectedEmployee(e.target.value);
                   const selected = employeesUnderChief.find(emp => String(emp.emp_code) === e.target.value);
-                  console.log('Selected employee:', selected);
-                }}
+                 }}
                 disabled={loading || isCompleted}
               >
                 <option value="">Choose Supervisor...</option>
