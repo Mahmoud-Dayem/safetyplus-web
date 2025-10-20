@@ -5,6 +5,8 @@ import { colors } from '../constants/color';
 import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import './AuditHistoryReports.css';
+import { collection, getDocs, query, where, orderBy,setDoc,addDoc,doc } from 'firebase/firestore'
+import { db } from '../firebase/firebaseConfig';
 
 function AuditHistoryReports() {
 
@@ -19,6 +21,25 @@ function AuditHistoryReports() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // fetch audit reports from firestore
+  async function getEmployeeByCode(empCode) {
+    // Build a query
+    const q = query(
+      collection(db, "employees"),
+      where("emp_code", "==", empCode)
+    );
+
+    // Run the query
+    const querySnapshot = await getDocs(q);
+
+    // Loop through results
+    querySnapshot.forEach((doc) => {
+      console.log(`${doc.id} =>`, doc.data());
+    });
+  }
+  ////
+
+
   const fetchReports = async () => {
     if (!id) {
       setError('User ID not found');
@@ -28,15 +49,29 @@ function AuditHistoryReports() {
 
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('audit_reports')
-        .select('*')
-        .eq('emp_code', id)
-        .order('created_at', { ascending: false });
+      // const { data, error } = await supabase
+      //   .from('audit_reports')
+      //   .select('*')
+      //   .eq('emp_code', id)
+      //   .order('created_at', { ascending: false });
+      const q = query(
+        collection(db, "audit_reports"),
+        where("emp_code", "==", id)
+      );
 
-      if (error) throw error;
+      // Run the query
+      const data = await getDocs(q);
+      console.log('============data=============');
+      data.forEach((doc) => {
+        console.log(doc.id, '=>', doc.data());
+      });
+      console.log('====================================');
 
-      setReports(data || []);
+
+      // if (error) throw error;
+
+      const reportsArray = data.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setReports(reportsArray);
     } catch (err) {
       console.error('Error fetching reports:', err);
       setError(err.message);
@@ -172,7 +207,7 @@ function AuditHistoryReports() {
         ) : reports.length === 0 ? (
           <div className="empty-state">
             <svg viewBox="0 0 24 24" fill={colors.textSecondary} width="64" height="64">
-              <path d="M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm2 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
+              <path d="M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm2 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z" />
             </svg>
             <p>No audit reports found</p>
             <button
@@ -190,7 +225,7 @@ function AuditHistoryReports() {
                 <div className="card-header">
                   <div className="location-badge" style={{ backgroundColor: colors.primaryLight }}>
                     <svg viewBox="0 0 24 24" fill="#fff" width="16" height="16">
-                      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
                     </svg>
                     <span>{report.location}</span>
                   </div>

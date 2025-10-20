@@ -3,7 +3,9 @@ import { supabase } from './supabaseClient'
 import { colors } from '../constants/color';
 import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
- import './AuditReport.css';
+import './AuditReport.css';
+import { collection, addDoc, serverTimestamp,setDoc,doc } from 'firebase/firestore';
+import { db } from '../firebase/firebaseConfig';
 
 function AuditReport() {
   const navigate = useNavigate();
@@ -131,9 +133,11 @@ function AuditReport() {
     if (validateForm()) {
       setLoading(true);
       setUploadProgress(0);
-      
+
       try {
+
         let imageUrl = null;
+
 
         // Upload image to Supabase Storage if selected
         if (selectedImage) {
@@ -164,24 +168,42 @@ function AuditReport() {
           imageUrl = urlData.publicUrl;
         }
 
-        setUploadProgress(80);
-        // Insert into Supabase
-        const { error } = await supabase
-          .from('audit_reports')
-          .insert([{
-            location: formData.location.toUpperCase(),
-            description: formData.description,
-            date: formData.date,
-            emp_code: user?.companyId,
-            user_name: user?.displayName?.toUpperCase() || 'UNKNOWN',
-            image_url: imageUrl,
-          }]);
 
-        if (error) throw error;
+        setUploadProgress(80);
+        // Insert into Firestore (audit_reports collection)
+        // eslint-disable-next-line no-undef
+        // const firestore = window.firebase && window.firebase.firestore ? window.firebase.firestore() : null;
+        // if (!firestore) {
+        //   throw new Error('Firestore is not initialized. Make sure Firebase is loaded and initialized.');
+        // }
+
+        const auditReportData = {
+          location: formData.location.toUpperCase(),
+          description: formData.description,
+          date: formData.date,
+          emp_code: user?.companyId,
+          user_name: user?.displayName?.toUpperCase() || 'UNKNOWN',
+          image_url: imageUrl,
+          created_at: new Date().toLocaleString('en-US', { timeZone: 'Asia/Riyadh', hour12: false }),
+          // New fields
+          status: 'pending',
+          messages: [], // array of map/object
+          send_to: [], // array of string
+          assigned_department: '', // string
+          completed:false,
+          completed_at:null,
+          rectified_by:''
+
+        };
+        const docId = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+        // await firestore.collection('audit_reports').add(auditReportData);
+        // await firestore.collection('audit_reports').doc(docId).set(auditReportData);
+        await setDoc(doc(db, 'audit_reports', docId), auditReportData);     
 
         setUploadProgress(100);
+        // Show alert and navigate to home after user clicks OK
         alert('Audit report submitted successfully!');
-        
+        navigate('/home');
         // Reset form
         setFormData({ location: '', description: '', date: '' });
         removeImage();
@@ -214,7 +236,7 @@ function AuditReport() {
             History
           </button>
         </div>
-  <h1 className="audit-report-title" style={{ color: colors.text }}>Conduct Audit Report</h1>
+        <h1 className="audit-report-title" style={{ color: colors.text }}>Conduct Audit Report</h1>
       </div>
 
       <div className="audit-report-form">
@@ -285,7 +307,7 @@ function AuditReport() {
           <label htmlFor="image" style={{ color: colors.text }}>
             Upload Image (Optional)
           </label>
-          
+
           {!imagePreview ? (
             <div className="image-upload-container">
               {!showImageOptions ? (
@@ -295,7 +317,7 @@ function AuditReport() {
                   onClick={() => setShowImageOptions(true)}
                 >
                   <svg viewBox="0 0 24 24" fill={colors.primary} width="24" height="24">
-                    <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
+                    <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z" />
                   </svg>
                   <span>Add Image</span>
                   <span className="upload-hint">Max 5MB • JPG, PNG, GIF</span>
@@ -317,21 +339,21 @@ function AuditReport() {
                     onChange={handleCameraCapture}
                     style={{ display: 'none' }}
                   />
-                  
+
                   <label htmlFor="image-file" className="option-button file-option">
                     <svg viewBox="0 0 24 24" fill={colors.primary} width="20" height="20">
-                      <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
+                      <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" />
                     </svg>
                     <span>Choose File</span>
                   </label>
-                  
+
                   <label htmlFor="image-camera" className="option-button camera-option">
                     <svg viewBox="0 0 24 24" fill={colors.primary} width="20" height="20">
-                      <path d="M4,4H7L9,2H15L17,4H20A2,2 0 0,1 22,6V18A2,2 0 0,1 20,20H4A2,2 0 0,1 2,18V6A2,2 0 0,1 4,4M12,7A5,5 0 0,0 7,12A5,5 0 0,0 12,17A5,5 0 0,0 17,12A5,5 0 0,0 12,7M12,9A3,3 0 0,1 15,12A3,3 0 0,1 12,15A3,3 0 0,1 9,12A3,3 0 0,1 12,9Z"/>
+                      <path d="M4,4H7L9,2H15L17,4H20A2,2 0 0,1 22,6V18A2,2 0 0,1 20,20H4A2,2 0 0,1 2,18V6A2,2 0 0,1 4,4M12,7A5,5 0 0,0 7,12A5,5 0 0,0 12,17A5,5 0 0,0 17,12A5,5 0 0,0 12,7M12,9A3,3 0 0,1 15,12A3,3 0 0,1 12,15A3,3 0 0,1 9,12A3,3 0 0,1 12,9Z" />
                     </svg>
                     <span>Take Photo</span>
                   </label>
-                  
+
                   <button
                     type="button"
                     className="cancel-option"
@@ -352,7 +374,7 @@ function AuditReport() {
                 style={{ backgroundColor: colors.error }}
               >
                 <svg viewBox="0 0 24 24" fill="#fff" width="20" height="20">
-                  <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                  <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
                 </svg>
                 Remove Image
               </button>
@@ -368,11 +390,11 @@ function AuditReport() {
         {loading && uploadProgress > 0 && (
           <div className="upload-progress">
             <div className="progress-bar">
-              <div 
-                className="progress-fill" 
-                style={{ 
+              <div
+                className="progress-fill"
+                style={{
                   width: `${uploadProgress}%`,
-                  backgroundColor: colors.primary 
+                  backgroundColor: colors.primary
                 }}
               />
             </div>

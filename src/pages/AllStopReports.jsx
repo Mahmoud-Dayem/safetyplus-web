@@ -1,3 +1,4 @@
+//only view by safety officer
 import React, { useState, useEffect } from 'react';
 import { colors } from '../constants/color';
 import { useNavigate } from 'react-router-dom';

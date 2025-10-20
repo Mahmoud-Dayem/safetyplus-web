@@ -1,9 +1,12 @@
+// for safety supervisor
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { supabase } from './supabaseClient';
 import { colors } from '../constants/color';
 import './AuditReportDetails.css';
+import { collection, getDocs, query, where, orderBy, setDoc, addDoc, doc, getDoc } from 'firebase/firestore'
+import { db } from '../firebase/firebaseConfig';
 
 const AuditReportDetails = () => {
     const navigate = useNavigate();
@@ -25,18 +28,14 @@ const AuditReportDetails = () => {
 
     const fetchMessages = useCallback(async () => {
         try {
-            // Fetch current messages, status, assigned department, and completed status from the report
-            const { data: reportData, error } = await supabase
-                .from('audit_reports')
-                .select('messages, status, assigned_department, completed')
-                .eq('id', report.id)
-                .single();
-
-            if (error) {
-                console.error('Error fetching messages:', error);
+            // Fetch current messages, status, assigned department, and completed status from Firestore
+            const docRef = doc(db, 'audit_reports', report.id);
+            const docSnap = await getDoc(docRef);
+            if (!docSnap.exists()) {
+                console.error('Audit report not found:', report.id);
                 return;
             }
-
+            const reportData = docSnap.data();
             setMessages(reportData?.messages || []);
             setReportStatus(reportData?.status || 'pending');
             setAssignedDepartment(reportData?.assigned_department || '');
@@ -50,41 +49,15 @@ const AuditReportDetails = () => {
         const fetchDepartments = async () => {
             try {
                 setLoading(true);
-
-                // Fetch departments
-                const { data: deptData, error: deptError } = await supabase
-                    .from('departments')
-                    .select('dept_code, name, chief_code')
-                    .order('name', { ascending: true });
-
-                if (deptError) {
-                    console.error('Error fetching departments:', deptError);
-                    return;
-                }
-
-                // Get unique chief codes
-                const chiefCodes = [...new Set(deptData.filter(dept => dept.chief_code).map(dept => dept.chief_code))];
-
-                // Fetch chiefs information
-                if (chiefCodes.length > 0) {
-                    const { data: chiefsData, error: chiefsError } = await supabase
-                        .from('employees')
-                        .select('emp_code, first_name, last_name')
-                        .in('emp_code', chiefCodes);
-
-                    if (chiefsError) {
-                        console.error('Error fetching chiefs:', chiefsError);
-                    } else {
-                        // Create chiefs lookup object
-                        const chiefsMap = {};
-                        chiefsData.forEach(chief => {
-                            chiefsMap[chief.emp_code] = chief;
-                        });
-                        setChiefs(chiefsMap);
-                    }
-                }
-
+                // Fetch departments from Firestore, sorted by name
+                const deptQuery = query(collection(db, 'departments'), orderBy('dept_name', 'asc'));
+                const deptSnapshot = await getDocs(deptQuery);
+                const deptData = deptSnapshot.docs.map(doc => doc.data());
+               
                 setDepartments(deptData || []);
+                console.log('===========departments=================');
+                console.log(departments);
+                console.log('====================================');
              } catch (err) {
                 console.error('Error fetching departments:', err);
             } finally {
@@ -92,8 +65,8 @@ const AuditReportDetails = () => {
             }
         };
 
-        fetchDepartments();
         fetchMessages();
+        fetchDepartments();
     }, [report.id, fetchMessages]);
 
     if (!report) {
@@ -185,31 +158,30 @@ const AuditReportDetails = () => {
                                         const confirmed = window.confirm(
                                             'Are you sure you want to mark this report as completed? This action cannot be undone.'
                                         );
-                                        
                                         if (!confirmed) {
                                             return; // User cancelled
                                         }
-
                                         try {
                                             setMarkingComplete(true);
-
-                                            const { error } = await supabase
-                                                .from('audit_reports')
-                                                .update({ 
-                                                    completed: true,
-                                                    status: 'completed'
-                                                })
-                                                .eq('id', report.id);
-
-                                            if (error) {
-                                                console.error('Error marking as completed:', error);
-                                                alert('Failed to mark as completed.');
+                                            // Update Firestore document for this report
+                                            const { setDoc, doc, getDoc } = await import('firebase/firestore');
+                                            const { db } = await import('../firebase/firebaseConfig');
+                                            const reportRef = doc(db, 'audit_reports', report.id);
+                                            // Get current report data to preserve all fields
+                                            const reportSnap = await getDoc(reportRef);
+                                            if (!reportSnap.exists()) {
+                                                alert('Report not found in Firestore.');
+                                                setMarkingComplete(false);
                                                 return;
                                             }
-
+                                            const currentData = reportSnap.data();
+                                            await setDoc(reportRef, {
+                                                ...currentData,
+                                                completed: true,
+                                                status: 'completed'
+                                            });
                                             setIsCompleted(true);
                                             alert('Report marked as completed successfully!');
-
                                         } catch (error) {
                                             console.error('Error marking as completed:', error);
                                             alert('An error occurred while marking as completed.');
@@ -326,11 +298,16 @@ const AuditReportDetails = () => {
                                 value={selectedDepartment}
                                 onChange={(e) => setSelectedDepartment(e.target.value)}
                                 disabled={loading || isCompleted || (reportStatus === 'assigned' && !isReassigning)}
+                                style={{
+                                    borderColor: selectedDepartment ? colors.primary : colors.border,
+                                    borderWidth: '2px',
+                                    outline: 'none'
+                                }}
                             >
                                 <option value="">Choose a department...</option>
                                 {departments.map((dept) => (
-                                    <option key={dept.dept_code} value={dept.dept_code}>
-                                        {dept.name}
+                                    <option key={dept.dept_code} value={dept.dept_name}>
+                                        {dept.dept_name}
                                     </option>
                                 ))}
                             </select>
@@ -346,20 +323,19 @@ const AuditReportDetails = () => {
                             {selectedDepartment && (
                                 <div className="selected-department-info">
                                     {(() => {
-                                        const selected = departments.find(d => d.dept_code === selectedDepartment);
+                                        const selected = departments.find(d => d.dept_name === selectedDepartment);
                                         return selected ? (
                                             <div className="department-details">
                                                 <div className="dept-info-row">
                                                     <span className="dept-label">Department:</span>
-                                                    <span className="dept-value">{selected.name}</span>
+                                                    <span className="dept-value">{selected.dept_name}</span>
                                                 </div>
 
                                                 <div className="dept-info-row">
                                                     <span className="dept-label">Department Chief:</span>
                                                     <span className="dept-value">
-                                                        {selected.chief_code && chiefs[selected.chief_code] ?
-                                                            `${chiefs[selected.chief_code].first_name} ${chiefs[selected.chief_code].last_name}` :
-                                                            (selected.chief_code ? `Code: ${selected.chief_code}` : 'N/A')
+                                                        {
+                                                            (selected.chief_code ? ` ${selected.chief_name}` : 'N/A')
                                                         }
                                                     </span>
                                                 </div>
@@ -391,9 +367,7 @@ const AuditReportDetails = () => {
                                     <div key={index} className="message-item">
                                         <div className="message-header">
                                             <span className="message-sender">Sender: {msg.id}</span>
-                                            <span className="message-date">
-                                                {new Date(msg.timestamp).toLocaleDateString()} {new Date(msg.timestamp).toLocaleTimeString()}
-                                            </span>
+                               
                                         </div>
                                         <div className="message-content">{msg.message}</div>
                                         {msg.department && (
@@ -436,35 +410,26 @@ const AuditReportDetails = () => {
                     <div className="send-message-bottom">
                         <button
                             className="send-message-button-bottom"
+
                             onClick={async () => {
                                 if (!selectedDepartment) {
                                     alert('Please select a department before sending the message.');
                                     return;
                                 }
-
-                                if (!safetyOfficer.trim()) {
-                                    alert('Please enter a message before sending.');
-                                    return;
-                                }
-
                                 try {
                                     setSending(true);
-
-                                    // Get current messages and sent_to arrays from the report
-                                    const { data: currentReport, error: fetchError } = await supabase
-                                        .from('audit_reports')
-                                        .select('messages, sent_to')
-                                        .eq('id', report.id)
-                                        .single();
-
-                                    if (fetchError) {
-                                        console.error('Error fetching current report:', fetchError);
+                                    // Get current messages and sent_to arrays from Firestore
+                                    const docRef = doc(db, 'audit_reports', report.id);
+                                    const docSnap = await getDoc(docRef);
+                                    if (!docSnap.exists()) {
+                                        console.error('Error fetching current report: not found');
                                         alert('Failed to fetch current report data.');
                                         return;
                                     }
+                                    const currentReport = docSnap.data();
 
                                     // Get selected department info
-                                    const selectedDept = departments.find(d => d.dept_code === selectedDepartment);
+                                    const selectedDept = departments.find(d => d.dept_name === selectedDepartment);
 
                                     // Create new message object
                                     const newMessage = {
@@ -478,26 +443,34 @@ const AuditReportDetails = () => {
                                     updatedMessages.push(newMessage);
 
                                     // Update sent_to array with chief_code
-                                    const currentSentTo = currentReport.sent_to || [];
+                                    const currentSentTo = currentReport.send_to || [];
+                                    console.log('=============selectedDept===============');
+                                    console.log(selectedDept?.dept_name);
+                                    console.log('====================================');
                                     const chiefCode = selectedDept?.chief_code;
+                                    console.log('=========chiefCode=================');
+                                    console.log(chiefCode);
+                                    console.log('====================================');
 
                                     // Add chief_code to sent_to array if it exists and isn't already there
                                     if (chiefCode && !currentSentTo.includes(parseInt(chiefCode))) {
                                         currentSentTo.push(parseInt(chiefCode));
+                                        console.log('=============currentSentTo array===============');
+                                        console.log(currentSentTo);
+                                        console.log('====================================');
                                     }
 
                                     // Update the report with new messages array, sent_to array, status, and assigned department
-                                    const { error: updateError } = await supabase
-                                        .from('audit_reports')
-                                        .update({
+
+                                    try {
+                                        await setDoc(doc(db, 'audit_reports', report.id), {
+                                            ...currentReport,
                                             messages: updatedMessages,
-                                            sent_to: currentSentTo,
+                                            send_to: currentSentTo,
                                             status: 'assigned',
                                             assigned_department: selectedDepartment
-                                        })
-                                        .eq('id', report.id);
-
-                                    if (updateError) {
+                                        });
+                                    } catch (updateError) {
                                         console.error('Error updating report:', updateError);
                                         alert('Failed to send message.');
                                         return;
@@ -514,9 +487,9 @@ const AuditReportDetails = () => {
                                     setSending(false);
                                 }
                             }}
-                            disabled={sending || !safetyOfficer.trim() || !selectedDepartment || isCompleted}
+                            disabled={sending  || !selectedDepartment || isCompleted}
                         >
-                            {isCompleted ? 'Report Completed' : (sending ? 'Sending...' : 'Send Message')}
+                            {isCompleted ? 'Report Completed' : (sending ? 'Sending...' : 'Assign Department')}
                         </button>
                     </div>
 
@@ -533,18 +506,19 @@ const AuditReportDetails = () => {
                                     try {
                                         setSending(true);
 
-                                        // Get current messages array from the report
-                                        const { data: currentReport, error: fetchError } = await supabase
-                                            .from('audit_reports')
-                                            .select('messages')
-                                            .eq('id', report.id)
-                                            .single();
+                                        // Get current messages array from Firestore
+                                        const { doc, getDoc, updateDoc } = await import('firebase/firestore');
+                                        const { db } = await import('../firebase/firebaseConfig');
+                                        const reportRef = doc(db, 'audit_reports', report.id);
+                                        const reportSnap = await getDoc(reportRef);
 
-                                        if (fetchError) {
-                                            console.error('Error fetching current report:', fetchError);
+                                        if (!reportSnap.exists()) {
+                                            console.error('Report not found in Firestore');
                                             alert('Failed to fetch current report data.');
                                             return;
                                         }
+
+                                        const reportData = reportSnap.data();
 
                                         // Create new message object - use custom message or default acceptance message
                                         const messageText = safetyOfficer.trim() || 'Verified and Accepted by safety';
@@ -555,28 +529,20 @@ const AuditReportDetails = () => {
                                         };
 
                                         // Add new message to existing messages array
-                                        const updatedMessages = currentReport.messages || [];
+                                        const updatedMessages = reportData.messages || [];
                                         updatedMessages.push(newMessage);
 
                                         // Update the report with new message, completed status, and change status to completed
-                                        const { error: updateError } = await supabase
-                                            .from('audit_reports')
-                                            .update({
-                                                messages: updatedMessages,
-                                                status: 'completed',
-                                                completed: true
-                                            })
-                                            .eq('id', report.id);
+                                        await updateDoc(reportRef, {
+                                            messages: updatedMessages,
+                                            status: 'completed',
+                                            completed: true
+                                        });
 
-                                        if (updateError) {
-                                            console.error('Error updating report:', updateError);
-                                            alert('Failed to accept report.');
-                                            return;
-                                        }
- 
                                         alert('Report accepted and completed successfully!');
                                         setSafetyOfficer(''); // Clear the input
-                                        fetchMessages(); // Refresh message history
+                                        // fetchMessages(); // Refresh message history
+                                        navigate('/viewallauditreports'); // Navigate back to home after acceptance
 
                                     } catch (error) {
                                         console.error('Error accepting report:', error);
@@ -609,18 +575,19 @@ const AuditReportDetails = () => {
                                     try {
                                         setSending(true);
 
-                                        // Get current messages array from the report
-                                        const { data: currentReport, error: fetchError } = await supabase
-                                            .from('audit_reports')
-                                            .select('messages')
-                                            .eq('id', report.id)
-                                            .single();
+                                        // Get current messages array from Firestore
+                                        const { doc, getDoc, updateDoc } = await import('firebase/firestore');
+                                        const { db } = await import('../firebase/firebaseConfig');
+                                        const reportRef = doc(db, 'audit_reports', report.id);
+                                        const reportSnap = await getDoc(reportRef);
 
-                                        if (fetchError) {
-                                            console.error('Error fetching current report:', fetchError);
+                                        if (!reportSnap.exists()) {
+                                            console.error('Report not found in Firestore');
                                             alert('Failed to fetch current report data.');
                                             return;
                                         }
+
+                                        const reportData = reportSnap.data();
 
                                         // Create new message object with rejection reason
                                         const newMessage = {
@@ -630,27 +597,19 @@ const AuditReportDetails = () => {
                                         };
 
                                         // Add new message to existing messages array
-                                        const updatedMessages = currentReport.messages || [];
+                                        const updatedMessages = reportData.messages || [];
                                         updatedMessages.push(newMessage);
 
                                         // Update the report with new message and change status back to assigned
-                                        const { error: updateError } = await supabase
-                                            .from('audit_reports')
-                                            .update({
-                                                messages: updatedMessages,
-                                                status: 'assigned'
-                                            })
-                                            .eq('id', report.id);
+                                        await updateDoc(reportRef, {
+                                            messages: updatedMessages,
+                                            status: 'rectifying'
+                                        });
 
-                                        if (updateError) {
-                                            console.error('Error updating report:', updateError);
-                                            alert('Failed to reject report.');
-                                            return;
-                                        }
-
-                                         alert('Report rejected and sent back for revision.');
+                                        alert('Report rejected and sent back for revision.');
                                         setSafetyOfficer(''); // Clear the input
-                                        fetchMessages(); // Refresh message history
+                                        // fetchMessages(); // Refresh message history
+                                        navigate('/viewallauditreports'); // Navigate back to inbox after rejection
 
                                     } catch (error) {
                                         console.error('Error rejecting report:', error);

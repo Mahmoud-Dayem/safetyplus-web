@@ -1,11 +1,11 @@
-
 import React, { useState, useEffect, useCallback } from 'react'
 import { supabase } from './supabaseClient'
 import { colors } from '../constants/color';
 import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import './AllAuditReports.css';
-
+import { collection, getDocs, query, where, orderBy, setDoc, addDoc, doc, getDoc } from 'firebase/firestore'
+import { db } from '../firebase/firebaseConfig';
 
 function Inbox() {
 
@@ -34,6 +34,8 @@ function Inbox() {
       filtered = filtered.filter(report => !report.completed && report.status === 'verifying');
     } else if (statusFilter === 'completed') {
       filtered = filtered.filter(report => report.completed);
+    } else if (statusFilter === 'rectifying') {
+      filtered = filtered.filter(report => !report.completed && report.status === 'rectifying');
     }
     
     // Apply date filters
@@ -55,49 +57,47 @@ function Inbox() {
   }, []);
 
   const getAuditReports = useCallback(async () => {
+ 
+    
     try {
-      // Fetch audit reports with status and completed fields that are sent to current user
-       const { data: reportsData, error: reportsError } = await supabase
-        .from('audit_reports')
-        .select('*, status, completed, sent_to')
-        .contains('sent_to', [String(id)]) // Filter reports where sent_to array contains current user's ID as string
-        .order('date', { ascending: false });
-
-      if (reportsError) {
-        console.error('Error fetching audit reports:', reportsError);
-        setError('Failed to load assigned reports');
-        return [];
-      }
+      // Fetch audit reports from Firestore where send_to array contains current user's id
+      const reportsQuery = query(
+        collection(db, 'audit_reports'),
+        where('send_to', 'array-contains', parseInt(id)),
+      );
+      const reportsSnapshot = await getDocs(reportsQuery);
+      const reportsData = reportsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+ 
  
 
       // Fetch employees data
-      const { data: employeesData, error: employeesError } = await supabase
-        .from('employees')
-        .select('emp_code, first_name, last_name, job_title');
+      // const { data: employeesData, error: employeesError } = await supabase
+      //   .from('employees')
+      //   .select('emp_code, first_name, last_name, job_title');
 
-      if (employeesError) {
-        console.error('Error fetching employees:', employeesError);
-        setError('Failed to load employee data');
-        return [];
-      }
+      // if (employeesError) {
+      //   console.error('Error fetching employees:', employeesError);
+      //   setError('Failed to load employee data');
+      //   return [];
+      // }
 
-      // Create employee lookup map
-      const employeeMap = {};
-      employeesData.forEach(emp => {
-        employeeMap[emp.emp_code] = emp;
-      });
+      // // Create employee lookup map
+      // const employeeMap = {};
+      // employeesData.forEach(emp => {
+      //   employeeMap[emp.emp_code] = emp;
+      // });
 
-      // Merge reports with employee data
-      const reportsWithEmployees = reportsData.map(report => ({
-        ...report,
-        employee: employeeMap[report.emp_code] || null
-      }));
+      // // Merge reports with employee data
+      // const reportsWithEmployees = reportsData.map(report => ({
+      //   ...report,
+      //   employee: employeeMap[report.emp_code] || null
+      // }));
 
-      setAuditReports(reportsWithEmployees);
+      setAuditReports(reportsData);
       // Apply default filters (assigned status, all months, current year)
-      const filteredReports = applyFilters(reportsWithEmployees, 'assigned', 'All', '2025');
+      const filteredReports = applyFilters(reportsData, 'assigned', 'All', '2025');
       setFilteredReports(filteredReports);
-       return reportsWithEmployees;
+       return reportsData;
     } catch (err) {
       console.error('Error fetching inbox reports:', err);
       setError('Failed to load inbox reports');
@@ -246,7 +246,17 @@ function Inbox() {
             setFilteredReports(filteredReports);
           }}
         >
-          Assigned ({applyFilters(auditReports, 'assigned', selectedMonth, selectedYear).length})
+          Assigned to chief ({applyFilters(auditReports, 'assigned', selectedMonth, selectedYear).length})
+        </button>
+        <button
+          className={`filter-button ${selectedFilter === 'rectifying' ? 'active' : ''}`}
+          onClick={() => {
+            setSelectedFilter('rectifying');
+            const filteredReports = applyFilters(auditReports, 'rectifying', selectedMonth, selectedYear);
+            setFilteredReports(filteredReports);
+          }}
+        >
+          Rectifying by Supervisor ({applyFilters(auditReports, 'rectifying', selectedMonth, selectedYear).length})
         </button>
         <button
           className={`filter-button ${selectedFilter === 'verifying' ? 'active' : ''}`}
