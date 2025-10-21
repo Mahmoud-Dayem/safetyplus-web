@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { supabase } from './supabaseClient'
 import { colors } from '../constants/color';
 import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import './AllAuditReports.css';
-import { collection, getDocs, query, where, orderBy, setDoc, addDoc, doc, getDoc } from 'firebase/firestore'
+import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firestore'
 import { db } from '../firebase/firebaseConfig';
 
 function Inbox() {
@@ -21,6 +20,9 @@ function Inbox() {
   const [filteredReports, setFilteredReports] = useState([]);
   const [selectedFilter, setSelectedFilter] = useState('assigned');
   const [refreshing, setRefreshing] = useState(false);
+  const [isChief, setIsChief] = useState(false);
+  const [isSupervisor, setIsSupervisor] = useState(false);
+  const [defaultFilterApplied, setDefaultFilterApplied] = useState(false);
 
   const applyFilters = useCallback((reports, statusFilter, monthFilter, yearFilter) => {
     let filtered = reports;
@@ -94,15 +96,71 @@ function Inbox() {
       // }));
 
       setAuditReports(reportsData);
-      // Apply default filters (assigned status, all months, current year)
-      const filteredReports = applyFilters(reportsData, 'assigned', 'All', '2025');
-      setFilteredReports(filteredReports);
+  // Tentative default; may be adjusted after role detection below
+  const filteredReports = applyFilters(reportsData, 'assigned', 'All', '2025');
+  setFilteredReports(filteredReports);
        return reportsData;
     } catch (err) {
       console.error('Error fetching inbox reports:', err);
       setError('Failed to load inbox reports');
     }
   }, [applyFilters, id]);
+
+  // Role detection: Supervisor via assigned_list/supervisors
+  useEffect(() => {
+    const checkSupervisor = async () => {
+      try {
+        if (!id) { setIsSupervisor(false); return; }
+        const supervisorsRef = doc(db, 'assigned_list', 'supervisors');
+        const supervisorsSnap = await getDoc(supervisorsRef);
+        if (!supervisorsSnap.exists()) { setIsSupervisor(false); return; }
+        const data = supervisorsSnap.data();
+        const list = Array.isArray(data?.supervisors_id) ? data.supervisors_id : [];
+        setIsSupervisor(list.map(String).includes(String(id)));
+      } catch (e) {
+        console.error('Error checking supervisor role:', e);
+        setIsSupervisor(false);
+      }
+    };
+    checkSupervisor();
+  }, [id]);
+
+  // Role detection: Chief via departments collection (chief_code == user id)
+  useEffect(() => {
+    const checkChief = async () => {
+      try {
+        if (!id) { setIsChief(false); return; }
+        // Try numeric match first
+        const numId = parseInt(id);
+        let snap = await getDocs(query(collection(db, 'departments'), where('chief_code', '==', numId)));
+        if (snap.empty) {
+          // Fallback: try string match if stored as string in Firestore
+          snap = await getDocs(query(collection(db, 'departments'), where('chief_code', '==', String(id))));
+        }
+        setIsChief(!snap.empty);
+      } catch (e) {
+        console.error('Error checking chief role:', e);
+        setIsChief(false);
+      }
+    };
+    checkChief();
+  }, [id]);
+
+  // Apply default filter once roles and reports are known
+  useEffect(() => {
+    if (defaultFilterApplied) return;
+    if (!auditReports || auditReports.length === 0) return;
+
+    if (isChief) {
+      setSelectedFilter('assigned');
+      setFilteredReports(applyFilters(auditReports, 'assigned', selectedMonth, selectedYear));
+      setDefaultFilterApplied(true);
+    } else if (isSupervisor) {
+      setSelectedFilter('rectifying');
+      setFilteredReports(applyFilters(auditReports, 'rectifying', selectedMonth, selectedYear));
+      setDefaultFilterApplied(true);
+    }
+  }, [isChief, isSupervisor, auditReports, applyFilters, selectedMonth, selectedYear, defaultFilterApplied]);
 
   useEffect(() => {
     const loadInboxData = async () => {
@@ -238,25 +296,29 @@ function Inbox() {
 
       {/* Filter Buttons */}
       <div className="filter-buttons-container">
+        {(isChief || !isSupervisor) && (
+          <button
+            className={`filter-button ${selectedFilter === 'assigned' ? 'active' : ''} ${isChief ? 'inbox-yellow' : ''}`}
+            onClick={() => {
+              setSelectedFilter('assigned');
+              const filteredReports = applyFilters(auditReports, 'assigned', selectedMonth, selectedYear);
+              setFilteredReports(filteredReports);
+            }}
+          >
+            {isChief ? 'Inbox' : `Assigned to chief (${applyFilters(auditReports, 'assigned', selectedMonth, selectedYear).length})`}
+            {!isChief && ''}
+            {isChief && ` (${applyFilters(auditReports, 'assigned', selectedMonth, selectedYear).length})`}
+          </button>
+        )}
         <button
-          className={`filter-button ${selectedFilter === 'assigned' ? 'active' : ''}`}
-          onClick={() => {
-            setSelectedFilter('assigned');
-            const filteredReports = applyFilters(auditReports, 'assigned', selectedMonth, selectedYear);
-            setFilteredReports(filteredReports);
-          }}
-        >
-          Assigned to chief ({applyFilters(auditReports, 'assigned', selectedMonth, selectedYear).length})
-        </button>
-        <button
-          className={`filter-button ${selectedFilter === 'rectifying' ? 'active' : ''}`}
+          className={`filter-button ${selectedFilter === 'rectifying' ? 'active' : ''} ${(!isChief && isSupervisor) ? 'inbox-green' : ''}`}
           onClick={() => {
             setSelectedFilter('rectifying');
             const filteredReports = applyFilters(auditReports, 'rectifying', selectedMonth, selectedYear);
             setFilteredReports(filteredReports);
           }}
         >
-          Rectifying by Supervisor ({applyFilters(auditReports, 'rectifying', selectedMonth, selectedYear).length})
+          {(!isChief && isSupervisor) ? 'Inbox' : 'Rectifying by Supervisor'} ({applyFilters(auditReports, 'rectifying', selectedMonth, selectedYear).length})
         </button>
         <button
           className={`filter-button ${selectedFilter === 'verifying' ? 'active' : ''}`}

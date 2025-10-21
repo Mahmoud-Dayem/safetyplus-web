@@ -17,7 +17,7 @@
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
 }
 
-.back-button, .home-button, .refresh-button {
+.back-button, .home-button, .refresh-button, .export-button {
   background: rgba(255, 255, 255, 0.1);
   border: none;
   border-radius: 8px;
@@ -26,7 +26,7 @@
   transition: all 0.3s ease;
 }
 
-.back-button:hover, .home-button:hover, .refresh-button:hover:not(:disabled) {
+.back-button:hover, .home-button:hover, .refresh-button:hover:not(:disabled), .export-button:hover:not(:disabled) {
   background: rgba(255, 255, 255, 0.2);
   transform: translateY(-2px);
 }
@@ -131,6 +131,46 @@
   border-color: #1a1a1a;
 }
 
+/* Supervisor Inbox (green) */
+.filter-button.inbox-green {
+  background: #28a745;
+  border-color: #28a745;
+  color: #fff;
+}
+.filter-button.inbox-green:hover {
+  background: #218838;
+  border-color: #218838;
+}
+.filter-button.inbox-green.active {
+  background: #28a745;
+  border-color: #28a745;
+  color: #fff;
+}
+.filter-button.inbox-green.active:hover {
+  background: #1e7e34;
+  border-color: #1e7e34;
+}
+
+/* Chief Inbox (yellow) */
+.filter-button.inbox-yellow {
+  background: #ffc107;
+  border-color: #ffc107;
+  color: #212529;
+}
+.filter-button.inbox-yellow:hover {
+  background: #e0a800;
+  border-color: #e0a800;
+}
+.filter-button.inbox-yellow.active {
+  background: #ffc107;
+  border-color: #ffc107;
+  color: #212529;
+}
+.filter-button.inbox-yellow.active:hover {
+  background: #d39e00;
+  border-color: #d39e00;
+}
+
 /* Filter button text responsive styles */
 .filter-text-full {
   display: inline;
@@ -184,6 +224,26 @@
   outline: none;
   border-color: #2c2c2c;
   box-shadow: 0 0 0 3px rgba(44, 44, 44, 0.1);
+}
+
+/* View toggle button */
+.toggle-view-button {
+  background: white;
+  border: 2px solid #dee2e6;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: #2c2c2c;
+  white-space: nowrap;
+}
+
+.toggle-view-button:hover {
+  background: #f8f9fa;
+  border-color: #adb5bd;
+  transform: translateY(-1px);
 }
 
 /* Reports Count */
@@ -352,6 +412,48 @@
   transform: scale(1.02);
 }
 
+/* Table View */
+.reports-table-wrapper {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  margin-top: 20px;
+  overflow-x: auto;
+}
+
+.reports-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.reports-table thead th {
+  background: #f8f9fa;
+  color: #2c2c2c;
+  font-weight: 700;
+  font-size: 13px;
+  text-align: left;
+  padding: 12px;
+  border-bottom: 2px solid #eee;
+}
+
+.reports-table tbody td {
+  padding: 12px;
+  border-bottom: 1px solid #f0f0f0;
+  color: #2c2c2c;
+  font-size: 13px;
+  vertical-align: top;
+}
+
+.reports-table tbody tr:hover {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+/* Make long descriptions wrap nicely */
+.reports-table td:nth-child(2) {
+  white-space: normal;
+  word-break: break-word;
+}
+
 /* Responsive Card Layout */
 @media (max-width: 768px) {
   .filter-buttons-container {
@@ -416,6 +518,73 @@
   
   .report-thumbnail {
     height: 100px;
+  }
+
+  /* Keep only Location, Description, Status on small screens */
+  .reports-table th:nth-child(3),
+  .reports-table th:nth-child(4),
+  .reports-table th:nth-child(5),
+  .reports-table td:nth-child(3),
+  .reports-table td:nth-child(4),
+  .reports-table td:nth-child(5) {
+    display: none;
+  }
+
+  .reports-table thead th,
+  .reports-table tbody td {
+    padding: 10px 8px;
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Fully avoid horizontal scroll on mobile */
+  .reports-table-wrapper {
+    overflow-x: hidden;
+  }
+
+  .reports-table {
+    table-layout: fixed;
+    width: 100%;
+  }
+
+  .reports-table thead th,
+  .reports-table tbody td {
+    padding: 8px 6px;
+    font-size: 12px;
+  }
+
+  /* Column widths: Location | Description | Status */
+  .reports-table th:nth-child(1),
+  .reports-table td:nth-child(1) {
+    width: 15%;
+    word-break: break-word;
+  }
+
+  .reports-table th:nth-child(2),
+  .reports-table td:nth-child(2) {
+    width: 65%;
+  }
+
+  .reports-table th:nth-child(6),
+  .reports-table td:nth-child(6) {
+    width: 15%;
+    white-space: nowrap;
+  }
+
+  /* Clamp description to 2 lines with ellipsis */
+  .reports-table td:nth-child(2) {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    line-clamp: 2;
+    overflow: hidden;
+  }
+
+  /* Slightly reduce badge size to fit */
+  .card-status-badge {
+    font-size: 10px;
+    padding: 3px 8px;
   }
 }
 

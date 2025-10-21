@@ -3,6 +3,8 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { updateDoc } from 'firebase/firestore';
  import { collection, getDocs, query, where,   setDoc,  doc, getDoc } from 'firebase/firestore'
+ import { colors } from '../constants/color';
+
 import { db } from '../firebase/firebaseConfig';
 
 import './AuditReportDetailsInbox.css';
@@ -21,6 +23,7 @@ const AuditReportDetailsInbox = () => {
   const [assignedDepartment, setAssignedDepartment] = useState('');
   const [isCompleted, setIsCompleted] = useState(false);
   const [markingComplete, setMarkingComplete] = useState(false);
+  const [isSupervisor, setIsSupervisor] = useState(false);
   const user = useSelector(state => state.auth.user);
 const navigate = useNavigate();
   const fetchMessages = useCallback(async () => {
@@ -80,16 +83,74 @@ const navigate = useNavigate();
     fetchSupervisors();
   }, [report.id, fetchMessages, user?.companyId, assignedDepartment]);
 
+  // Check if current user is a Supervisor from assigned_list/supervisors
+  useEffect(() => {
+    const checkSupervisor = async () => {
+      try {
+        if (!user?.companyId) {
+          setIsSupervisor(false);
+          return;
+        }
+        const supervisorsRef = doc(db, 'assigned_list', 'supervisors');
+        const supervisorsSnap = await getDoc(supervisorsRef);
+        if (!supervisorsSnap.exists()) {
+          setIsSupervisor(false);
+          return;
+        }
+        const data = supervisorsSnap.data();
+        const list = Array.isArray(data?.supervisors_id) ? data.supervisors_id : [];
+        const isSup = list.map(String).includes(String(user.companyId));
+        setIsSupervisor(isSup);
+      } catch (err) {
+        console.error('Error checking supervisor list:', err);
+        setIsSupervisor(false);
+      }
+    };
+    checkSupervisor();
+  }, [user?.companyId]);
+
   return (
     <div className="details-content">
+            {/* Header */}
+                  <div className="details-header">
+                      <button
+                          className="details-back-button"
+                          onClick={() => navigate(-1)}
+                          style={{ backgroundColor: colors.primary }}
+                      >
+                          <svg viewBox="0 0 24 24" fill="#FFFFFF" width="24" height="24">
+                              <path d="M19 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" />
+                          </svg>
+                      </button>
+                      <h1 className="details-title">Audit Report Details</h1>
+                      <button
+                          className="details-home-button"
+                          onClick={() => navigate('/home')}
+                      >
+                          <svg viewBox="0 0 24 24" fill="#FFFFFF" width="20" height="20">
+                              <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
+                          </svg>
+                      </button>
+                  </div>
       {/* Chief Badge */}
-      {true && (
-        <div className="chief-badge">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <svg viewBox="0 0 24 24" fill="white" width="20" height="20">
+      {isChief  && (
+        <div className="chief-status-banner">
+          <div className="chief-status-content">
+            <svg viewBox="0 0 24 24" fill="#fff" width="20" height="20">
               <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
             </svg>
-            <span style={{ color: 'white', fontSize: '16px', fontWeight: '600' }}>You are a Department Chief</span>
+            <span className="chief-status-text">You are a Department Chief</span>
+          </div>
+        </div>
+      )}
+      {/* Supervisor Badge (only if not Chief) */}
+      {!isChief && isSupervisor && (
+        <div className="chief-status-banner">
+          <div className="chief-status-content">
+            <svg viewBox="0 0 24 24" fill="#fff" width="20" height="20">
+              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+            </svg>
+            <span className="chief-status-text">You are a Supervisor</span>
           </div>
         </div>
       )}
@@ -204,7 +265,6 @@ const navigate = useNavigate();
                 value={selectedEmployee}
                 onChange={(e) => {
                   setSelectedEmployee(e.target.value);
-                  const selected = employeesUnderChief.find(emp => String(emp.emp_code) === e.target.value);
                  }}
                 disabled={loading || isCompleted}
               >
@@ -288,7 +348,7 @@ const navigate = useNavigate();
         {/* user  Input */}
         <div className="details-section">
           {
-            reportStatus === 'assigned' || reportStatus === 'rectifying' && (
+            (reportStatus === 'assigned' || reportStatus === 'rectifying') && (
               <>
                 <h3 className="section-title">Assignment Message</h3>
                 <div className="safety-officer-container">
@@ -315,10 +375,11 @@ const navigate = useNavigate();
 
 
       {/* Action Button - Fixed at Bottom */}
-      <div className="send-message-bottom">
-        {/* Show both buttons for chief users */}
-        {isChief ? (
-          <>
+      {!isCompleted && (
+        <div className="send-message-bottom">
+          {/* Show both buttons for chief users */}
+          {isChief ? (
+            <>
             <button
               className="send-message-button-bottom"
               onClick={async () => {
@@ -511,7 +572,8 @@ const navigate = useNavigate();
             {isCompleted ? 'Report Completed' : (markingComplete ? 'Marking Complete...' : 'Mark as Completed')}
           </button>
         )}
-      </div>
+        </div>
+      )}
     </div>
   );
 };

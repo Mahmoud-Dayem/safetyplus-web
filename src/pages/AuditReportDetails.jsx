@@ -2,10 +2,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useSelector } from 'react-redux';
-import { supabase } from './supabaseClient';
 import { colors } from '../constants/color';
 import './AuditReportDetails.css';
-import { collection, getDocs, query, where, orderBy, setDoc, addDoc, doc, getDoc } from 'firebase/firestore'
+import { collection, getDocs, query, orderBy, setDoc, doc, getDoc } from 'firebase/firestore'
 import { db } from '../firebase/firebaseConfig';
 
 const AuditReportDetails = () => {
@@ -15,7 +14,7 @@ const AuditReportDetails = () => {
     const [departments, setDepartments] = useState([]);
     const [selectedDepartment, setSelectedDepartment] = useState('');
     const [loading, setLoading] = useState(false);
-    const [chiefs, setChiefs] = useState({});
+    // const [chiefs, setChiefs] = useState({}); // Not used currently
     const [safetyOfficer, setSafetyOfficer] = useState('');
     const [sending, setSending] = useState(false);
     const [messages, setMessages] = useState([]);
@@ -466,7 +465,7 @@ const AuditReportDetails = () => {
  
                                     alert('Message sent successfully!');
                                     setSafetyOfficer(''); // Clear the input
-                                    fetchMessages(); // Refresh message history
+                                    navigate('/viewallauditreports'); // Navigate back to list after assignment
 
                                 } catch (error) {
                                     console.error('Error sending message:', error);
@@ -625,34 +624,29 @@ const AuditReportDetails = () => {
                                     return;
                                 }
 
-                                if (!safetyOfficer.trim()) {
-                                    alert('Please enter a message before sending.');
-                                    return;
-                                }
+                                // Allow reassignment without a comment; we'll use a default message if empty
 
                                 try {
                                     setSending(true);
 
-                                    // Get current messages and sent_to arrays from the report
-                                    const { data: currentReport, error: fetchError } = await supabase
-                                        .from('audit_reports')
-                                        .select('messages, sent_to')
-                                        .eq('id', report.id)
-                                        .single();
-
-                                    if (fetchError) {
-                                        console.error('Error fetching current report:', fetchError);
+                                    // Get current report data from Firestore
+                                    const reportRef = doc(db, 'audit_reports', report.id);
+                                    const reportSnap = await getDoc(reportRef);
+                                    if (!reportSnap.exists()) {
+                                        console.error('Error fetching current report: not found');
                                         alert('Failed to fetch current report data.');
                                         return;
                                     }
+                                    const currentReport = reportSnap.data();
 
-                                    // Get selected department info
-                                    const selectedDept = departments.find(d => d.dept_code === selectedDepartment);
+                                    // Get selected department info (selector stores dept_name)
+                                    const selectedDept = departments.find(d => d.dept_name === selectedDepartment);
 
                                     // Create new message object
+                                    const messageText = safetyOfficer.trim() || `Reassigned to ${selectedDept?.dept_name || selectedDepartment}`;
                                     const newMessage = {
                                         id: user?.displayName || user?.id || 'unknown',
-                                        message: safetyOfficer.trim(),
+                                        message: messageText,
                                         timestamp: new Date().toISOString()
                                     };
 
@@ -660,35 +654,26 @@ const AuditReportDetails = () => {
                                     const updatedMessages = currentReport.messages || [];
                                     updatedMessages.push(newMessage);
 
-                                    // Clear previous sent_to array and start fresh with new department's chief
+                                    // Reset sent_to to only the new department's chief
                                     const currentSentTo = [];
                                     const chiefCode = selectedDept?.chief_code;
-
-                                    // Add new chief_code to fresh sent_to array
                                     if (chiefCode) {
-                                        currentSentTo.push(parseInt(chiefCode));
+                                        currentSentTo.push(parseInt(chiefCode, 10));
                                     }
 
-                                    // Update the report with new messages array, fresh sent_to array, and new assigned department
-                                    const { error: updateError } = await supabase
-                                        .from('audit_reports')
-                                        .update({
-                                            messages: updatedMessages,
-                                            sent_to: currentSentTo,
-                                            assigned_department: selectedDepartment
-                                        })
-                                        .eq('id', report.id);
+                                    // Update the report in Firestore
+                                    const { updateDoc } = await import('firebase/firestore');
+                                    await updateDoc(reportRef, {
+                                        messages: updatedMessages,
+                                        send_to: currentSentTo,
+                                        assigned_department: selectedDepartment,
+                                        status: 'assigned'
+                                    });
 
-                                    if (updateError) {
-                                        console.error('Error updating report:', updateError);
-                                        alert('Failed to reassign report.');
-                                        return;
-                                    }
- 
                                     alert('Report reassigned successfully!');
                                     setSafetyOfficer(''); // Clear the input
                                     setIsReassigning(false); // Exit reassignment mode
-                                    fetchMessages(); // Refresh message history
+                                    navigate('/viewallauditreports'); // Navigate back to list after reassignment
 
                                 } catch (error) {
                                     console.error('Error reassigning report:', error);
@@ -697,7 +682,7 @@ const AuditReportDetails = () => {
                                     setSending(false);
                                 }
                             }}
-                            disabled={sending || !safetyOfficer.trim() || !selectedDepartment || selectedDepartment === assignedDepartment || isCompleted}
+                            disabled={sending || !selectedDepartment || selectedDepartment === assignedDepartment || isCompleted}
                         >
                             {isCompleted ? 'Report Completed' : (sending ? 'Reassigning...' : 'Reassign to Department')}
                         </button>
