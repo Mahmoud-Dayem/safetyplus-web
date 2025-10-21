@@ -174,10 +174,14 @@ const AuditReportDetails = () => {
                                             await setDoc(reportRef, {
                                                 ...currentData,
                                                 completed: true,
-                                                status: 'completed'
+                                                status: 'completed',
+                                                completed_at: new Date().toLocaleString(),
+                                                rectified_by: user?.displayName || user?.email || user?.id || 'unknown',
                                             });
                                             setIsCompleted(true);
                                             alert('Report marked as completed successfully!');
+                                            // Navigate back to previous page
+                                            navigate(-1);
                                         } catch (error) {
                                             console.error('Error marking as completed:', error);
                                             alert('An error occurred while marking as completed.');
@@ -293,7 +297,7 @@ const AuditReportDetails = () => {
                                 className="department-select"
                                 value={selectedDepartment}
                                 onChange={(e) => setSelectedDepartment(e.target.value)}
-                                disabled={loading || isCompleted || (reportStatus === 'assigned' && !isReassigning)}
+                                disabled={loading || isCompleted || reportStatus === 'verifying' || reportStatus === 'rectifying' || (reportStatus === 'assigned' && !isReassigning)}
                                 style={{
                                     borderColor: selectedDepartment ? colors.primary : colors.border,
                                     borderWidth: '2px',

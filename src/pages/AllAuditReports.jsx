@@ -32,7 +32,8 @@ function AllAuditReports() {
     if (statusFilter === 'pending') {
       filtered = filtered.filter(report => !report.completed && (!report.status || report.status === 'pending'));
     } else if (statusFilter === 'assigned') {
-      filtered = filtered.filter(report => !report.completed && report.status === 'assigned');
+      // Show both assigned and rectifying in this combined view
+      filtered = filtered.filter(report => !report.completed && (report.status === 'assigned' || report.status === 'rectifying'));
     } else if (statusFilter === 'verifying') {
       filtered = filtered.filter(report => !report.completed && report.status === 'verifying');
     } else if (statusFilter === 'completed') {
@@ -246,6 +247,7 @@ function AllAuditReports() {
                   'Status',
                   'Assigned Department',
                   'Completed At',
+                  'Rectified By',
                 ];
                 const escape = (val) => {
                   const str = (val ?? '').toString();
@@ -266,6 +268,7 @@ function AllAuditReports() {
                     displayStatus,
                     r?.assigned_department || '',
                     completedAt,
+                    r?.rectified_by || '',
                   ];
                 });
                 const csvContent = [headers, ...rows]
@@ -350,7 +353,7 @@ function AllAuditReports() {
             setFilteredReports(filteredReports);
           }}
         >
-          Assigned ({applyFilters(auditReports, 'assigned', selectedMonth, selectedYear).length})
+          Assigned/Rectifying ({applyFilters(auditReports, 'assigned', selectedMonth, selectedYear).length})
         </button>
         <button
           className={`filter-button ${selectedFilter === 'verifying' ? 'active' : ''}`}
@@ -532,6 +535,7 @@ function AllAuditReports() {
                     <th>Created At</th>
                     <th>Department</th>
                     <th>Status</th>
+                    <th>Completed At</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -551,6 +555,7 @@ function AllAuditReports() {
                         <td>
                           <span className={`card-status-badge ${displayStatus}`}>{displayStatus}</span>
                         </td>
+                        <td>{report.completed_at ? new Date(report.completed_at).toLocaleString() : '—'}</td>
                       </tr>
                     );
                   })}

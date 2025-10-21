@@ -320,6 +320,20 @@
   border: 1px solid #c3e6cb;
 }
 
+/* Verifying status style (to match details page theme) */
+.card-status-badge.verifying {
+  background: #f7b4b4;
+  color: #da0606;
+  border: 1px solid #c3e6cb;
+}
+
+/* Rectifying status style */
+.card-status-badge.rectifying {
+  background: #cce5ff;
+  color: #0b5ed7;
+  border: 1px solid #99ccff;
+}
+
 /* Clickable Card Area */
 .card-clickable-area {
   cursor: pointer;
@@ -524,9 +538,11 @@
   .reports-table th:nth-child(3),
   .reports-table th:nth-child(4),
   .reports-table th:nth-child(5),
+  .reports-table th:nth-child(7),
   .reports-table td:nth-child(3),
   .reports-table td:nth-child(4),
-  .reports-table td:nth-child(5) {
+  .reports-table td:nth-child(5),
+  .reports-table td:nth-child(7) {
     display: none;
   }
 

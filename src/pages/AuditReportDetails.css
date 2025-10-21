@@ -139,6 +139,18 @@
   border: 1px solid #c3e6cb;
 }
 
+.status-badge.verifying {
+  background: #f7b4b4;
+  color: #da0606;
+  border: 1px solid #f3a6a6;
+}
+
+.status-badge.rectifying {
+  background: #cce5ff;
+  color: #0b5ed7;
+  border: 1px solid #99ccff;
+}
+
 .assigned-department {
   font-weight: 500;
   text-transform: none;

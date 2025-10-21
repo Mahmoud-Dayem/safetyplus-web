@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { updateDoc } from 'firebase/firestore';
- import { collection, getDocs, query, where,   setDoc,  doc, getDoc } from 'firebase/firestore'
+ import { doc, getDoc } from 'firebase/firestore'
  import { colors } from '../constants/color';
 
 import { db } from '../firebase/firebaseConfig';
@@ -45,7 +45,7 @@ const navigate = useNavigate();
        } catch (err) {
       console.error('Error fetching messages from Firestore:', err);
     }
-  }, [report.id,assignedDepartment]);
+  }, [report.id]);
 
   useEffect(() => {
     const fetchSupervisors = async () => {
@@ -222,14 +222,58 @@ const navigate = useNavigate();
         {report.image_url && (
           <div className="details-section">
             <h3 className="section-title">Attached Image</h3>
-            <div className="image-container">
+            <div className="image-container shareable">
               <img
                 src={report.image_url}
                 alt="Audit report"
                 className="details-image"
-                onClick={() => window.open(report.image_url, '_blank')}
+                draggable={false}
+                onClick={(e) => { e.preventDefault(); }}
+                onContextMenu={(e) => { e.preventDefault(); }}
               />
-              <p className="image-caption">Click image to view full size</p>
+              <button
+                type="button"
+                className="image-share-button"
+                title="Share to WhatsApp"
+                onClick={async () => {
+                  const lines = [];
+                  if (report.location) lines.push(`Location: ${report.location}`);
+                  if (report.description) lines.push(`Description: ${report.description}`);
+                  const textMessage = lines.join('\n');
+                  try {
+                    // Try Web Share API with image file (mobile browsers like Chrome on Android)
+                    if (report.image_url && navigator.canShare) {
+                      const resp = await fetch(report.image_url, { mode: 'cors' });
+                      if (resp.ok) {
+                        const blob = await resp.blob();
+                        const mime = blob.type || 'image/jpeg';
+                        const ext = mime.split('/')[1] || 'jpg';
+                        const file = new File([blob], `audit-report.${ext}`, { type: mime });
+                        if (navigator.canShare({ files: [file] })) {
+                          await navigator.share({
+                            files: [file],
+                            text: textMessage,
+                            title: 'Audit Report'
+                          });
+                          return;
+                        }
+                      }
+                    }
+                    // Fallback: WhatsApp text share with link
+                    const fallbackText = textMessage + (report.image_url ? `\n${report.image_url}` : '');
+                    const url = `https://wa.me/?text=${encodeURIComponent(fallbackText)}`;
+                    window.open(url, '_blank');
+                  } catch (err) {
+                    console.error('Share failed:', err);
+                    alert('Unable to share. Your browser may not support file sharing.');
+                  }
+                }}
+              >
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="#fff" aria-hidden="true">
+                  <path d="M20.52 3.48A11.85 11.85 0 0012.07 0C5.6 0 .35 5.25.35 11.72c0 2.06.54 4.07 1.57 5.86L0 24l6.62-1.9a11.68 11.68 0 005.45 1.39h.01c6.47 0 11.72-5.25 11.72-11.72 0-3.13-1.22-6.07-3.28-8.29zM12.07 21.3h-.01a9.6 9.6 0 01-4.89-1.34l-.35-.21-3.93 1.12 1.1-3.83-.23-.39a9.56 9.56 0 01-1.47-5.09c0-5.28 4.29-9.57 9.57-9.57a9.54 9.54 0 016.77 2.8 9.54 9.54 0 012.8 6.77c0 5.29-4.29 9.57-9.56 9.57zm5.47-7.16c-.3-.15-1.78-.88-2.06-.98-.28-.1-.49-.15-.7.15-.2.3-.8.98-.98 1.18-.18.2-.36.22-.66.07-.3-.15-1.25-.46-2.38-1.47-.88-.79-1.48-1.77-1.66-2.07-.18-.3-.02-.46.13-.61.13-.13.3-.34.45-.52.15-.18.2-.3.3-.51.1-.2.05-.38-.02-.53-.07-.15-.7-1.69-.96-2.31-.25-.6-.5-.52-.7-.53l-.6-.01c-.2 0-.53.08-.81.38-.28.3-1.06 1.04-1.06 2.54 0 1.5 1.09 2.95 1.24 3.15.15.2 2.15 3.28 5.22 4.6.73.31 1.3.49 1.74.62.73.23 1.4.2 1.93.12.59-.09 1.78-.73 2.03-1.43.25-.7.25-1.3.18-1.43-.07-.13-.27-.2-.56-.35z"/>
+                </svg>
+              </button>
+              <p className="image-caption">Share image via WhatsApp</p>
             </div>
           </div>
         )}
@@ -266,7 +310,7 @@ const navigate = useNavigate();
                 onChange={(e) => {
                   setSelectedEmployee(e.target.value);
                  }}
-                disabled={loading || isCompleted}
+                disabled={loading || isCompleted || reportStatus === 'verifying'}
               >
                 <option value="">Choose Supervisor...</option>
                 {employeesUnderChief.map((employee) => (
@@ -449,7 +493,7 @@ const navigate = useNavigate();
                   setSending(false);
                 }
               }}
-              disabled={sending ||  !selectedEmployee || isCompleted}
+              disabled={sending ||  !selectedEmployee || isCompleted || reportStatus === 'verifying'}
             >
               {isCompleted ? 'Report Completed' : (sending ? 'Sending...' : 'Assign to Supervisor')}
             </button>
@@ -492,7 +536,9 @@ const navigate = useNavigate();
                   // Update the report with new message and status to 'verifying'
                   await updateDoc(reportRef, {
                     messages: updatedMessages,
-                    status: 'verifying'
+                    status: 'verifying',
+                    completed_at: new Date().toLocaleString(),
+                    rectified_by: user?.displayName || user?.email || user?.id || 'unknown',
                   });
 
                   alert('Report marked as completed and waiting for verification!');
@@ -552,7 +598,9 @@ const navigate = useNavigate();
                 // Update the report with new message and status to 'verifying'
                 await updateDoc(reportRef, {
                   messages: updatedMessages,
-                  status: 'verifying'
+                  status: 'verifying',
+                  completed_at: new Date().toLocaleString(),
+                  rectified_by: user?.displayName || user?.email || user?.id || 'unknown',
                 });
 
                 alert('Report marked as completed and waiting for verification!');

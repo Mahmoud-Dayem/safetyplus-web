@@ -23,6 +23,7 @@ function Inbox() {
   const [isChief, setIsChief] = useState(false);
   const [isSupervisor, setIsSupervisor] = useState(false);
   const [defaultFilterApplied, setDefaultFilterApplied] = useState(false);
+  const [viewMode, setViewMode] = useState('table'); // 'card' | 'table'
 
   const applyFilters = useCallback((reports, statusFilter, monthFilter, yearFilter) => {
     let filtered = reports;
@@ -262,6 +263,71 @@ function Inbox() {
         </div>
         <div className="header-buttons">
           <button
+            className="export-button"
+            onClick={() => {
+              try {
+                const toExport = auditReports || [];
+                const headers = [
+                  'Report ID',
+                  'Date',
+                  'Created At',
+                  'Location',
+                  'Description',
+                  'Status',
+                  'Assigned Department',
+                  'Completed At',
+                  'Rectified By',
+                ];
+                const escape = (val) => {
+                  const str = (val ?? '').toString();
+                  return '"' + str.replace(/"/g, '""') + '"';
+                };
+                const rows = toExport.map((r) => {
+                  const displayStatus = r?.completed ? 'completed' : (r?.status || 'pending');
+                  const formattedDate = r?.date ? new Date(r.date).toLocaleDateString() : '';
+                  const formattedCreated = r?.created_at ? new Date(r.created_at).toLocaleString() : '';
+                  const completedAt = r?.completed_at ? new Date(r.completed_at).toLocaleString() : '';
+                  return [
+                    r?.id || '',
+                    formattedDate,
+                    formattedCreated,
+                    r?.location || '',
+                    r?.description || '',
+                    displayStatus,
+                    r?.assigned_department || '',
+                    completedAt,
+                    r?.rectified_by || '',
+                  ];
+                });
+                const csvContent = [headers, ...rows]
+                  .map(cols => cols.map(escape).join(','))
+                  .join('\r\n');
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                const today = new Date();
+                const yyyy = today.getFullYear();
+                const mm = String(today.getMonth() + 1).padStart(2, '0');
+                const dd = String(today.getDate()).padStart(2, '0');
+                link.download = `InboxReports_${yyyy}-${mm}-${dd}.csv`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+              } catch (err) {
+                console.error('Export error:', err);
+                alert('Failed to export file.');
+              }
+            }}
+            title="Export inbox reports to Excel"
+            disabled={!auditReports || auditReports.length === 0}
+          >
+            <svg viewBox="0 0 24 24" fill="#FFFFFF" width="20" height="20">
+              <path d="M5 20h14v-2H5m14-9h-4V3H9v6H5l7 7 7-7z" />
+            </svg>
+          </button>
+          <button
             className="refresh-button"
             onClick={async () => {
               setRefreshing(true);
@@ -397,72 +463,126 @@ function Inbox() {
               <option value="12">December</option>
             </select>
           </div>
+
+          {/* View toggle button */}
+          <div className="filter-group">
+            <label className="filter-label">View:</label>
+            <button
+              type="button"
+              className="toggle-view-button"
+              onClick={() => setViewMode(prev => (prev === 'card' ? 'table' : 'card'))}
+              title={viewMode === 'card' ? 'Switch to Table View' : 'Switch to Card View'}
+            >
+              {viewMode === 'card' ? 'Table View' : 'Card View'}
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Reports Cards */}
+      {/* Reports: Cards or Table */}
       {filteredReports.length === 0 ? (
         <div className="empty-state">
           <h3>No {selectedFilter === 'all' ? 'Assigned Reports' : selectedFilter.charAt(0).toUpperCase() + selectedFilter.slice(1) + ' Reports'} Found</h3>
           <p>{selectedFilter === 'all' ? 'No reports have been assigned to you yet.' : `No ${selectedFilter} reports found in your assignments.`}</p>
         </div>
       ) : (
-        <div className="reports-cards-container">
-          {filteredReports.map((report, index) => (
-            <div key={index} className="audit-report-card">
-              <div className="card-status-bar">
-                <span className={`card-status-badge ${report.status}`}>
-                  { report.status }
-                </span>
-              </div>
-              <div 
-                className="card-clickable-area"
-                onClick={() => navigate('/audit-report-details-assigned', { state: { report } })}
-              >
-                <div className="card-header">
- 
-                  <div className="report-date">
-                    {report.date ? new Date(report.date).toLocaleDateString() : 'N/A'}
+        <>
+          {viewMode === 'card' ? (
+            <div className="reports-cards-container">
+              {filteredReports.map((report, index) => (
+                <div key={index} className="audit-report-card">
+                  <div className="card-status-bar">
+                    <span className={`card-status-badge ${report.completed ? 'completed' : (report.status || 'pending')}`}>
+                      {report.completed ? 'completed' : (report.status || 'pending')}
+                    </span>
                   </div>
-                </div>
-                
-                <div className="card-content">
-                  <div className="location-section">
-                    <svg viewBox="0 0 24 24" fill="#666" width="16" height="16">
-                      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-                    </svg>
-                    <span className="location-text">{report.location || 'N/A'}</span>
+                  <div 
+                    className="card-clickable-area"
+                    onClick={() => navigate('/audit-report-details-assigned', { state: { report } })}
+                  >
+                    <div className="card-header">
+                      <div className="report-date">
+                        {report.date ? new Date(report.date).toLocaleDateString() : 'N/A'}
+                      </div>
+                    </div>
+                    
+                    <div className="card-content">
+                      <div className="location-section">
+                        <svg viewBox="0 0 24 24" fill="#666" width="16" height="16">
+                          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                        </svg>
+                        <span className="location-text">{report.location || 'N/A'}</span>
+                      </div>
+                      
+                      <div className="description-section">
+                        <p className="description-text">
+                          {report.description ? 
+                            (report.description.length > 80 ? 
+                              report.description.substring(0, 80) + '...' : 
+                              report.description
+                            ) : 'No description available'
+                          }
+                        </p>
+                      </div>
+                    </div>
                   </div>
                   
-                  <div className="description-section">
-                    <p className="description-text">
-                      {report.description ? 
-                        (report.description.length > 80 ? 
-                          report.description.substring(0, 80) + '...' : 
-                          report.description
-                        ) : 'No description available'
-                      }
-                    </p>
-                  </div>
+                  {report.image_url && (
+                    <div className="card-image">
+                      <img 
+                        src={report.image_url} 
+                        alt="Audit report" 
+                        className="report-thumbnail"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          window.open(report.image_url, '_blank');
+                        }}
+                      />
+                    </div>
+                  )}
                 </div>
-              </div>
-              
-              {report.image_url && (
-                <div className="card-image">
-                  <img 
-                    src={report.image_url} 
-                    alt="Audit report" 
-                    className="report-thumbnail"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      window.open(report.image_url, '_blank');
-                    }}
-                  />
-                </div>
-              )}
+              ))}
             </div>
-          ))}
-        </div>
+          ) : (
+            <div className="reports-table-wrapper">
+              <table className="reports-table">
+                <thead>
+                  <tr>
+                    <th>Location</th>
+                    <th>Description</th>
+                    <th>Date</th>
+                    <th>Created At</th>
+                    <th>Department</th>
+                    <th>Status</th>
+                    <th>Completed At</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredReports.map((report) => {
+                    const displayStatus = report.completed ? 'completed' : (report.status || 'pending');
+                    return (
+                      <tr key={report.id}
+                          className="report-row"
+                          onClick={() => navigate('/audit-report-details-assigned', { state: { report } })}
+                          style={{ cursor: 'pointer' }}
+                      >
+                        <td>{report.location || 'N/A'}</td>
+                        <td>{report.description || 'No description'}</td>
+                        <td>{report.date ? new Date(report.date).toLocaleDateString() : 'N/A'}</td>
+                        <td>{report.created_at ? new Date(report.created_at).toLocaleString() : 'N/A'}</td>
+                        <td>{report.assigned_department || '—'}</td>
+                        <td>
+                          <span className={`card-status-badge ${displayStatus}`}>{displayStatus}</span>
+                        </td>
+                        <td>{report.completed_at ? new Date(report.completed_at).toLocaleString() : '—'}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
       )}
     </div>
   )

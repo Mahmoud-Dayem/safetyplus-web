@@ -53,6 +53,7 @@ export async function signup({ displayName, email, password, companyId }) {
     await updateProfile(user, {
       displayName: displayName,
     });
+    // Primary user doc keyed by companyId (legacy app expectation)
     await setDoc(doc(db, "users", companyId), {
       uid: user.uid,
       email,
@@ -63,6 +64,24 @@ export async function signup({ displayName, email, password, companyId }) {
       isPrivileged: false,
 
     });
+
+    // Secondary mapping keyed by uid to support secure rules and fast lookup
+    try {
+      await setDoc(
+        doc(db, "users_by_uid", user.uid),
+        {
+          uid: user.uid,
+          email,
+          displayName: displayName.toUpperCase(),
+          companyId,
+          companyIdNum: parseInt(companyId, 10),
+          createdAt: new Date().toISOString(),
+        },
+        { merge: true }
+      );
+    } catch (e) {
+      console.warn("Failed to write users_by_uid mapping:", e);
+    }
 
 
 
@@ -85,7 +104,7 @@ export async function signin({ email, password, companyId }) {
   const auth = getAuth();
   try {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
-    const user = userCredential.user;
+  const user = userCredential.user;
  
     // Fetch user document by company ID
     const docRef = doc(db, "users", companyIdString);
@@ -110,6 +129,23 @@ export async function signin({ email, password, companyId }) {
  
     // Verify user email matches the company ID
     if (userId === user.uid) {
+      // Maintain users_by_uid mapping for rules and lookups
+      try {
+        await setDoc(
+          doc(db, "users_by_uid", user.uid),
+          {
+            uid: user.uid,
+            email: user.email,
+            displayName: user.displayName || null,
+            companyId: storedCompanyId,
+            companyIdNum: parseInt(storedCompanyId, 10),
+            updatedAt: new Date().toISOString(),
+          },
+          { merge: true }
+        );
+      } catch (e) {
+        console.warn("Failed to upsert users_by_uid mapping on signin:", e);
+      }
        return {
         status: 'ok',
         error: false,
