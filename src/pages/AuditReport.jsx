@@ -4,35 +4,23 @@ import { colors } from '../constants/color';
 import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import './AuditReport.css';
-import { collection, addDoc, serverTimestamp,setDoc,doc } from 'firebase/firestore';
+import { setDoc, doc } from 'firebase/firestore';
 import { db } from '../firebase/firebaseConfig';
 
 function AuditReport() {
   const navigate = useNavigate();
   const user = useSelector((state) => state.auth.user);
-  // const id = user?.companyId;
 
-  // useEffect(() => {
-  //   const fetchEmployees = async () => {
-  //     const { error } = await supabase
-  //       .from('employees')     // 👈 your table name
-  //       .select('*')
-  //       .eq('emp_code', id)
-  //       .single();           // fetch all columns
-
-  //     if (error) {
-  //       console.error('Error fetching data:', error)
-  //     } 
-  //   }
-
-  //   fetchEmployees()
-  // }, [id])
-
-
+  const department = user?.department;
+  const fullName = user?.fullName;
+  const jobTitle = user?.jobTitle;
   const [formData, setFormData] = useState({
     location: '',
     description: '',
+    corrective_action: '',
+    incident_type: '',
     date: '',
+    
   });
   const [selectedImage, setSelectedImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
@@ -40,6 +28,8 @@ function AuditReport() {
   const [loading, setLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [showImageOptions, setShowImageOptions] = useState(false);
+  const incident_type_list = ['Unsafe Condition', 'Unsafe Act', 'Near Miss', 'Environment Concern', 'Management Audit'];
+
 
   const updateFormData = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -113,6 +103,10 @@ function AuditReport() {
   const validateForm = () => {
     const newErrors = {};
 
+    if (!formData.incident_type) {
+      newErrors.incident_type = 'Please select an incident type';
+    }
+
     if (!formData.location.trim()) {
       newErrors.location = 'Location is required';
     }
@@ -123,6 +117,10 @@ function AuditReport() {
 
     if (!formData.date) {
       newErrors.date = 'Date is required';
+    }
+
+    if (!formData.corrective_action.trim()) {
+      newErrors.corrective_action = 'Correction action is required';
     }
 
     setErrors(newErrors);
@@ -139,11 +137,14 @@ function AuditReport() {
         let imageUrl = null;
 
 
+        // Generate unique docId first (will be used for both Firestore doc and image filename)
+        const docId = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
         // Upload image to Supabase Storage if selected
         if (selectedImage) {
           setUploadProgress(20);
           const fileExt = selectedImage.name.split('.').pop();
-          const fileName = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
+          const fileName = `${docId}_${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
           const filePath = `${user?.companyId}/${fileName}`;
 
           setUploadProgress(40);
@@ -185,20 +186,25 @@ function AuditReport() {
           user_name: user?.displayName?.toUpperCase() || 'UNKNOWN',
           image_url: imageUrl,
           created_at: new Date().toLocaleString('en-US', { timeZone: 'Asia/Riyadh', hour12: false }),
+          // Employee-specific fields from Redux
+          department: department || '',
+          full_name: fullName || '',
+          job_title: jobTitle || '',
           // New fields
           status: 'pending',
           messages: [], // array of map/object
           send_to: [], // array of string
           assigned_department: '', // string
-          completed:false,
-          completed_at:null,
-          rectified_by:''
+          completed: false,
+          completed_at: null,
+          rectified_by: '',
+          corrective_action: formData.corrective_action,
+          incident_type: formData.incident_type,
 
         };
-        const docId = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
         // await firestore.collection('audit_reports').add(auditReportData);
         // await firestore.collection('audit_reports').doc(docId).set(auditReportData);
-        await setDoc(doc(db, 'audit_reports', docId), auditReportData);     
+        await setDoc(doc(db, 'audit_reports', docId), auditReportData);
 
         setUploadProgress(100);
         // Show alert and navigate to home after user clicks OK
@@ -240,6 +246,48 @@ function AuditReport() {
       </div>
 
       <div className="audit-report-form">
+        {/* Incident Type Selector */}
+        <div className="form-group">
+          <label style={{ color: colors.text, marginBottom: '10px' }}>
+            Incident Type *
+          </label>
+          <div className="incident-type-selector">
+            {incident_type_list.map((type) => (
+              <button
+                key={type}
+                type="button"
+                className={`incident-type-button ${
+                  formData.incident_type === type ? 'active' : ''
+                }`}
+                onClick={() => updateFormData('incident_type', type)}
+                style={{
+                  backgroundColor:
+                    formData.incident_type === type
+                      ? colors.primary
+                      : '#f0f0f0',
+                  color:
+                    formData.incident_type === type
+                      ? 'white'
+                      : colors.text,
+                  borderColor:
+                    formData.incident_type === type
+                      ? colors.primary
+                      : errors.incident_type
+                      ? colors.error
+                      : '#d1d1d6',
+                }}
+              >
+                {type}
+              </button>
+            ))}
+          </div>
+          {errors.incident_type && (
+            <span className="error-text" style={{ color: colors.error }}>
+              {errors.incident_type}
+            </span>
+          )}
+        </div>
+
         <div className="form-group">
           <label htmlFor="location" style={{ color: colors.text }}>
             Location *
@@ -291,7 +339,7 @@ function AuditReport() {
             placeholder="Enter detailed description of the audit..."
             value={formData.description}
             onChange={(e) => updateFormData('description', e.target.value)}
-            rows={5}
+            rows={2}
             style={{
               borderColor: errors.description ? colors.error : colors.border
             }}
@@ -299,6 +347,26 @@ function AuditReport() {
           {errors.description && (
             <span className="error-text" style={{ color: colors.error }}>
               {errors.description}
+            </span>
+          )}
+        </div>
+        <div className="form-group">
+          <label htmlFor="corrective_action" style={{ color: colors.text }}>
+            Corrective Action *
+          </label>
+          <textarea
+            id="correction-action"
+            placeholder="Enter Corrective Action..."
+            value={formData.corrective_action}
+            onChange={(e) => updateFormData('corrective_action', e.target.value)}
+            rows={2}
+            style={{
+              borderColor: errors.corrective_action ? colors.error : colors.border
+            }}
+          />
+          {errors.corrective_action && (
+            <span className="error-text" style={{ color: colors.error }}>
+              {errors.corrective_action}
             </span>
           )}
         </div>

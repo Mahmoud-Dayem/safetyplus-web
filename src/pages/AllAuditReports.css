@@ -372,6 +372,13 @@
   text-transform: uppercase;
   letter-spacing: 0.3px;
 }
+.employee-department {
+  color: #666;
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
 
 .report-date {
   color: #666;
@@ -454,12 +461,26 @@
   padding: 12px;
   border-bottom: 1px solid #f0f0f0;
   color: #2c2c2c;
-  font-size: 13px;
+  font-size: 12px;
   vertical-align: top;
 }
 
 .reports-table tbody tr:hover {
   background: rgba(0, 0, 0, 0.02);
+}
+
+/* Report Row Styles */
+.report-row {
+  transition: all 0.2s ease;
+}
+
+.report-row td {
+  font-size: 14px !important; /* Control font size for all row data - Desktop */
+  font-weight: 100;
+}
+
+.report-row:hover {
+  background: rgba(44, 44, 44, 0.04);
 }
 
 /* Make long descriptions wrap nicely */
@@ -551,6 +572,11 @@
     padding: 10px 8px;
     font-size: 12px;
   }
+
+  /* Responsive font size for tablet */
+  .report-row td {
+    font-size: 12px !important;
+  }
 }
 
 @media (max-width: 480px) {
@@ -595,6 +621,11 @@
     -webkit-box-orient: vertical;
     line-clamp: 2;
     overflow: hidden;
+  }
+
+  /* Responsive font size for mobile */
+  .report-row td {
+    font-size: 10px !important;
   }
 
   /* Slightly reduce badge size to fit */

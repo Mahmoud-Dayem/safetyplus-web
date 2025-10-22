@@ -52,9 +52,9 @@ const AuditReportDetails = () => {
                 const deptQuery = query(collection(db, 'departments'), orderBy('dept_name', 'asc'));
                 const deptSnapshot = await getDocs(deptQuery);
                 const deptData = deptSnapshot.docs.map(doc => doc.data());
-               
+
                 setDepartments(deptData || []);
-              } catch (err) {
+            } catch (err) {
                 console.error('Error fetching departments:', err);
             } finally {
                 setLoading(false);
@@ -112,8 +112,8 @@ const AuditReportDetails = () => {
                         <div className="info-row">
                             <span className="info-label">Employee Name:</span>
                             <span className="info-value">
-                                {report.employee ?
-                                    `${report.employee.first_name} ${report.employee.last_name}` :
+                                {report.full_name ?
+                                    report.full_name :
                                     'N/A'
                                 }
                             </span>
@@ -121,12 +121,16 @@ const AuditReportDetails = () => {
                         <div className="info-row">
                             <span className="info-label">Job Title:</span>
                             <span className="info-value">
-                                {report.employee?.job_title || 'N/A'}
+                                {report?.job_title || 'N/A'}
                             </span>
                         </div>
                         <div className="info-row">
                             <span className="info-label">Employee Code:</span>
                             <span className="employee-code-badge">{report.emp_code || 'N/A'}</span>
+                        </div>
+                        <div className="info-row">
+                            <span className="info-label">Department:</span>
+                            <span className="employee-code-badge">{report.department || 'N/A'}</span>
                         </div>
                     </div>
 
@@ -145,7 +149,7 @@ const AuditReportDetails = () => {
                                 )}
                             </span>
                         </div>
-                        {reportStatus === 'assigned' && !isCompleted && (
+                        {reportStatus === 'pending' && !isCompleted && (
                             <div className="mark-complete-container">
                                 <button
                                     className="mark-complete-button"
@@ -242,12 +246,32 @@ const AuditReportDetails = () => {
                         </div>
                     </div>
 
+                    {/* Incident Type */}
+                    <div className="details-section">
+                        <h3 className="section-title">Incident Type</h3>
+                        <div className="info-row">
+                            <span className="info-value incident-type-badge">
+                                {report.incident_type || 'N/A'}
+                            </span>
+                        </div>
+                    </div>
+
                     {/* Description */}
                     <div className="details-section">
                         <h3 className="section-title">Description</h3>
                         <div className="description-content">
                             <p className="full-description">
                                 {report.description || 'No description available'}
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Corrective Action */}
+                    <div className="details-section">
+                        <h3 className="section-title">Corrective Action</h3>
+                        <div className="description-content">
+                            <p className="full-description">
+                                {report.corrective_action || 'No corrective action specified'}
                             </p>
                         </div>
                     </div>
@@ -261,9 +285,11 @@ const AuditReportDetails = () => {
                                     src={report.image_url}
                                     alt="Audit report"
                                     className="details-image"
-                                    onClick={() => window.open(report.image_url, '_blank')}
+                                    draggable={false}
+                                    onClick={(e) => { e.preventDefault(); }}
+                                    onContextMenu={(e) => { e.preventDefault(); }}
                                 />
-                                <p className="image-caption">Click image to view full size</p>
+                     
                             </div>
                         </div>
                     )}
@@ -367,7 +393,7 @@ const AuditReportDetails = () => {
                                     <div key={index} className="message-item">
                                         <div className="message-header">
                                             <span className="message-sender">Sender: {msg.id}</span>
-                               
+
                                         </div>
                                         <div className="message-content">{msg.message}</div>
                                         {msg.department && (
@@ -393,7 +419,7 @@ const AuditReportDetails = () => {
                                 value={safetyOfficer}
                                 onChange={(e) => {
                                     setSafetyOfficer(e.target.value);
-                                 }}
+                                }}
                                 placeholder={isCompleted ? "Report completed - messaging disabled" : " Safety officer message..."}
                                 disabled={isCompleted}
                             />
@@ -444,12 +470,12 @@ const AuditReportDetails = () => {
 
                                     // Update sent_to array with chief_code
                                     const currentSentTo = currentReport.send_to || [];
-                                     const chiefCode = selectedDept?.chief_code;
- 
+                                    const chiefCode = selectedDept?.chief_code;
+
                                     // Add chief_code to sent_to array if it exists and isn't already there
                                     if (chiefCode && !currentSentTo.includes(parseInt(chiefCode))) {
                                         currentSentTo.push(parseInt(chiefCode));
-                                     }
+                                    }
 
                                     // Update the report with new messages array, sent_to array, status, and assigned department
 
@@ -466,7 +492,7 @@ const AuditReportDetails = () => {
                                         alert('Failed to send message.');
                                         return;
                                     }
- 
+
                                     alert('Message sent successfully!');
                                     setSafetyOfficer(''); // Clear the input
                                     navigate('/viewallauditreports'); // Navigate back to list after assignment
@@ -478,7 +504,7 @@ const AuditReportDetails = () => {
                                     setSending(false);
                                 }
                             }}
-                            disabled={sending  || !selectedDepartment || isCompleted}
+                            disabled={sending || !selectedDepartment || isCompleted}
                         >
                             {isCompleted ? 'Report Completed' : (sending ? 'Sending...' : 'Assign Department')}
                         </button>
@@ -546,7 +572,7 @@ const AuditReportDetails = () => {
                             >
                                 {sending ? 'Processing...' : 'Accept'}
                             </button>
-                            
+
                             <button
                                 className="reject-button"
                                 onClick={async () => {

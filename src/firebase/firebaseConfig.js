@@ -53,8 +53,20 @@ export async function signup({ displayName, email, password, companyId }) {
     await updateProfile(user, {
       displayName: displayName,
     });
+    // Prevent companyId hijacking: block if companyId already claimed
+    const targetUserDocRef = doc(db, "users", companyId);
+    const targetUserDoc = await getDoc(targetUserDocRef);
+    if (targetUserDoc.exists()) {
+      // Revert auth session and abort
+      await getAuth().signOut();
+      return {
+        status: 'error',
+        error: true,
+        message: 'This Company ID is already in use. Please contact your administrator or use your own Company ID.',
+      };
+    }
     // Primary user doc keyed by companyId (legacy app expectation)
-    await setDoc(doc(db, "users", companyId), {
+    await setDoc(targetUserDocRef, {
       uid: user.uid,
       email,
       displayName: displayName.toUpperCase(),

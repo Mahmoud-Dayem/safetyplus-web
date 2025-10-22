@@ -1,10 +1,13 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { removeUser } from "../helper/authStorage";
 import { colors } from '../constants/color';
 import { useNavigate } from 'react-router-dom';
-import { logout } from '../store/authSlice';
+import { logout, updateUserProfile } from '../store/authSlice';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../firebase/firebaseConfig';
 import './HomeScreen.css';
+
 const HomeScreen = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -12,6 +15,39 @@ const HomeScreen = () => {
 
   const name = user?.displayName;
   const id = user?.companyId;
+
+  // Fetch employee document and update Redux store
+  useEffect(() => {
+    const fetchUserDocument = async () => {
+      if (!id) {
+         return;
+      }
+
+      try {
+        const userDocRef = doc(db, 'employees_collection', id);
+        const userDocSnap = await getDoc(userDocRef);
+
+        if (userDocSnap.exists()) {
+          const empData = userDocSnap.data();
+ 
+          // Combine first_name and last_name with space between
+          const fullName = `${empData.first_name || ''} ${empData.last_name || ''}`.trim();
+
+          // Dispatch to Redux to store department, fullName, and jobTitle
+          dispatch(updateUserProfile({
+            department: empData.department || null,
+            fullName: fullName || null,
+            jobTitle: empData.job_title || null,
+          }));
+        } else {
+         }
+      } catch (error) {
+        console.error('Error fetching user document:', error);
+      }
+    };
+
+    fetchUserDocument();
+  }, [id, dispatch]);
 
 
   const navigateToStopCard = () => {
@@ -173,6 +209,7 @@ const HomeScreen = () => {
         </div>
 
         <div className="footer-section">
+ 
           <p className="footer-text">
             Conduct safety observations and generate reports
           </p>

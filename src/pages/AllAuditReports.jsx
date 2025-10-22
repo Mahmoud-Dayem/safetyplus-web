@@ -62,34 +62,18 @@ function AllAuditReports() {
 
   const getAuditReports = useCallback(async () => {
     try {
-      // Fetch audit reports from Firestore
+      // Fetch audit reports from Firestore (each report now contains full_name, department, job_title)
       const reportsSnapshot = await getDocs(query(
         collection(db, 'audit_reports'),
         orderBy('date', 'desc')
       ));
       const reportsData = reportsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-      // Fetch employees from Firestore (use employees_collection)
-      const employeesSnapshot = await getDocs(collection(db, 'employees_collection'));
-      const employeesData = employeesSnapshot.docs.map(doc => doc.data());
-
-      // Create employee lookup map
-      const employeeMap = {};
-      employeesData.forEach(emp => {
-        employeeMap[emp.emp_code] = emp;
-      });
-
-      // Merge reports with employee data
-      const reportsWithEmployees = reportsData.map(report => ({
-        ...report,
-        employee: employeeMap[report.emp_code] || null
-      }));
-
-      setAuditReports(reportsWithEmployees);
+      setAuditReports(reportsData);
       // Apply default filters (pending status, all months, current year)
-      const filteredReports = applyFilters(reportsWithEmployees, 'pending', 'All', '2025');
+      const filteredReports = applyFilters(reportsData, 'pending', 'All', '2025');
       setFilteredReports(filteredReports);
-      return reportsWithEmployees;
+      return reportsData;
     } catch (err) {
       console.error('Error fetching audit reports:', err);
       setError('Failed to load audit reports');
@@ -240,14 +224,16 @@ function AllAuditReports() {
                 const toExport = auditReports || [];
                 const headers = [
                   'Report ID',
-                  'Date',
-                  'Created At',
+                  'Incident Type',
+                  'Requested date',
+                  'Closed date',
+                  'Employee',
+                  'Employee Name',
+                  'Employee Department',
                   'Location',
                   'Description',
+                  'Corrective Action',
                   'Status',
-                  'Assigned Department',
-                  'Completed At',
-                  'Rectified By',
                 ];
                 const escape = (val) => {
                   const str = (val ?? '').toString();
@@ -257,18 +243,19 @@ function AllAuditReports() {
                 const rows = toExport.map((r) => {
                   const displayStatus = r?.completed ? 'completed' : (r?.status || 'pending');
                   const formattedDate = r?.date ? new Date(r.date).toLocaleDateString() : '';
-                  const formattedCreated = r?.created_at ? new Date(r.created_at).toLocaleString() : '';
                   const completedAt = r?.completed_at ? new Date(r.completed_at).toLocaleString() : '';
                   return [
                     r?.id || '',
+                    r?.incident_type || '',
                     formattedDate,
-                    formattedCreated,
+                    completedAt,
+                    r?.emp_code || '',
+                    r?.user_name || r?.full_name || '',
+                    r?.department || '',
                     r?.location || '',
                     r?.description || '',
+                    r?.correction_action || '',
                     displayStatus,
-                    r?.assigned_department || '',
-                    completedAt,
-                    r?.rectified_by || '',
                   ];
                 });
                 const csvContent = [headers, ...rows]
@@ -305,10 +292,12 @@ function AllAuditReports() {
             onClick={async () => {
               setRefreshing(true);
               try {
-                await getAuditReports();
-                // Re-apply current filters after refresh
-                const filteredReports = applyFilters(auditReports, selectedFilter, selectedMonth, selectedYear);
-                setFilteredReports(filteredReports);
+                const freshReports = await getAuditReports();
+                // Re-apply current filters to the fresh data
+                if (freshReports) {
+                  const filteredReports = applyFilters(freshReports, selectedFilter, selectedMonth, selectedYear);
+                  setFilteredReports(filteredReports);
+                }
               } catch (error) {
                 console.error('Error refreshing data:', error);
               } finally {
@@ -471,14 +460,18 @@ function AllAuditReports() {
                     <div className="card-header">
                       <div className="employee-info">
                         <div className="employee-name">
-                          {report.employee ?
-                            `${report.employee.first_name} ${report.employee.last_name}` :
-                            `Code: ${report.emp_code || 'N/A'}`
+                          { 
+                            `${report.full_name} Code: ${report.emp_code || 'N/A'}`
                           }
                         </div>
-                        {report.employee && (
+                        {report.job_title && (
                           <div className="employee-job-title">
-                            {report.employee.job_title}
+                            {report.job_title}
+                          </div>
+                        )}
+                        {report.department && (
+                          <div className="employee-department">
+                            {report.department}
                           </div>
                         )}
                       </div>
@@ -529,13 +522,17 @@ function AllAuditReports() {
               <table className="reports-table">
                 <thead>
                   <tr>
+                    <th>Incident Type</th>
+                    <th>Date</th>
+                    <th>Completed At</th>
+                    <th>Employee ID</th>
+                    <th>Employee Name</th>
+                    <th>Employee Department</th>
                     <th>Location</th>
                     <th>Description</th>
-                    <th>Date</th>
-                    <th>Created At</th>
-                    <th>Department</th>
+                    <th>Corrective Action</th>
+                    <th>Assigned Department</th>
                     <th>Status</th>
-                    <th>Completed At</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -547,15 +544,19 @@ function AllAuditReports() {
                           onClick={() => navigate('/audit-report-details', { state: { report } })}
                           style={{ cursor: 'pointer' }}
                       >
+                        <td>{report.incident_type || 'N/A'}</td>
+                        <td>{report.date ? new Date(report.date).toLocaleDateString() : 'N/A'}</td>
+                        <td>{report.completed_at ? new Date(report.completed_at).toLocaleString() : '—'}</td>
+                        <td>{report.emp_code || 'N/A'}</td>
+                        <td>{report.user_name || report.full_name || 'N/A'}</td>
+                        <td>{report.department || 'N/A'}</td>
                         <td>{report.location || 'N/A'}</td>
                         <td>{report.description || 'No description'}</td>
-                        <td>{report.date ? new Date(report.date).toLocaleDateString() : 'N/A'}</td>
-                        <td>{report.created_at ? new Date(report.created_at).toLocaleString() : 'N/A'}</td>
-                        <td>{report.assigned_department || '—'}</td>
+                        <td>{report.correction_action || 'N/A'}</td>
+                        <td>{report.assigned_department || 'N/A'}</td>
                         <td>
                           <span className={`card-status-badge ${displayStatus}`}>{displayStatus}</span>
                         </td>
-                        <td>{report.completed_at ? new Date(report.completed_at).toLocaleString() : '—'}</td>
                       </tr>
                     );
                   })}

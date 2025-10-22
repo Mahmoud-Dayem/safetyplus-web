@@ -20,9 +20,13 @@ const authSlice = createSlice({
         displayName: firebaseUser.displayName,
         photoURL: firebaseUser.photoURL,
         token: firebaseUser.token,
-        companyId:firebaseUser.companyId,
-        isAdmin:firebaseUser.isAdmin,
-        isPrivileged:firebaseUser.isPrivileged,
+        companyId: firebaseUser.companyId,
+        isAdmin: firebaseUser.isAdmin,
+        isPrivileged: firebaseUser.isPrivileged,
+        // Employee-specific fields from employees_collection
+        department: firebaseUser.department || null,
+        fullName: firebaseUser.fullName || null,
+        jobTitle: firebaseUser.jobTitle || null,
       };
       state.isAuthenticated = true;
     },
@@ -31,12 +35,23 @@ const authSlice = createSlice({
       state.isAuthenticated = false;
     },
     setAuthenticated: (state, action) => {
-      state.isAuthenticated = action.payload;
+    state.isAuthenticated = action.payload;
     },
     saveUser: (state, action) => {
       state.user = action.payload;
+    },
+    updateUserProfile: (state, action) => {
+      // Update specific employee fields fetched from employees_collection
+      if (state.user) {
+        state.user = {
+          ...state.user,
+          department: action.payload.department || state.user.department,
+          fullName: action.payload.fullName || state.user.fullName,
+          jobTitle: action.payload.jobTitle || state.user.jobTitle,
+        };
+      }
     }
   }});
 
-export const { login, logout, setAuthenticated,saveUser } = authSlice.actions;
+export const { login, logout, setAuthenticated, saveUser, updateUserProfile } = authSlice.actions;
 export default authSlice.reducer;
