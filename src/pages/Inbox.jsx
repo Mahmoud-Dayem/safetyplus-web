@@ -27,7 +27,7 @@ function Inbox() {
 
   const applyFilters = useCallback((reports, statusFilter, monthFilter, yearFilter) => {
     let filtered = reports;
-    
+
     // Apply status filter
     if (statusFilter === 'pending') {
       filtered = filtered.filter(report => !report.completed && (!report.status || report.status === 'pending'));
@@ -40,7 +40,7 @@ function Inbox() {
     } else if (statusFilter === 'rectifying') {
       filtered = filtered.filter(report => !report.completed && report.status === 'rectifying');
     }
-    
+
     // Apply date filters
     if (yearFilter !== 'all' || monthFilter !== 'All') {
       filtered = filtered.filter(report => {
@@ -48,20 +48,20 @@ function Inbox() {
         const reportDate = new Date(report.date);
         const reportYear = reportDate.getFullYear();
         const reportMonth = reportDate.getMonth() + 1; // 1-12
-        
+
         const yearMatch = yearFilter === 'all' || reportYear === parseInt(yearFilter);
         const monthMatch = monthFilter === 'All' || reportMonth === parseInt(monthFilter);
-        
+
         return yearMatch && monthMatch;
       });
     }
-    
+
     return filtered;
   }, []);
 
   const getAuditReports = useCallback(async () => {
- 
-    
+
+
     try {
       // Fetch audit reports from Firestore where send_to array contains current user's id
       const reportsQuery = query(
@@ -71,36 +71,11 @@ function Inbox() {
       const reportsSnapshot = await getDocs(reportsQuery);
       const reportsData = reportsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
  
- 
-
-      // Fetch employees data
-      // const { data: employeesData, error: employeesError } = await supabase
-      //   .from('employees')
-      //   .select('emp_code, first_name, last_name, job_title');
-
-      // if (employeesError) {
-      //   console.error('Error fetching employees:', employeesError);
-      //   setError('Failed to load employee data');
-      //   return [];
-      // }
-
-      // // Create employee lookup map
-      // const employeeMap = {};
-      // employeesData.forEach(emp => {
-      //   employeeMap[emp.emp_code] = emp;
-      // });
-
-      // // Merge reports with employee data
-      // const reportsWithEmployees = reportsData.map(report => ({
-      //   ...report,
-      //   employee: employeeMap[report.emp_code] || null
-      // }));
-
       setAuditReports(reportsData);
-  // Tentative default; may be adjusted after role detection below
-  const filteredReports = applyFilters(reportsData, 'assigned', 'All', '2025');
-  setFilteredReports(filteredReports);
-       return reportsData;
+      // Tentative default; may be adjusted after role detection below
+      const filteredReports = applyFilters(reportsData, 'assigned', 'All', '2025');
+      setFilteredReports(filteredReports);
+      return reportsData;
     } catch (err) {
       console.error('Error fetching inbox reports:', err);
       setError('Failed to load inbox reports');
@@ -169,7 +144,7 @@ function Inbox() {
         setLoading(true);
         // For Inbox, any authenticated user can see their assigned reports
         setIsAuthorized(true);
-        
+
         // Fetch assigned reports for current user
         await getAuditReports();
       } catch (err) {
@@ -211,15 +186,15 @@ function Inbox() {
   }
 
   // Check authorization after data is loaded
-  if(!isAuthorized){
+  if (!isAuthorized) {
 
-    return(
+    return (
       <div className="unauthorized-container">
         <div className="unauthorized-content">
           <div className="unauthorized-icon">
             <svg viewBox="0 0 24 24" fill="#dc3545" width="80" height="80">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-              <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+              <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z" />
             </svg>
           </div>
           <h1 className="unauthorized-title">Access Denied</h1>
@@ -229,7 +204,7 @@ function Inbox() {
           <p className="unauthorized-submessage">
             Please contact your administrator if you believe this is an error.
           </p>
-          <button 
+          <button
             className="unauthorized-button"
             onClick={() => navigate('/home')}
           >
@@ -251,7 +226,7 @@ function Inbox() {
           style={{ backgroundColor: colors.primary }}
         >
           <svg viewBox="0 0 24 24" fill="#FFFFFF" width="24" height="24">
-            <path d="M19 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+            <path d="M19 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" />
           </svg>
         </button>
         <div className="header-title-section">
@@ -332,11 +307,14 @@ function Inbox() {
             onClick={async () => {
               setRefreshing(true);
               try {
-                await getAuditReports();
+                const freshReports = await getAuditReports();
+                if (freshReports) {
+                  const filteredReports = applyFilters(freshReports, selectedFilter, selectedMonth, selectedYear);
+                  setFilteredReports(filteredReports);
+                }
                 // Re-apply current filters after refresh
-                const filteredReports = applyFilters(auditReports, selectedFilter, selectedMonth, selectedYear);
-                setFilteredReports(filteredReports);
-              } catch (error) {
+                // const filteredReports = applyFilters(auditReports, selectedFilter, selectedMonth, selectedYear);
+               } catch (error) {
                 console.error('Error refreshing data:', error);
               } finally {
                 setRefreshing(false);
@@ -346,7 +324,7 @@ function Inbox() {
             title="Refresh Data"
           >
             <svg viewBox="0 0 24 24" fill="#FFFFFF" width="20" height="20" className={refreshing ? 'spinning' : ''}>
-              <path d="M17.65,6.35C16.2,4.9 14.21,4 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20C15.73,20 18.84,17.45 19.73,14H17.65C16.83,16.33 14.61,18 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6C13.66,6 15.14,6.69 16.22,7.78L13,11H20V4L17.65,6.35Z"/>
+              <path d="M17.65,6.35C16.2,4.9 14.21,4 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20C15.73,20 18.84,17.45 19.73,14H17.65C16.83,16.33 14.61,18 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6C13.66,6 15.14,6.69 16.22,7.78L13,11H20V4L17.65,6.35Z" />
             </svg>
           </button>
           <button
@@ -354,7 +332,7 @@ function Inbox() {
             onClick={() => navigate('/home')}
           >
             <svg viewBox="0 0 24 24" fill="#FFFFFF" width="20" height="20">
-              <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+              <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
             </svg>
           </button>
         </div>
@@ -417,12 +395,12 @@ function Inbox() {
         >
           All ({applyFilters(auditReports, 'all', selectedMonth, selectedYear).length})
         </button>
-        
+
         {/* Date Filters in same row */}
         <div className="date-filters-inline">
           <div className="filter-group">
             <label className="filter-label">Year:</label>
-            <select 
+            <select
               className="date-filter-select"
               value={selectedYear}
               onChange={(e) => {
@@ -436,10 +414,10 @@ function Inbox() {
               <option value="2026">2026</option>
             </select>
           </div>
-          
+
           <div className="filter-group">
             <label className="filter-label">Month:</label>
-            <select 
+            <select
               className="date-filter-select"
               value={selectedMonth}
               onChange={(e) => {
@@ -496,7 +474,7 @@ function Inbox() {
                       {report.completed ? 'completed' : (report.status || 'pending')}
                     </span>
                   </div>
-                  <div 
+                  <div
                     className="card-clickable-area"
                     onClick={() => navigate('/audit-report-details-assigned', { state: { report } })}
                   >
@@ -505,20 +483,20 @@ function Inbox() {
                         {report.date ? new Date(report.date).toLocaleDateString() : 'N/A'}
                       </div>
                     </div>
-                    
+
                     <div className="card-content">
                       <div className="location-section">
                         <svg viewBox="0 0 24 24" fill="#666" width="16" height="16">
-                          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
                         </svg>
                         <span className="location-text">{report.location || 'N/A'}</span>
                       </div>
-                      
+
                       <div className="description-section">
                         <p className="description-text">
-                          {report.description ? 
-                            (report.description.length > 80 ? 
-                              report.description.substring(0, 80) + '...' : 
+                          {report.description ?
+                            (report.description.length > 80 ?
+                              report.description.substring(0, 80) + '...' :
                               report.description
                             ) : 'No description available'
                           }
@@ -526,12 +504,12 @@ function Inbox() {
                       </div>
                     </div>
                   </div>
-                  
+
                   {report.image_url && (
                     <div className="card-image">
-                      <img 
-                        src={report.image_url} 
-                        alt="Audit report" 
+                      <img
+                        src={report.image_url}
+                        alt="Audit report"
                         className="report-thumbnail"
                         onClick={(e) => {
                           e.stopPropagation();
@@ -562,9 +540,9 @@ function Inbox() {
                     const displayStatus = report.completed ? 'completed' : (report.status || 'pending');
                     return (
                       <tr key={report.id}
-                          className="report-row"
-                          onClick={() => navigate('/audit-report-details-assigned', { state: { report } })}
-                          style={{ cursor: 'pointer' }}
+                        className="report-row"
+                        onClick={() => navigate('/audit-report-details-assigned', { state: { report } })}
+                        style={{ cursor: 'pointer' }}
                       >
                         <td>{report.location || 'N/A'}</td>
                         <td>{report.description || 'No description'}</td>

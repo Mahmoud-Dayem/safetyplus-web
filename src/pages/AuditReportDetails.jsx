@@ -161,6 +161,19 @@ const AuditReportDetails = () => {
                                         if (!confirmed) {
                                             return; // User cancelled
                                         }
+                                        if (!safetyOfficer.trim()) {
+                                            // Highlight the input field
+                                            const inputField = document.getElementById('safety-officer-input');
+                                            if (inputField) {
+                                                inputField.focus();
+                                                inputField.classList.add('highlight-required');
+                                                setTimeout(() => {
+                                                    inputField.classList.remove('highlight-required');
+                                                }, 3000);
+                                            }
+                                            return;
+                                        }
+
                                         try {
                                             setMarkingComplete(true);
                                             // Update Firestore document for this report
@@ -197,18 +210,9 @@ const AuditReportDetails = () => {
                                 >
                                     {markingComplete ? 'Marking Complete...' : 'Mark as Completed'}
                                 </button>
-                                <button
-                                    className="reassign-button"
-                                    onClick={() => {
-                                        setIsReassigning(!isReassigning);
-                                        if (!isReassigning) {
-                                            // Reset selected department to current assigned when starting reassignment
-                                            setSelectedDepartment(assignedDepartment);
-                                        }
-                                    }}
-                                >
-                                    {isReassigning ? 'Cancel Reassignment' : 'Reassign Department'}
-                                </button>
+
+
+
                             </div>
                         )}
                         {isCompleted && (
@@ -289,7 +293,7 @@ const AuditReportDetails = () => {
                                     onClick={(e) => { e.preventDefault(); }}
                                     onContextMenu={(e) => { e.preventDefault(); }}
                                 />
-                     
+
                             </div>
                         </div>
                     )}
@@ -337,6 +341,21 @@ const AuditReportDetails = () => {
                                     </option>
                                 ))}
                             </select>
+
+                            {reportStatus === 'assigned' && (
+                                <button
+                                    className="reassign-button"
+                                    onClick={() => {
+                                        setIsReassigning(!isReassigning);
+                                        if (!isReassigning) {
+                                            // Reset selected department to current assigned when starting reassignment
+                                            setSelectedDepartment(assignedDepartment);
+                                        }
+                                    }}
+                                >
+                                    {isReassigning ? 'Cancel Reassignment' : 'Reassign Department'}
+                                </button>
+                            )}
 
                             {isCompleted && (
                                 <div className="completion-notice-dept">
@@ -520,6 +539,19 @@ const AuditReportDetails = () => {
                             <button
                                 className="accept-button"
                                 onClick={async () => {
+
+                                    if (!safetyOfficer.trim()) {
+                                        // Highlight the input field
+                                        const inputField = document.getElementById('safety-officer-input');
+                                        if (inputField) {
+                                            inputField.focus();
+                                            inputField.classList.add('highlight-required');
+                                            setTimeout(() => {
+                                                inputField.classList.remove('highlight-required');
+                                            }, 3000);
+                                        }
+                                    }
+
                                     try {
                                         setSending(true);
 

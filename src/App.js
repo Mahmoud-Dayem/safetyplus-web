@@ -31,6 +31,17 @@ const ProtectedRoute = ({ children }) => {
 function App() {
   const dispatch = useDispatch();
   const [loading, setLoading] = useState(true);
+  const user = useSelector(state => state.auth.user);
+
+  // Update browser tab title with user name globally
+  useEffect(() => {
+    if (user) {
+      const userName = user?.displayName || user?.fullName || user?.email || 'User';
+      document.title = `SafetyPlus - ${userName}`;
+    } else {
+      document.title = 'SafetyPlus';
+    }
+  }, [user]);
 
   // Check if app is running as PWA
   useEffect(() => {

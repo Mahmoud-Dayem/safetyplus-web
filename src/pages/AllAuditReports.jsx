@@ -334,16 +334,7 @@ function AllAuditReports() {
         >
           Pending ({applyFilters(auditReports, 'pending', selectedMonth, selectedYear).length})
         </button>
-        <button
-          className={`filter-button ${selectedFilter === 'assigned' ? 'active' : ''}`}
-          onClick={() => {
-            setSelectedFilter('assigned');
-            const filteredReports = applyFilters(auditReports, 'assigned', selectedMonth, selectedYear);
-            setFilteredReports(filteredReports);
-          }}
-        >
-          Assigned/Rectifying ({applyFilters(auditReports, 'assigned', selectedMonth, selectedYear).length})
-        </button>
+
         <button
           className={`filter-button ${selectedFilter === 'verifying' ? 'active' : ''}`}
           onClick={() => {
@@ -353,6 +344,16 @@ function AllAuditReports() {
           }}
         >
           Waiting for Verification ({applyFilters(auditReports, 'verifying', selectedMonth, selectedYear).length})
+        </button>
+                <button
+          className={`filter-button ${selectedFilter === 'assigned' ? 'active' : ''}`}
+          onClick={() => {
+            setSelectedFilter('assigned');
+            const filteredReports = applyFilters(auditReports, 'assigned', selectedMonth, selectedYear);
+            setFilteredReports(filteredReports);
+          }}
+        >
+          Assigned/Rectifying ({applyFilters(auditReports, 'assigned', selectedMonth, selectedYear).length})
         </button>
         <button
           className={`filter-button ${selectedFilter === 'completed' ? 'active' : ''}`}
