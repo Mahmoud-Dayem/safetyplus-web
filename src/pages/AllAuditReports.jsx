@@ -222,6 +222,7 @@ function AllAuditReports() {
             onClick={() => {
               try {
                 const toExport = auditReports || [];
+                // Static headers (messages removed); include chief/supervisor comments
                 const headers = [
                   'Report ID',
                   'Incident Type',
@@ -230,11 +231,17 @@ function AllAuditReports() {
                   'Employee',
                   'Employee Name',
                   'Employee Department',
-                  'Location',
+                  'Location Description',
                   'Description',
                   'Corrective Action',
-                  'Status',
+                  'Responsible Department',
+                  'Department Head',
+                  'Department Head Comm',
+                  'Responsible Department Supervisor',
+                  'Department Supervisor Comment',
                 ];
+                // Final status column
+                headers.push('Status');
                 const escape = (val) => {
                   const str = (val ?? '').toString();
                   // Escape double quotes by doubling them, wrap in quotes
@@ -244,7 +251,7 @@ function AllAuditReports() {
                   const displayStatus = r?.completed ? 'completed' : (r?.status || 'pending');
                   const formattedDate = r?.date ? new Date(r.date).toLocaleDateString() : '';
                   const completedAt = r?.completed_at ? new Date(r.completed_at).toLocaleString() : '';
-                  return [
+                  const base = [
                     r?.id || '',
                     r?.incident_type || '',
                     formattedDate,
@@ -255,8 +262,15 @@ function AllAuditReports() {
                     r?.location || '',
                     r?.description || '',
                     r?.correction_action || '',
-                    displayStatus,
+                    r?.assigned_department || '',
+                    r?.assigned_chief || '',
+                    r?.chief_comment || '',
+                    r?.assigned_supervisor || '',
+                    r?.supervisor_comment || '',
                   ];
+                  
+                  base.push(displayStatus);
+                  return base;
                 });
                 const csvContent = [headers, ...rows]
                   .map(cols => cols.map(escape).join(','))
@@ -533,6 +547,8 @@ function AllAuditReports() {
                     <th>Description</th>
                     <th>Corrective Action</th>
                     <th>Assigned Department</th>
+                    <th>Assigned Chief</th>
+                    <th>Assigned Supervisor</th>
                     <th>Status</th>
                   </tr>
                 </thead>
@@ -555,6 +571,8 @@ function AllAuditReports() {
                         <td>{report.description || 'No description'}</td>
                         <td>{report.correction_action || 'N/A'}</td>
                         <td>{report.assigned_department || 'N/A'}</td>
+                        <td>{report.assigned_chief || 'N/A'}</td>
+                        <td>{report.assigned_supervisor || 'N/A'}</td>
                         <td>
                           <span className={`card-status-badge ${displayStatus}`}>{displayStatus}</span>
                         </td>

@@ -474,11 +474,19 @@ const AuditReportDetailsInbox = () => {
                     // Ensure all values in currentSentTo are integers
                     currentSentTo = currentSentTo.map(val => parseInt(val, 10));
 
+                    // Determine supervisor name for assigned_supervisor field
+                    const supervisor = (Array.isArray(employeesUnderChief) ? employeesUnderChief : []).find(
+                      (e) => String(e.emp_code) === String(selectedEmployee)
+                    );
+                    const supervisorName = supervisor?.emp_name || supervisor?.name || String(selectedEmployee);
+
                     // Update the report with new message and status to 'rectifying'
                     await updateDoc(reportRef, {
                       messages: updatedMessages,
                       send_to: currentSentTo,
-                      status: 'rectifying'
+                      status: 'rectifying',
+                      assigned_supervisor: supervisorName,
+                      chief_comment: safetyOfficer.trim()
                     });
 
                     alert('Report sent to supervisor successfully!');
@@ -539,6 +547,7 @@ const AuditReportDetailsInbox = () => {
                       status: 'verifying',
                       completed_at: new Date().toLocaleString(),
                       rectified_by: user?.displayName || user?.email || user?.id || 'unknown',
+                      chief_comment: safetyOfficer.trim()
                     });
 
                     alert('Report marked as completed and waiting for verification!');
@@ -605,7 +614,8 @@ const AuditReportDetailsInbox = () => {
                     // Update the report with new message and change status back to assigned
                     await updateDoc(reportRef, {
                       messages: updatedMessages,
-                      status: 'pending'
+                      status: 'pending',
+                      chief_comment: safetyOfficer.trim()
                     });
 
                     alert('Report rejected and sent back to chief for revision.');
@@ -683,6 +693,7 @@ const AuditReportDetailsInbox = () => {
                       status: 'verifying',
                       completed_at: new Date().toLocaleString(),
                       rectified_by: user?.displayName || user?.email || user?.id || 'unknown',
+                      supervisor_comment: safetyOfficer.trim()
                     });
 
                     alert('Report marked as completed and waiting for verification!');
@@ -750,7 +761,8 @@ const AuditReportDetailsInbox = () => {
                     // Update the report with new message and change status back to assigned
                     await updateDoc(reportRef, {
                       messages: updatedMessages,
-                      status: 'assigned'
+                      status: 'assigned',
+                      supervisor_comment: safetyOfficer.trim()
                     });
 
                     alert('Report rejected and sent back to safety officer for revision.');

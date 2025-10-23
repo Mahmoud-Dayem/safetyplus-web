@@ -24,6 +24,7 @@ const AuditReportDetails = () => {
     const [markingComplete, setMarkingComplete] = useState(false);
     const [isReassigning, setIsReassigning] = useState(false);
     const user = useSelector(state => state.auth.user);
+    const [assignedChief, setAssignedChief] = useState('');
 
     const fetchMessages = useCallback(async () => {
         try {
@@ -64,6 +65,12 @@ const AuditReportDetails = () => {
         fetchMessages();
         fetchDepartments();
     }, [report.id, fetchMessages]);
+
+    // Update assignedChief when selectedDepartment changes
+    useEffect(() => {
+        const selected = departments.find(d => d.dept_name === selectedDepartment);
+        setAssignedChief(selected ? selected.chief_name : '');
+    }, [selectedDepartment, departments]);
 
     if (!report) {
         return (
@@ -449,7 +456,7 @@ const AuditReportDetails = () => {
             </div>
 
 
-            {/* Send Message Button - Fixed at Bottom */}
+            {/* Assign to department Send Message Button - Fixed at Bottom */}
             {
                 reportStatus === 'pending' && !isCompleted && (
                     <div className="send-message-bottom">
@@ -499,12 +506,16 @@ const AuditReportDetails = () => {
                                     // Update the report with new messages array, sent_to array, status, and assigned department
 
                                     try {
+                                        console.log('===========assignedChief==============');
+                                        console.log(assignedChief);
+                                        console.log('====================================');
                                         await setDoc(doc(db, 'audit_reports', report.id), {
                                             ...currentReport,
                                             messages: updatedMessages,
                                             send_to: currentSentTo,
                                             status: 'assigned',
-                                            assigned_department: selectedDepartment
+                                            assigned_department: selectedDepartment,
+                                            assigned_chief: assignedChief,
                                         });
                                     } catch (updateError) {
                                         console.error('Error updating report:', updateError);
@@ -729,7 +740,8 @@ const AuditReportDetails = () => {
                                         messages: updatedMessages,
                                         send_to: currentSentTo,
                                         assigned_department: selectedDepartment,
-                                        status: 'assigned'
+                                        status: 'assigned',
+                                        assigned_chief: assignedChief,
                                     });
 
                                     alert('Report reassigned successfully!');
