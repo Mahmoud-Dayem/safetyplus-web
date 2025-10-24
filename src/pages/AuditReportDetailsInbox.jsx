@@ -58,15 +58,23 @@ const AuditReportDetailsInbox = () => {
       setLoading(true);
       try {
 
-        const deptRef = doc(db, 'departments', assignedDepartment);
+        const deptRef = doc(db, 'departments', 'all_departments');
         const deptSnap = await getDoc(deptRef);
         if (deptSnap.exists()) {
-          const deptData = deptSnap.data();
-          const isChiefInDepartments = String(deptData.chief_code) === String(user?.companyId);
-          setIsChief(isChiefInDepartments);
-
-          setEmployeesUnderChief(isChiefInDepartments && Array.isArray(deptData.supervisors) ? deptData.supervisors : []);
-
+          const allDeptData = deptSnap.data();
+          // Find the specific department by name from the departments object
+          const deptData = Object.values(allDeptData.departments || {}).find(dept => 
+            dept.dept_name === assignedDepartment
+          );
+          
+          if (deptData) {
+            const isChiefInDepartments = String(deptData.chief_code) === String(user?.companyId);
+            setIsChief(isChiefInDepartments);
+            setEmployeesUnderChief(isChiefInDepartments && Array.isArray(deptData.supervisors) ? deptData.supervisors : []);
+          } else {
+            setIsChief(false);
+            setEmployeesUnderChief([]);
+          }
         } else {
           setIsChief(false);
           setEmployeesUnderChief([]);

@@ -14,8 +14,8 @@ function AllAuditReports() {
   const navigate = useNavigate();
   const user = useSelector((state) => state.auth.user);
   const id = user?.companyId;
-  const [selectedMonth, setSelectedMonth] = useState('All');
-  const [selectedYear, setSelectedYear] = useState('2025');
+  const [selectedMonth, setSelectedMonth] = useState(String(new Date().getMonth() + 1));
+  const [selectedYear, setSelectedYear] = useState(String(new Date().getFullYear()));
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isAuthorized, setIsAuthorized] = useState(false);
@@ -70,8 +70,10 @@ function AllAuditReports() {
       const reportsData = reportsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
       setAuditReports(reportsData);
-      // Apply default filters (pending status, all months, current year)
-      const filteredReports = applyFilters(reportsData, 'pending', 'All', '2025');
+      // Apply default filters (pending status, current month, current year)
+      const currentMonth = String(new Date().getMonth() + 1);
+      const currentYear = String(new Date().getFullYear())
+      const filteredReports = applyFilters(reportsData, 'pending', currentMonth, currentYear);
       setFilteredReports(filteredReports);
       return reportsData;
     } catch (err) {
@@ -437,7 +439,7 @@ function AllAuditReports() {
           </div>
 
           {/* View toggle button */}
-          <div className="filter-group">
+          {/* <div className="filter-group">
             <label className="filter-label">View:</label>
             <button
               type="button"
@@ -447,7 +449,7 @@ function AllAuditReports() {
             >
               {viewMode === 'card' ? 'Table View' : 'Card View'}
             </button>
-          </div>
+          </div> */}
         </div>
       </div>
 
@@ -457,82 +459,9 @@ function AllAuditReports() {
           <h3>No {selectedFilter === 'all' ? 'Audit Reports' : selectedFilter.charAt(0).toUpperCase() + selectedFilter.slice(1) + ' Reports'} Found</h3>
           <p>{selectedFilter === 'all' ? 'No audit reports have been submitted yet.' : `No ${selectedFilter} reports found. Try selecting a different filter.`}</p>
         </div>
-      ) : (
-        <>
-          {viewMode === 'card' ? (
-            <div className="reports-cards-container">
-              {filteredReports.map((report, index) => (
-                <div key={index} className="audit-report-card">
-                  <div className="card-status-bar">
-                    <span className={`card-status-badge ${report.completed ? 'completed' : (report.status || 'pending')}`}>
-                      {report.completed ? 'completed' : (report.status || 'pending')}
-                    </span>
-                  </div>
-                  <div
-                    className="card-clickable-area"
-                    onClick={() => navigate('/audit-report-details', { state: { report } })}
-                  >
-                    <div className="card-header">
-                      <div className="employee-info">
-                        <div className="employee-name">
-                          { 
-                            `${report.full_name} Code: ${report.emp_code || 'N/A'}`
-                          }
-                        </div>
-                        {report.job_title && (
-                          <div className="employee-job-title">
-                            {report.job_title}
-                          </div>
-                        )}
-                        {report.department && (
-                          <div className="employee-department">
-                            {report.department}
-                          </div>
-                        )}
-                      </div>
-                      <div className="report-date">
-                        {report.date ? new Date(report.date).toLocaleDateString() : 'N/A'}
-                      </div>
-                    </div>
-
-                    <div className="card-content">
-                      <div className="location-section">
-                        <svg viewBox="0 0 24 24" fill="#666" width="16" height="16">
-                          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
-                        </svg>
-                        <span className="location-text">{report.location || 'N/A'}</span>
-                      </div>
-
-                      <div className="description-section">
-                        <p className="description-text">
-                          {report.description ?
-                            (report.description.length > 80 ?
-                              report.description.substring(0, 80) + '...' :
-                              report.description
-                            ) : 'No description available'
-                          }
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {report.image_url && (
-                    <div className="card-image">
-                      <img
-                        src={report.image_url}
-                        alt="Audit report"
-                        className="report-thumbnail"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          window.open(report.image_url, '_blank');
-                        }}
-                      />
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          ) : (
+      ) : 
+         
+          
             <div className="reports-table-wrapper">
               <table className="reports-table">
                 <thead>
@@ -582,9 +511,9 @@ function AllAuditReports() {
                 </tbody>
               </table>
             </div>
-          )}
-        </>
-      )}
+          
+        
+      }
     </div>
   )
 }

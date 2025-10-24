@@ -11,8 +11,10 @@ function Inbox() {
   const navigate = useNavigate();
   const user = useSelector((state) => state.auth.user);
   const id = user?.companyId;
-  const [selectedMonth, setSelectedMonth] = useState('All');
-  const [selectedYear, setSelectedYear] = useState('2025');
+  // const [selectedMonth, setSelectedMonth] = useState('All');
+  const [selectedMonth, setSelectedMonth] = useState(String(new Date().getMonth() + 1));
+
+  const [selectedYear, setSelectedYear] = useState(String(new Date().getFullYear()));
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isAuthorized, setIsAuthorized] = useState(false);
@@ -70,10 +72,13 @@ function Inbox() {
       );
       const reportsSnapshot = await getDocs(reportsQuery);
       const reportsData = reportsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
- 
+
       setAuditReports(reportsData);
       // Tentative default; may be adjusted after role detection below
-      const filteredReports = applyFilters(reportsData, 'assigned', 'All', '2025');
+      const currentMonth = String(new Date().getMonth() + 1);
+       const currentYear = String(new Date().getFullYear())
+
+      const filteredReports = applyFilters(reportsData, currentMonth, 'All', currentYear);
       setFilteredReports(filteredReports);
       return reportsData;
     } catch (err) {
@@ -250,6 +255,7 @@ function Inbox() {
                   'Description',
                   'Status',
                   'Assigned Department',
+                  'Assigned Supervisor',
                   'Completed At',
                   'Rectified By',
                 ];
@@ -270,6 +276,7 @@ function Inbox() {
                     r?.description || '',
                     displayStatus,
                     r?.assigned_department || '',
+                    r?.assigned_supervisor || '',
                     completedAt,
                     r?.rectified_by || '',
                   ];
@@ -296,7 +303,8 @@ function Inbox() {
               }
             }}
             title="Export inbox reports to Excel"
-            disabled={!auditReports || auditReports.length === 0}
+            disabled={true}
+          // disabled={!auditReports || auditReports.length === 0}
           >
             <svg viewBox="0 0 24 24" fill="#FFFFFF" width="20" height="20">
               <path d="M5 20h14v-2H5m14-9h-4V3H9v6H5l7 7 7-7z" />
@@ -314,7 +322,7 @@ function Inbox() {
                 }
                 // Re-apply current filters after refresh
                 // const filteredReports = applyFilters(auditReports, selectedFilter, selectedMonth, selectedYear);
-               } catch (error) {
+              } catch (error) {
                 console.error('Error refreshing data:', error);
               } finally {
                 setRefreshing(false);
@@ -443,17 +451,7 @@ function Inbox() {
           </div>
 
           {/* View toggle button */}
-          <div className="filter-group">
-            <label className="filter-label">View:</label>
-            <button
-              type="button"
-              className="toggle-view-button"
-              onClick={() => setViewMode(prev => (prev === 'card' ? 'table' : 'card'))}
-              title={viewMode === 'card' ? 'Switch to Table View' : 'Switch to Card View'}
-            >
-              {viewMode === 'card' ? 'Table View' : 'Card View'}
-            </button>
-          </div>
+
         </div>
       </div>
 
@@ -464,104 +462,49 @@ function Inbox() {
           <p>{selectedFilter === 'all' ? 'No reports have been assigned to you yet.' : `No ${selectedFilter} reports found in your assignments.`}</p>
         </div>
       ) : (
-        <>
-          {viewMode === 'card' ? (
-            <div className="reports-cards-container">
-              {filteredReports.map((report, index) => (
-                <div key={index} className="audit-report-card">
-                  <div className="card-status-bar">
-                    <span className={`card-status-badge ${report.completed ? 'completed' : (report.status || 'pending')}`}>
-                      {report.completed ? 'completed' : (report.status || 'pending')}
-                    </span>
-                  </div>
-                  <div
-                    className="card-clickable-area"
+
+        <div className="reports-table-wrapper">
+          <table className="reports-table">
+            <thead>
+              <tr>
+                <th>Location</th>
+                <th>Description</th>
+                <th>Date</th>
+                <th>Created At</th>
+                <th>Department</th>
+                <th>Assigned Supervisor</th>
+                <th>Status</th>
+                <th>Completed At</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredReports.map((report) => {
+                const displayStatus = report.completed ? 'completed' : (report.status || 'pending');
+                return (
+                  <tr key={report.id}
+                    className="report-row"
                     onClick={() => navigate('/audit-report-details-assigned', { state: { report } })}
+                    style={{ cursor: 'pointer' }}
                   >
-                    <div className="card-header">
-                      <div className="report-date">
-                        {report.date ? new Date(report.date).toLocaleDateString() : 'N/A'}
-                      </div>
-                    </div>
-
-                    <div className="card-content">
-                      <div className="location-section">
-                        <svg viewBox="0 0 24 24" fill="#666" width="16" height="16">
-                          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
-                        </svg>
-                        <span className="location-text">{report.location || 'N/A'}</span>
-                      </div>
-
-                      <div className="description-section">
-                        <p className="description-text">
-                          {report.description ?
-                            (report.description.length > 80 ?
-                              report.description.substring(0, 80) + '...' :
-                              report.description
-                            ) : 'No description available'
-                          }
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {report.image_url && (
-                    <div className="card-image">
-                      <img
-                        src={report.image_url}
-                        alt="Audit report"
-                        className="report-thumbnail"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          window.open(report.image_url, '_blank');
-                        }}
-                      />
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="reports-table-wrapper">
-              <table className="reports-table">
-                <thead>
-                  <tr>
-                    <th>Location</th>
-                    <th>Description</th>
-                    <th>Date</th>
-                    <th>Created At</th>
-                    <th>Department</th>
-                    <th>Status</th>
-                    <th>Completed At</th>
+                    <td>{report.location || 'N/A'}</td>
+                    <td>{report.description || 'No description'}</td>
+                    <td>{report.date ? new Date(report.date).toLocaleDateString() : 'N/A'}</td>
+                    <td>{report.created_at ? new Date(report.created_at).toLocaleString() : 'N/A'}</td>
+                    <td>{report.assigned_department || '—'}</td>
+                    <td>{report.assigned_supervisor || '—'}</td>
+                    <td>
+                      <span className={`card-status-badge ${displayStatus}`}>{displayStatus}</span>
+                    </td>
+                    <td>{report.completed_at ? new Date(report.completed_at).toLocaleString() : '—'}</td>
                   </tr>
-                </thead>
-                <tbody>
-                  {filteredReports.map((report) => {
-                    const displayStatus = report.completed ? 'completed' : (report.status || 'pending');
-                    return (
-                      <tr key={report.id}
-                        className="report-row"
-                        onClick={() => navigate('/audit-report-details-assigned', { state: { report } })}
-                        style={{ cursor: 'pointer' }}
-                      >
-                        <td>{report.location || 'N/A'}</td>
-                        <td>{report.description || 'No description'}</td>
-                        <td>{report.date ? new Date(report.date).toLocaleDateString() : 'N/A'}</td>
-                        <td>{report.created_at ? new Date(report.created_at).toLocaleString() : 'N/A'}</td>
-                        <td>{report.assigned_department || '—'}</td>
-                        <td>
-                          <span className={`card-status-badge ${displayStatus}`}>{displayStatus}</span>
-                        </td>
-                        <td>{report.completed_at ? new Date(report.completed_at).toLocaleString() : '—'}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       )}
+
+
     </div>
   )
 }

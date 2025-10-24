@@ -4,7 +4,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { colors } from '../constants/color';
 import './AuditReportDetails.css';
-import { collection, getDocs, query, orderBy, setDoc, doc, getDoc } from 'firebase/firestore'
+import { setDoc, doc, getDoc } from 'firebase/firestore'
 import { db } from '../firebase/firebaseConfig';
 
 const AuditReportDetails = () => {
@@ -49,14 +49,24 @@ const AuditReportDetails = () => {
         const fetchDepartments = async () => {
             try {
                 setLoading(true);
-                // Fetch departments from Firestore, sorted by name
-                const deptQuery = query(collection(db, 'departments'), orderBy('dept_name', 'asc'));
-                const deptSnapshot = await getDocs(deptQuery);
-                const deptData = deptSnapshot.docs.map(doc => doc.data());
-
-                setDepartments(deptData || []);
+                // Fetch departments from single Firestore document
+                const docRef = doc(db, 'departments', 'all_departments');
+                const docSnap = await getDoc(docRef);
+                
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    // Convert departments object to array and sort by dept_name
+                    const deptArray = Object.values(data.departments || {}).sort((a, b) => 
+                        a.dept_name.localeCompare(b.dept_name)
+                    );
+                    setDepartments(deptArray);
+                } else {
+                    console.error('Departments document not found');
+                    setDepartments([]);
+                }
             } catch (err) {
                 console.error('Error fetching departments:', err);
+                setDepartments([]);
             } finally {
                 setLoading(false);
             }
@@ -551,17 +561,17 @@ const AuditReportDetails = () => {
                                 className="accept-button"
                                 onClick={async () => {
 
-                                    if (!safetyOfficer.trim()) {
-                                        // Highlight the input field
-                                        const inputField = document.getElementById('safety-officer-input');
-                                        if (inputField) {
-                                            inputField.focus();
-                                            inputField.classList.add('highlight-required');
-                                            setTimeout(() => {
-                                                inputField.classList.remove('highlight-required');
-                                            }, 3000);
-                                        }
-                                    }
+                                    // if (!safetyOfficer.trim()) {
+                                    //     // Highlight the input field
+                                    //     const inputField = document.getElementById('safety-officer-input');
+                                    //     if (inputField) {
+                                    //         inputField.focus();
+                                    //         inputField.classList.add('highlight-required');
+                                    //         setTimeout(() => {
+                                    //             inputField.classList.remove('highlight-required');
+                                    //         }, 3000);
+                                    //     }
+                                    // }
 
                                     try {
                                         setSending(true);
@@ -581,7 +591,7 @@ const AuditReportDetails = () => {
                                         const reportData = reportSnap.data();
 
                                         // Create new message object - use custom message or default acceptance message
-                                        const messageText = safetyOfficer.trim() || 'Verified and Accepted by safety';
+                                        const messageText = safetyOfficer.trim() || 'Verified and Accepted by safety officer';
                                         const newMessage = {
                                             id: user?.displayName || user?.id || 'unknown',
                                             message: messageText,
