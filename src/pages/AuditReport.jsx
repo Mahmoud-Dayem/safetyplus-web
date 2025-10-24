@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { supabase } from './supabaseClient'
+import { uploadImageToCloudinary } from '../utils/cloudinary';
 import { colors } from '../constants/color';
 import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
@@ -117,6 +117,18 @@ function AuditReport() {
 
     if (!formData.date) {
       newErrors.date = 'Date is required';
+    } else {
+      // Check if date is within the last 7 days
+      const selectedDate = new Date(formData.date);
+      const today = new Date();
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(today.getDate() - 7);
+      
+      if (selectedDate > today) {
+        newErrors.date = 'Date cannot be in the future';
+      } else if (selectedDate < sevenDaysAgo) {
+        newErrors.date = 'Date must be within the last 7 days';
+      }
     }
 
     if (!formData.corrective_action.trim()) {
@@ -140,33 +152,30 @@ function AuditReport() {
         // Generate unique docId first (will be used for both Firestore doc and image filename)
         const docId = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
-        // Upload image to Supabase Storage if selected
+        // Upload image to Cloudinary if selected
         if (selectedImage) {
-          setUploadProgress(20);
-          const fileExt = selectedImage.name.split('.').pop();
-          const fileName = `${docId}_${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
-          const filePath = `${user?.companyId}/${fileName}`;
-
-          setUploadProgress(40);
-          const { error: uploadError } = await supabase.storage
-            .from('auditBucket')
-            .upload(filePath, selectedImage, {
-              cacheControl: '3600',
-              upsert: false
-            });
-
-          if (uploadError) {
-            console.error('Upload error:', uploadError);
+          setUploadProgress(10);
+          
+          try {
+            // Upload to Cloudinary with progress tracking and same filename format as Supabase
+            imageUrl = await uploadImageToCloudinary(
+              selectedImage,
+              (progress) => {
+                // Map Cloudinary progress (0-100) to our progress range (10-70)
+                const mappedProgress = 10 + (progress * 0.6);
+                setUploadProgress(Math.round(mappedProgress));
+              },
+              `audit_reports_hcc/${user?.companyId}`, // Organize by user/company
+              docId // Pass docId for filename: docId_randomString
+            );
+            
+            setUploadProgress(70);
+            console.log('Image uploaded successfully:', imageUrl);
+            
+          } catch (uploadError) {
+            console.error('Cloudinary upload error:', uploadError);
             throw new Error(`Failed to upload image: ${uploadError.message}`);
           }
-
-          setUploadProgress(60);
-          // Get public URL
-          const { data: urlData } = supabase.storage
-            .from('auditBucket')
-            .getPublicUrl(filePath);
-
-          imageUrl = urlData.publicUrl;
         }
 
 
@@ -311,12 +320,17 @@ function AuditReport() {
 
         <div className="form-group">
           <label htmlFor="date" style={{ color: colors.text }}>
-            Date *
+            Date * (Last 7 days only)
           </label>
           <input
             id="date"
             type="date"
             value={formData.date}
+            min={(() => {
+              const sevenDaysAgo = new Date();
+              sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+              return sevenDaysAgo.toISOString().split('T')[0];
+            })()}
             max={new Date().toISOString().split('T')[0]}
             onChange={(e) => updateFormData('date', e.target.value)}
             style={{

@@ -33,11 +33,13 @@ const HomeScreen = () => {
           // Combine first_name and last_name with space between
           const fullName = `${empData.first_name || ''} ${empData.last_name || ''}`.trim();
 
-          // Dispatch to Redux to store department, fullName, and jobTitle
+          // Dispatch to Redux to store department, fullName, jobTitle, and permissions
           dispatch(updateUserProfile({
             department: empData.department || null,
             fullName: fullName || null,
             jobTitle: empData.job_title || null,
+            stopcard: empData.stopcard === true, // default to false if not specified
+            inbox: empData.inbox === true, // default to false if not specified
           }));
         } else {
          }
@@ -104,21 +106,23 @@ const HomeScreen = () => {
         </div>
 
         <div className="button-section">
-          <button
-            className="stop-card-button"
-            onClick={navigateToStopCard}
-          >
-            <svg className="button-icon" viewBox="0 0 24 24" fill="#FFFFFF">
-              <path d="M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm2 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z" />
-            </svg>
-            <div className="button-text-container">
-              <span className="button-title">Start STOP Card</span>
-              <span className="button-subtitle">Safety Task Observation Program</span>
-            </div>
-            <svg className="chevron-icon" viewBox="0 0 24 24" fill="#FFFFFF">
-              <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
-            </svg>
-          </button>
+          {user?.stopcard && (
+            <button
+              className="stop-card-button"
+              onClick={navigateToStopCard}
+            >
+              <svg className="button-icon" viewBox="0 0 24 24" fill="#FFFFFF">
+                <path d="M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm2 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z" />
+              </svg>
+              <div className="button-text-container">
+                <span className="button-title">Start STOP Card</span>
+                <span className="button-subtitle">Safety Task Observation Program</span>
+              </div>
+              <svg className="chevron-icon" viewBox="0 0 24 24" fill="#FFFFFF">
+                <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
+              </svg>
+            </button>
+          )}
 
           <button
             className="audit-button"
@@ -136,21 +140,23 @@ const HomeScreen = () => {
             </svg>
           </button>
 
-          <button
-            className="reports-button"
-            onClick={() => navigate('/inbox')}
-          >
-            <svg className="button-icon" viewBox="0 0 24 24" fill={colors.primary || '#FF9500'}>
-              <path d="M19 3H4.99c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.88 2 2 2h15c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 12h-4c0 1.66-1.35 3-3 3s-3-1.34-3-3H5V5h14v10z" />
-            </svg>
-            <div className="button-text-container">
-              <span className="reports-button-title">Inbox</span>
-              <span className="reports-button-subtitle">Check Assigned Reports </span>
-            </div>
-            <svg className="chevron-icon" viewBox="0 0 24 24" fill={colors.primary || '#FF9500'}>
-              <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
-            </svg>
-          </button>
+          {user?.inbox && (
+            <button
+              className="reports-button"
+              onClick={() => navigate('/inbox')}
+            >
+              <svg className="button-icon" viewBox="0 0 24 24" fill={colors.primary || '#FF9500'}>
+                <path d="M19 3H4.99c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.88 2 2 2h15c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 12h-4c0 1.66-1.35 3-3 3s-3-1.34-3-3H5V5h14v10z" />
+              </svg>
+              <div className="button-text-container">
+                <span className="reports-button-title">Inbox</span>
+                <span className="reports-button-subtitle">Check Assigned Reports </span>
+              </div>
+              <svg className="chevron-icon" viewBox="0 0 24 24" fill={colors.primary || '#FF9500'}>
+                <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
+              </svg>
+            </button>
+          )}
           {
             user?.isAdmin && (
               <>

@@ -7,12 +7,12 @@ import ItemCheck from "../components/ItemCheck";
 import { useSelector } from "react-redux";
 import './StopCard.css';
 
-// Replace Constants.expoConfig.extra with environment variables
-const googleSheetsUrl = process.env.REACT_APP_GOOGLE_SHEETS_URL || '';
+
 
 const StopCard = () => {
   const navigate = useNavigate();
   const user = useSelector(state => state.auth.user);
+  console.log(user)
   const [activeTab, setActiveTab] = useState('actions'); // 'actions', 'conditions', or 'report'
   const name = user?.displayName;
   const id = user?.companyId;
@@ -320,30 +320,7 @@ const StopCard = () => {
     };
   }, [actions, conditions, actionStatus, conditionStatus, reportForm]);
 
-  // Function to send data to Google Sheets
-  const sendToGoogleSheets = async (reportData) => {
-    try {
-      const GOOGLE_SCRIPT_URL = googleSheetsUrl;
-      if (!GOOGLE_SCRIPT_URL) {
-        throw new Error('Google Sheets URL not configured');
-      }
-      const response = await fetch(GOOGLE_SCRIPT_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(reportData),
-      });
 
-      if (response.ok) {
-        return { success: true, message: 'Report sent successfully' };
-      } else {
-        throw new Error('Failed to send report');
-      }
-    } catch (error) {
-      return { success: false, message: error.message };
-    }
-  };
 
   // Function to send data to Firestore
   const sendToFirestore = async (reportData) => {
@@ -355,8 +332,12 @@ const StopCard = () => {
         userInfo: {
           email: user?.email || 'unknown@company.com',
           displayName: name || 'Unknown User',
-          companyId: id || 'unknown',
-          uid: user?.uid || 'unknown'
+          companyId: parseInt(id) || 0,
+          uid: user?.uid || 'unknown',
+          department:user?.department|| 'unknown',
+          job_title:user?.jobTitle|| 'unknown',
+          full_name:user?.fullName|| 'unknown'
+
         },
         siteInfo: {
           site: reportData.site,
@@ -398,11 +379,7 @@ const StopCard = () => {
         feedback: {
           suggestions: reportData.suggestions || ''
         },
-        metadata: {
-          appVersion: '1.0.0',
-          platform: 'web',
-          submissionMethod: 'stopcard_form'
-        }
+ 
       });
 
       return {
@@ -454,7 +431,7 @@ const StopCard = () => {
       timestamp,
       reportId,
       userEmail: user?.email || 'unknown@company.com',
-      companyId: user?.companyId || id || 'unknown',
+      companyId: parseInt(user?.companyId || id) || 0,
       site: reportForm.site,
       area: reportForm.area,
       date: reportForm.date.toISOString().split('T')[0],
@@ -552,23 +529,17 @@ const StopCard = () => {
     try {
       const sheetData = prepareSheetData();
 
-      const [sheetsResult, firestoreResult] = await Promise.allSettled([
-        // sendToGoogleSheets(sheetData),
-        sendToFirestore(sheetData)
-      ]);
-
-      // const sheetsSuccess = sheetsResult.status === 'fulfilled' && sheetsResult.value.success;
-      const firestoreSuccess = firestoreResult.status === 'fulfilled' && firestoreResult.value.success;
+      const firestoreResult = await sendToFirestore(sheetData);
+      const firestoreSuccess = firestoreResult.success;
 
       let alertTitle, alertMessage;
 
-      if (  firestoreSuccess) {
+      if (firestoreSuccess) {
         alertTitle = 'Success!';
         alertMessage = 'Your STOP Card report has been submitted successfully.';
-      
       } else {
         alertTitle = 'Submission Error';
-        alertMessage = 'Failed to submit report to   systems. Please check your internet connection and try again.';
+        alertMessage = 'Failed to submit report. Please check your internet connection and try again.';
       }
 
       if (window.confirm(`${alertTitle}\n\n${alertMessage}\n\nView Summary?`)) {
@@ -593,10 +564,8 @@ const StopCard = () => {
  
         </div>
         <div className="header-right-container">
-          <button className="home-button" onClick={() => navigate('/reports')} aria-label="History">
-            <svg className="nav-icon" viewBox="0 0 24 24" fill="#fff">
-              <path d="M3 6h18v2H3V6zm0 5h18v2H3v-2zm0 5h18v2H3v-2z"/>
-            </svg>
+          <button className="home-button history-button" onClick={() => navigate('/reports')} aria-label="History">
+            <span className="button-text">History</span>
           </button>
           <button className="home-button" onClick={() => navigate('/home')}>
             <svg className="nav-icon" viewBox="0 0 24 24" fill="#fff">

@@ -23,8 +23,7 @@ function AllAuditReports() {
   const [filteredReports, setFilteredReports] = useState([]);
   const [selectedFilter, setSelectedFilter] = useState('pending');
   const [refreshing, setRefreshing] = useState(false);
-  const [viewMode, setViewMode] = useState('table'); // 'card' | 'table'
-
+ 
   const applyFilters = useCallback((reports, statusFilter, monthFilter, yearFilter) => {
     let filtered = reports;
 
@@ -263,7 +262,7 @@ function AllAuditReports() {
                     r?.department || '',
                     r?.location || '',
                     r?.description || '',
-                    r?.correction_action || '',
+                    r?.corrective_action || '',
                     r?.assigned_department || '',
                     r?.assigned_chief || '',
                     r?.chief_comment || '',
@@ -498,7 +497,7 @@ function AllAuditReports() {
                         <td>{report.department || 'N/A'}</td>
                         <td>{report.location || 'N/A'}</td>
                         <td>{report.description || 'No description'}</td>
-                        <td>{report.correction_action || 'N/A'}</td>
+                        <td>{report.corrective_action || 'N/A'}</td>
                         <td>{report.assigned_department || 'N/A'}</td>
                         <td>{report.assigned_chief || 'N/A'}</td>
                         <td>{report.assigned_supervisor || 'N/A'}</td>

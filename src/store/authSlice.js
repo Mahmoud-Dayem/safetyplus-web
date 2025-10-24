@@ -27,6 +27,8 @@ const authSlice = createSlice({
         department: firebaseUser.department || null,
         fullName: firebaseUser.fullName || null,
         jobTitle: firebaseUser.jobTitle || null,
+        stopcard: firebaseUser.stopcard === true, // default to false
+        inbox: firebaseUser.inbox === true, // default to false
       };
       state.isAuthenticated = true;
     },
@@ -48,6 +50,8 @@ const authSlice = createSlice({
           department: action.payload.department || state.user.department,
           fullName: action.payload.fullName || state.user.fullName,
           jobTitle: action.payload.jobTitle || state.user.jobTitle,
+          stopcard: action.payload.stopcard !== undefined ? action.payload.stopcard : state.user.stopcard,
+          inbox: action.payload.inbox !== undefined ? action.payload.inbox : state.user.inbox,
         };
       }
     }

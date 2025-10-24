@@ -25,7 +25,7 @@ function Inbox() {
   const [isChief, setIsChief] = useState(false);
   const [isSupervisor, setIsSupervisor] = useState(false);
   const [defaultFilterApplied, setDefaultFilterApplied] = useState(false);
-  const [viewMode, setViewMode] = useState('table'); // 'card' | 'table'
+  // const [viewMode, setViewMode] = useState('table'); // 'card' | 'table'
 
   const applyFilters = useCallback((reports, statusFilter, monthFilter, yearFilter) => {
     let filtered = reports;

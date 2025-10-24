@@ -504,12 +504,12 @@ const AuditReportDetails = () => {
                                     const updatedMessages = currentReport.messages || [];
                                     updatedMessages.push(newMessage);
 
-                                    // Update sent_to array with chief_code
-                                    const currentSentTo = currentReport.send_to || [];
+                                    // Clear previous send_to array and set to new department's chief only
+                                    const currentSentTo = [];
                                     const chiefCode = selectedDept?.chief_code;
 
-                                    // Add chief_code to sent_to array if it exists and isn't already there
-                                    if (chiefCode && !currentSentTo.includes(parseInt(chiefCode))) {
+                                    // Add chief_code to sent_to array if it exists
+                                    if (chiefCode) {
                                         currentSentTo.push(parseInt(chiefCode));
                                     }
 
@@ -526,6 +526,7 @@ const AuditReportDetails = () => {
                                             status: 'assigned',
                                             assigned_department: selectedDepartment,
                                             assigned_chief: assignedChief,
+                                            assigned_supervisor: '', // Clear supervisor when assigning to new department
                                         });
                                     } catch (updateError) {
                                         console.error('Error updating report:', updateError);
@@ -752,6 +753,7 @@ const AuditReportDetails = () => {
                                         assigned_department: selectedDepartment,
                                         status: 'assigned',
                                         assigned_chief: assignedChief,
+                                        assigned_supervisor: '', // Clear supervisor when reassigning to new department
                                     });
 
                                     alert('Report reassigned successfully!');

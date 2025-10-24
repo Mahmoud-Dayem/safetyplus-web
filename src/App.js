@@ -16,6 +16,7 @@ import AllAuditReports from './pages/AllAuditReports'
 import AuditReportDetails from './pages/AuditReportDetails'
 import AuditReportDetailsInbox from './pages/AuditReportDetailsInbox'
 import DataAnalytics from './pages/DataAnalytics'
+import AccessDenied from './components/AccessDenied'
 
 // Protected Route component
 const ProtectedRoute = ({ children }) => {
@@ -23,6 +24,36 @@ const ProtectedRoute = ({ children }) => {
   
   if (!user) {
     return <Navigate to="/auth" replace />;
+  }
+  
+  return children;
+};
+
+// Permission-based Protected Route for StopCard features
+const StopCardProtectedRoute = ({ children }) => {
+  const user = useSelector(state => state.auth.user);
+  
+  if (!user) {
+    return <Navigate to="/auth" replace />;
+  }
+  
+  if (!user.stopcard) {
+    return <AccessDenied feature="STOP Card features" />;
+  }
+  
+  return children;
+};
+
+// Permission-based Protected Route for Inbox features
+const InboxProtectedRoute = ({ children }) => {
+  const user = useSelector(state => state.auth.user);
+  
+  if (!user) {
+    return <Navigate to="/auth" replace />;
+  }
+  
+  if (!user.inbox) {
+    return <AccessDenied feature="Inbox features" />;
   }
   
   return children;
@@ -124,9 +155,9 @@ function App() {
         <Route 
           path="/stopcard" 
           element={
-            <ProtectedRoute>
+            <StopCardProtectedRoute>
               <StopCard />
-            </ProtectedRoute>
+            </StopCardProtectedRoute>
           } 
         />
         <Route 
@@ -156,9 +187,9 @@ function App() {
         <Route 
           path="/inbox" 
           element={
-            <ProtectedRoute>
+            <InboxProtectedRoute>
               <Inbox/>
-            </ProtectedRoute>
+            </InboxProtectedRoute>
           } 
         />
         <Route 

@@ -1,219 +1,168 @@
+//this page shows stop card report statistics with monthly breakdown
 import React, { useState, useEffect } from 'react';
 import { colors } from '../constants/color';
 import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import StopCardReportsService from '../firebase/stopCardReportsService';
-import StopCardModal from '../components/StopCardModal';
-import './ReportHistory.css';
+import './AuditHistoryReports.css';
 
 const ReportHistory = () => {
   const navigate = useNavigate();
   const user = useSelector(state => state.auth.user);
-  const name = user?.displayName;
   const id = user?.companyId;
 
   const [reports, setReports] = useState([]);
-  const [refreshing, setRefreshing] = useState(false);
-  const [visible, setVisible] = useState(false);
-  const [selectedReport, setSelectedReport] = useState(null);
+  const [selectedYear, setSelectedYear] = useState(String(new Date().getFullYear()));
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  useEffect(() => {
-    fetchReportsFromFirestore();
-  }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
+  const fetchReports = async () => {
+    if (!id) {
+      setError('User ID not found');
+      setLoading(false);
+      return;
+    }
 
-  // Load reports from localStorage cache
-  // const loadCachedReports = async () => {
-  //   try {
-  //     if (id) {
-  //       const cacheKey = `reports_${id}`;
-  //       const cachedData = localStorage.getItem(cacheKey);
-  //       if (cachedData) {
-  //         const allReports = JSON.parse(cachedData);
-  //         setReports(allReports);
-  //       } else {
-  //         setReports([]); // No cached data
-  //       }
-  //     }
-  //   } catch (error) {
-  //     console.error('Error loading cached reports:', error);
-  //     setReports([]);
-  //   }
-  // };
-
-  // Fetch fresh reports from Firestore and cache them
-  const fetchReportsFromFirestore = async () => {
     try {
-      setRefreshing(true);
-      if (id) {
-        const userReports = await StopCardReportsService.getUserReports(id, 200);
-
-        // Cache the reports
-        const cacheKey = `reports_${id}`;
-        localStorage.setItem(cacheKey, JSON.stringify(userReports));
-
-        // Display reports
-        setReports(userReports);
-      }
-    } catch (error) {
-      window.alert('Error: Failed to fetch reports from cloud. Please try again.');
-      console.error('Error fetching reports:', error);
+      setLoading(true);
+      const userReports = await StopCardReportsService.getUserReports(id, 200);
+      setReports(userReports);
+    } catch (err) {
+      console.error('Error fetching reports:', err);
+      setError(err.message);
     } finally {
-      setRefreshing(false);
+      setLoading(false);
     }
   };
 
-  const handleReportPress = (item) => {
-    setSelectedReport(item);
-    setVisible(true);
+  // Fetch reports on component mount and when id changes
+  useEffect(() => {
+    fetchReports();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
+  // Months list
+  const months = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+
+  const currentDate = new Date();
+  const currentMonth = currentDate.getMonth(); // 0-based
+  const currentYear = currentDate.getFullYear();
+
+  // Filter reports for selected year
+  const yearlyReports = reports.filter((r) => {
+    const d = r?.submittedAt ? new Date(r.submittedAt) : (r?.timestamp ? new Date(r.timestamp.toDate()) : null);
+    if (!d || isNaN(d)) return false;
+    return d.getFullYear() === parseInt(selectedYear, 10);
+  });
+
+  // Calculate monthly statistics
+  const monthlyStats = months.map((monthName, index) => {
+    const count = yearlyReports.filter((r) => {
+      const d = r?.submittedAt ? new Date(r.submittedAt) : (r?.timestamp ? new Date(r.timestamp.toDate()) : null);
+      if (!d || isNaN(d)) return false;
+      return d.getMonth() === index;
+    }).length;
+
+    const isCurrentYear = parseInt(selectedYear, 10) === currentYear;
+    const isPastOrCurrentMonth = !isCurrentYear || index <= currentMonth;
+    
+    return {
+      month: monthName,
+      count,
+      isPastOrCurrentMonth
+    };
+  });
+
+  // Total reports for selected year
+  const totalReports = yearlyReports.length;
+
+  // Get count color based on value
+  const getCountColor = (count) => {
+    if (count === 0) return '#ff4444'; // red
+    if (count === 1) return '#ffa500'; // orange/yellow
+    return '#22c55e'; // green
   };
 
   return (
-    <div className="report-history-container">
-      {/* Header */}
-      <div className="report-history-header">
+    <div className="audit-history-container">
+      <div className="audit-history-header">
         <button
-          className="report-history-back-button"
-          onClick={() => navigate(-1)}
+          className="back-button"
+          onClick={() => navigate('/home')}
           style={{ backgroundColor: colors.primary }}
         >
-          <svg viewBox="0 0 24 24" fill="#FFFFFF" width="36" height="36">
-            <path d="M19 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
-          </svg>
+          ← Back
         </button>
-        <div className="header-title-container">
-          <h1 className="header-title">Report History</h1>
-          <div className="header-user-info-row">
-            <span className="header-user-name">{name || 'User'}</span>
-            <span className="header-separator">•</span>
-            <span className="header-company-id">ID: {id || 'N/A'}</span>
+        <h1 style={{ color: colors.text }}>Stop Card Report Statistics</h1>
+        <div className="header-controls">
+          <div className="total-counter" title={`Total Reports in ${selectedYear}`}>
+            <span className="total-label">Total Reports</span>
+            <span className="total-value" style={{ color: colors.headerTitle }}>{totalReports}</span>
           </div>
-        </div>
-        <div className="header-right-container">
-          <button
-            className="header-create-button"
-            onClick={() => navigate('/stopcard')}
-          >
-            <svg viewBox="0 0 24 24" fill="#FFFFFF" width="20" height="20">
-              <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
-            </svg>
-            <span className="header-create-text">New Report</span>
-          </button>
-          {/* <button
-            className="refresh-button"
-            onClick={fetchReportsFromFirestore}
-            disabled={refreshing}
-          >
-            <svg
-              className={refreshing ? 'spin-icon' : ''}
-              viewBox="0 0 24 24"
-              fill="#FFFFFF"
-              width="20"
-              height="20"
+          <div className="year-filter">
+            <label htmlFor="yearSelect" className="sr-only">Filter by year</label>
+            <select
+              id="yearSelect"
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(e.target.value)}
             >
-              {refreshing ? (
-                <path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/>
-              ) : (
-                <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4c-1.48 0-2.85.43-4.01 1.17l1.46 1.46C10.21 6.23 11.08 6 12 6c3.04 0 5.5 2.46 5.5 5.5v.5H19l-3 3 3 3h-1.5v.5c0 3.04-2.46 5.5-5.5 5.5-1.48 0-2.82-.59-3.81-1.55l-1.46 1.46C7.96 21.14 9.88 22 12 22c4.42 0 8-3.58 8-8 0-.55-.08-1.08-.23-1.59l.58.58z"/>
-              )}
-            </svg>
-          </button> */}
-          <button
-            className="report-history-home-button"
-            onClick={() => {
-               navigate('/home');
-            }}
-          >
-            <svg viewBox="0 0 24 24" fill="#FFFFFF" width="20" height="20">
-              <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
-            </svg>
-          </button>
+              {[String(currentYear), String(currentYear + 1)].map((y) => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 
-      <div className="content">
-        {/* Reports Count */}
-        <div className="filter-section">
-          <h2 className="section-title">My Reports</h2>
-          <div className="count-container">
-            <span className="count-text">
-              {refreshing ? 'Syncing...' : `${reports.length} Report${reports.length !== 1 ? 's' : ''}`}
-            </span>
-          </div>
-        </div>
-
-        {/* Refreshing Indicator */}
-        {refreshing && (
-          <div className="refreshing-container">
+      <div className="audit-history-content">
+        {loading ? (
+          <div className="loading-container">
             <div className="spinner"></div>
-            <span className="refreshing-text">Fetching reports from cloud...</span>
+            <p>Loading statistics...</p>
           </div>
-        )}
-
-        {/* Reports List */}
-        {reports.length === 0 && !refreshing ? (
-          <div className="empty-state">
-            <svg viewBox="0 0 24 24" fill={colors.textSecondary || '#8E8E93'} width="80" height="80">
-              <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
-            </svg>
-            <h3 className="empty-title">No Reports Found</h3>
-            <p className="empty-subtitle">
-              No safety reports found. Create your first report to get started!
-            </p>
+        ) : error ? (
+          <div className="error-container">
+            <p style={{ color: colors.error }}>Error: {error}</p>
+            <button
+              onClick={fetchReports}
+              className="retry-button"
+              style={{ backgroundColor: colors.primary }}
+            >
+              Retry
+            </button>
           </div>
         ) : (
-          <div className="reports-list">
-            {reports.map((item) => (
-              <button
-                key={item.id}
-                className="report-card"
-                onClick={() => handleReportPress(item)}
-              >
-                <div className="card-header">
-                  <div className="site-container">
-                    <span className="site-label">SITE</span>
-                    <span className="site-value">{item.siteInfo?.site || 'Unknown Site'}</span>
-                  </div>
-                  <span className="date-text">{item.siteInfo?.date}</span>
-                </div>
-                <div className="area-row">
-                  <span className="area-label">AREA</span>
-                  <span className="area-value">{item.siteInfo?.area || 'Unknown Area'}</span>
-                </div>
-                {(item.completionRates || item.siteInfo?.shift) && (
-                  <div className="card-footer">
-                    {item.siteInfo?.shift && (
-                      <div className="shift-badge">
-                        <svg viewBox="0 0 24 24" fill="#8E8E93" width="14" height="14">
-                          <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
-                        </svg>
-                        <span>Shift {item.siteInfo.shift}</span>
-                      </div>
-                    )}
-                    {item.completionRates && (
-                      <div className="completion-badges">
-                        <div className="completion-badge actions">
-                          <span className="badge-label">Actions</span>
-                          <span className="badge-value">{item.completionRates.actionsCompletion}%</span>
-                        </div>
-                        <div className="completion-badge conditions">
-                          <span className="badge-label">Conditions</span>
-                          <span className="badge-value">{item.completionRates.conditionsCompletion}%</span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </button>
-            ))}
+          <div className="statistics-table-wrapper">
+            <table className="statistics-table">
+              <thead>
+                <tr>
+                  <th>Month</th>
+                  <th>Reports Count</th>
+                </tr>
+              </thead>
+              <tbody>
+                {monthlyStats.map((stat, index) => (
+                  <tr 
+                    key={stat.month} 
+                    className={`stats-row ${stat.isPastOrCurrentMonth ? 'past-current' : 'future'}`}
+                  >
+                    <td className="month-cell">{stat.month}</td>
+                    <td className="count-cell">
+                      <span 
+                        className="count-value"
+                        style={{ color: getCountColor(stat.count) }}
+                      >
+                        {stat.count}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        )}
-
-        {selectedReport && (
-          <StopCardModal
-            data={selectedReport}
-            visible={visible}
-            setVisible={setVisible}
-          />
         )}
       </div>
     </div>

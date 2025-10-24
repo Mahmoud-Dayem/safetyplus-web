@@ -5,6 +5,8 @@ import { useDispatch } from "react-redux";
 import { colors } from '../constants/color';
 import { useNavigate } from 'react-router-dom';
 import { signup, signin, resetPassword } from "../firebase/firebaseConfig";
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../firebase/firebaseConfig';
 import './AuthScreen.css';
 const AuthScreen = () => {
   const navigate = useNavigate();
@@ -21,6 +23,19 @@ const AuthScreen = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
+  const [validatingEmployee, setValidatingEmployee] = useState(false);
+
+  // Function to validate if employee exists in employees_collection
+  const validateEmployeeExists = async (companyId) => {
+    try {
+      const employeeDocRef = doc(db, 'employees_collection', companyId);
+      const employeeDoc = await getDoc(employeeDocRef);
+      return employeeDoc.exists();
+    } catch (error) {
+      console.error('Error checking employee:', error);
+      return false;
+    }
+  };
   const dispatch = useDispatch();
   const updateFormData = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -151,40 +166,60 @@ const AuthScreen = () => {
   const handleSignup = async () => {
     if (validateForm()) {
       setLoading(true);
-      const email = formData.email;
-      const password = formData.password;
-      const displayName = formData.name;
-      const companyId = formData.companyId;
+      setValidatingEmployee(true);
+      
+      try {
+        const email = formData.email;
+        const password = formData.password;
+        const displayName = formData.name;
+        const companyId = formData.companyId;
 
-      const result = await signup({ email, password, displayName, companyId })
-      setLoading(false);
-      if (result.status === "ok") {
-
-        const dispatchPayload = {
-          uid: result.message.uid,
-          email: result.message.email,
-          emailVerified: result.message.emailVerified,
-          displayName: result.message.displayName,
-          photoURL: result.message.photoURL,
-          token: result.message.accessToken,
-          isAdmin: false,
-          isPrivileged: false,
-          companyId
-        };
-
-        // Store user in localStorage
-        await storeUser(dispatchPayload);
-
-        // Update Redux state
-        dispatch(login(dispatchPayload));
+        // First, validate if employee exists in employees_collection
+        const employeeExists = await validateEmployeeExists(companyId);
+        setValidatingEmployee(false);
         
-        window.alert(`Success! Welcome ${formData.name}! Your account has been created.`);
-        navigate('/home'); // Navigate to home screen after successful signup
-      } else if (result.error && result.message.includes("already in use")) {
-        window.alert("User already exists. Please log in instead.");
-        setIsLogin(true);
-      } else {
-        window.alert("Signup failed: " + result.message);
+        if (!employeeExists) {
+          setErrors({ companyId: 'Employee ID not found. Please contact your administrator.' });
+          setLoading(false);
+          return;
+        }
+
+        // Proceed with signup if employee exists
+        const result = await signup({ email, password, displayName, companyId });
+        setLoading(false);
+        
+        if (result.status === "ok") {
+          const dispatchPayload = {
+            uid: result.message.uid,
+            email: result.message.email,
+            emailVerified: result.message.emailVerified,
+            displayName: result.message.displayName,
+            photoURL: result.message.photoURL,
+            token: result.message.accessToken,
+            isAdmin: false,
+            isPrivileged: false,
+            companyId
+          };
+
+          // Store user in localStorage
+          await storeUser(dispatchPayload);
+
+          // Update Redux state
+          dispatch(login(dispatchPayload));
+        
+          window.alert(`Success! Welcome ${formData.name}! Your account has been created.`);
+          navigate('/home'); // Navigate to home screen after successful signup
+        } else if (result.error && result.message.includes("already in use")) {
+          window.alert("User already exists. Please log in instead.");
+          setIsLogin(true);
+        } else {
+          window.alert("Signup failed: " + result.message);
+        }
+      } catch (error) {
+        console.error('Error during signup:', error);
+        setValidatingEmployee(false);
+        setLoading(false);
+        window.alert('An error occurred during signup. Please try again.');
       }
     }
   };
@@ -373,8 +408,11 @@ const AuthScreen = () => {
           <button
             className="auth-button"
             onClick={isForgotPassword ? handleForgotPassword : (isLogin ? handleLogin : handleSignup)}
+            disabled={loading || validatingEmployee}
           >
-            {isForgotPassword ? 'Send Reset Email' : (isLogin ? 'Sign In' : 'Create Account')}
+            {validatingEmployee ? 'Validating Employee...' : 
+             loading ? 'Please Wait...' :
+             isForgotPassword ? 'Send Reset Email' : (isLogin ? 'Sign In' : 'Create Account')}
           </button>
 
           {/* Forgot Password Link - Only show in login mode */}

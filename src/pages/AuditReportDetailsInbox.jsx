@@ -318,7 +318,7 @@ const AuditReportDetailsInbox = () => {
                 onChange={(e) => {
                   setSelectedEmployee(e.target.value);
                 }}
-                disabled={loading || isCompleted || reportStatus === 'verifying'}
+                disabled={loading || isCompleted || reportStatus === 'verifying' ||reportStatus === 'rectifying'}
               >
                 <option value="">Choose Supervisor...</option>
                 {employeesUnderChief.map((employee) => (
@@ -619,14 +619,34 @@ const AuditReportDetailsInbox = () => {
                     const updatedMessages = reportData.messages || [];
                     updatedMessages.push(newMessage);
 
-                    // Update the report with new message and change status back to assigned
-                    await updateDoc(reportRef, {
+                    // If user is Chief, clear the send_to array completely
+                    // If user is Supervisor, remove only their ID from send_to array
+                    let updatedSendTo = reportData.send_to || [];
+                    let updateFields = {
                       messages: updatedMessages,
                       status: 'pending',
-                      chief_comment: safetyOfficer.trim()
-                    });
+                      chief_comment: safetyOfficer.trim(),
+                      send_to: updatedSendTo
+                    };
 
-                    alert('Report rejected and sent back to chief for revision.');
+                    if (isChief) {
+                      // Chief rejection: clear entire send_to array and all assignment fields
+                      updatedSendTo = [];
+                      updateFields.send_to = updatedSendTo;
+                      updateFields.assigned_department = '';
+                      updateFields.assigned_chief = '';
+                      updateFields.assigned_supervisor = '';
+                    } else {
+                      // Supervisor rejection: remove only current user's ID and clear assigned_supervisor
+                      updatedSendTo = updatedSendTo.filter(id => parseInt(id) !== parseInt(user?.companyId));
+                      updateFields.send_to = updatedSendTo;
+                      updateFields.assigned_supervisor = '';
+                    }
+
+                    // Update the report with new message, status change, and field updates
+                    await updateDoc(reportRef, updateFields);
+
+                    alert('Report rejected and sent back to  for revision.');
                     setSafetyOfficer(''); // Clear the input
                     // fetchMessages(); // Refresh message history
                     navigate('/inbox'); // Navigate back to inbox after rejection
@@ -638,7 +658,7 @@ const AuditReportDetailsInbox = () => {
                     setSending(false);
                   }
                 }}
-                disabled={sending || isCompleted}
+                disabled={sending || isCompleted ||reportStatus === 'verifying' ||reportStatus === 'rectifying'}
               >
                 {sending ? 'Processing...' : 'Reject'}
               </button>
@@ -766,12 +786,32 @@ const AuditReportDetailsInbox = () => {
                     const updatedMessages = reportData.messages || [];
                     updatedMessages.push(newMessage);
 
-                    // Update the report with new message and change status back to assigned
-                    await updateDoc(reportRef, {
+                    // If user is Chief, clear the send_to array completely
+                    // If user is Supervisor, remove only their ID from send_to array
+                    let updatedSendTo = reportData.send_to || [];
+                    let updateFields = {
                       messages: updatedMessages,
                       status: 'assigned',
-                      supervisor_comment: safetyOfficer.trim()
-                    });
+                      supervisor_comment: safetyOfficer.trim(),
+                      send_to: updatedSendTo
+                    };
+
+                    if (isChief) {
+                      // Chief rejection: clear entire send_to array and all assignment fields
+                      updatedSendTo = [];
+                      updateFields.send_to = updatedSendTo;
+                      updateFields.assigned_department = '';
+                      updateFields.assigned_chief = '';
+                      updateFields.assigned_supervisor = '';
+                    } else {
+                      // Supervisor rejection: remove only current user's ID and clear assigned_supervisor
+                      updatedSendTo = updatedSendTo.filter(id => parseInt(id) !== parseInt(user?.companyId));
+                      updateFields.send_to = updatedSendTo;
+                      updateFields.assigned_supervisor = '';
+                    }
+
+                    // Update the report with new message, status change, and field updates
+                    await updateDoc(reportRef, updateFields);
 
                     alert('Report rejected and sent back to safety officer for revision.');
                     setSafetyOfficer(''); // Clear the input
