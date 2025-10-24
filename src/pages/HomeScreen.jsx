@@ -191,7 +191,7 @@ const HomeScreen = () => {
                     <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
                   </svg>
                 </button>
-                <button
+                {/* <button
                   className="analytics-button"
                   onClick={() => navigate('/data-analytics')}
                 >
@@ -205,7 +205,7 @@ const HomeScreen = () => {
                   <svg className="chevron-icon" viewBox="0 0 24 24" fill={colors.primary || '#FF9500'}>
                     <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
                   </svg>
-                </button>
+                </button> */}
               </>
 
             )
