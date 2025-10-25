@@ -6,126 +6,9 @@ import { useSelector } from 'react-redux';
 import StopCardReportsService from '../firebase/stopCardReportsService';
 import StopCardModal from '../components/StopCardModal';
 import './AllAuditReports.css';
+import './AllStopReports.css';
 
-/* Additional styles for suggestions column */
-const additionalStyles = `
-.suggestions-cell {
-  max-width: 200px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
 
-.suggestions-text {
-  font-size: 0.9em;
-  color: #666;
-}
-
-.suggestions-cell:hover {
-  overflow: visible;
-  white-space: normal;
-  word-wrap: break-word;
-  background: #f9f9f9;
-  position: relative;
-  z-index: 10;
-}
-
-.filter-controls {
-  display: flex;
-  gap: 15px;
-  align-items: center;
-}
-
-.filter-group {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.filter-group label {
-  font-size: 0.85em;
-  color: #ffffff;
-  font-weight: 500;
-}
-
-.filter-select {
-  padding: 6px 10px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.1);
-  color: #ffffff;
-  font-size: 0.9em;
-  min-width: 120px;
-}
-
-.filter-select option {
-  background: #2c2c2c;
-  color: #ffffff;
-}
-
-.export-button, .home-button {
-  background: rgba(255, 255, 255, 0.1);
-  border: none;
-  border-radius: 8px;
-  padding: 12px 16px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: #ffffff;
-  font-size: 0.9em;
-  font-weight: 500;
-}
-
-.export-button:hover:not(:disabled), .home-button:hover {
-  background: rgba(255, 255, 255, 0.2);
-  transform: translateY(-2px);
-}
-
-.export-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  transform: none;
-}
-
-.wide-button {
-  min-width: 120px;
-  padding: 12px 24px;
-}
-
-@media (max-width: 768px) {
-  .filter-controls {
-    flex-direction: column;
-    gap: 10px;
-  }
-  
-  .filter-group {
-    width: 100%;
-  }
-  
-  .filter-select {
-    width: 100%;
-  }
-  
-  .header-buttons {
-    flex-direction: column;
-    gap: 8px;
-  }
-  
-  .export-button, .home-button {
-    width: 100%;
-    justify-content: center;
-  }
-}
-`;
-
-// Inject styles
-if (typeof document !== 'undefined') {
-  const styleSheet = document.createElement("style");
-  styleSheet.innerText = additionalStyles;
-  document.head.appendChild(styleSheet);
-}
 
 const AllStopReports = () => {
   const navigate = useNavigate();
@@ -195,13 +78,14 @@ const AllStopReports = () => {
         'Company ID',
         'Department',
         'Date',
-        'Site',
         'Area',
         'Shift',
         'People Conducted',
         'People Observed',
-        'Safe Acts',
-        'Unsafe Acts',
+        'Safe Acts Count',
+        'Safe Acts List',
+        'Unsafe Acts Count', 
+        'Unsafe Acts List',
         'Actions %',
         'Conditions %',
         'Duration (min)',
@@ -217,22 +101,35 @@ const AllStopReports = () => {
       
       // Map data to CSV rows
       const rows = toExport.map((item) => {
+        // Format safe acts list with numbering
+        const safeActsList = item.safetyActs?.safeActsList || [];
+        const safeActsFormatted = safeActsList.length > 0 
+          ? safeActsList.map((act, index) => `${index + 1}. ${act}`).join('; ')
+          : 'None';
+        
+        // Format unsafe acts list with numbering
+        const unsafeActsList = item.safetyActs?.unsafeActsList || [];
+        const unsafeActsFormatted = unsafeActsList.length > 0 
+          ? unsafeActsList.map((act, index) => `${index + 1}. ${act}`).join('; ')
+          : 'None';
+        
         return [
           item.userInfo?.displayName || 'Unknown',
           item.userInfo?.companyId || 'N/A',
           item.userInfo?.department || 'N/A',
           item.siteInfo?.date || 'N/A',
-          item.siteInfo?.site || 'Unknown Site',
           item.siteInfo?.area || 'Unknown Area',
           item.siteInfo?.shift || 'N/A',
           item.observationData?.peopleConducted || 0,
           item.observationData?.peopleObserved || 0,
           item.safetyActs?.safeActsCount || 0,
+          safeActsFormatted,
           item.safetyActs?.unsafeActsCount || 0,
+          unsafeActsFormatted,
           item.completionRates?.actionsCompletion || 0,
           item.completionRates?.conditionsCompletion || 0,
           item.observationData?.durationMinutes || 0,
-          item.improvements?.suggestions || 'None'
+          item.feedback?.suggestions || 'None'
         ];
       });
       
@@ -411,11 +308,10 @@ const AllStopReports = () => {
           <table className="reports-table">
             <thead>
               <tr>
-                <th>Employee Name</th>
+                <th>Name</th>
                 <th>Company ID</th>
                 <th>Department</th>
                 <th>Date</th>
-                <th>Site</th>
                 <th>Area</th>
                 <th>Shift</th>
                 <th>People Conducted</th>
@@ -451,11 +347,6 @@ const AllStopReports = () => {
                   <td className="date-cell">
                     {item.siteInfo?.date || 'N/A'}
                   </td>
-                  <td className="site-cell">
-                    <span className="site-name">
-                      {item.siteInfo?.site || 'Unknown Site'}
-                    </span>
-                  </td>
                   <td className="area-cell">
                     {item.siteInfo?.area || 'Unknown Area'}
                   </td>
@@ -469,14 +360,42 @@ const AllStopReports = () => {
                     {item.observationData?.peopleObserved || 0}
                   </td>
                   <td className="safe-acts-cell">
-                    <span className="count-value">
-                      {item.safetyActs?.safeActsCount || 0}
-                    </span>
+                    <div className="acts-cell-content">
+                      <span className="count-value">
+                        {item.safetyActs?.safeActsCount || 0}
+                      </span>
+                      {item.safetyActs?.safeActsList && item.safetyActs.safeActsList.length > 0 && (
+                        <div className="acts-list">
+                          {item.safetyActs.safeActsList.slice(0, 2).map((act, index) => (
+                            <div key={index} className="act-item">
+                              {index + 1}. {act}
+                            </div>
+                          ))}
+                          {item.safetyActs.safeActsList.length > 2 && (
+                            <div className="more-acts">+{item.safetyActs.safeActsList.length - 2} more...</div>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </td>
                   <td className="unsafe-acts-cell">
-                    <span className="count-value">
-                      {item.safetyActs?.unsafeActsCount || 0}
-                    </span>
+                    <div className="acts-cell-content">
+                      <span className="count-value">
+                        {item.safetyActs?.unsafeActsCount || 0}
+                      </span>
+                      {item.safetyActs?.unsafeActsList && item.safetyActs.unsafeActsList.length > 0 && (
+                        <div className="acts-list">
+                          {item.safetyActs.unsafeActsList.slice(0, 2).map((act, index) => (
+                            <div key={index} className="act-item">
+                              {index + 1}. {act}
+                            </div>
+                          ))}
+                          {item.safetyActs.unsafeActsList.length > 2 && (
+                            <div className="more-acts">+{item.safetyActs.unsafeActsList.length - 2} more...</div>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </td>
                   <td className="completion-cell">
                     <span className="percentage-value">
@@ -493,7 +412,7 @@ const AllStopReports = () => {
                   </td>
                   <td className="suggestions-cell">
                     <span className="suggestions-text">
-                      {item.improvements?.suggestions || 'None'}
+                      {item.feedback?.suggestions || 'None'}
                     </span>
                   </td>
                 </tr>

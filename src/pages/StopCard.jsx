@@ -16,20 +16,35 @@ const StopCard = () => {
   const [activeTab, setActiveTab] = useState('actions'); // 'actions', 'conditions', or 'report'
   const name = user?.displayName;
   const id = user?.companyId;
-  const site_list = [
-    "LimeStone Crusher& Storage",
-    "Additives Crusher & Storage",
-    "Corrective Crusher& Storage",
-    "Raw Mill & Feeding Area",
-    "kiln"
+  const area_list = [
+    "Limestone Crusher Area & Limestone Hopper",
+    "Quarry & QWS Building Area",
+    "Additive & Corrective Crusher Area",
+    "Raw Mill Area",
+    "Kiln and Cooler Area",
+    'Preheater area',
+    'CM Area',
+    'Packing plant Area',
+    'Power Plant Area',
+    'HFO Unloading area',
+    'Limestone, Gypsum & additive storage area',
+    'Canteen area',
+    'Warehouse Area',
+    'Mechanical Workshop area',
+    'Technical Building Area',
+    'CCR & Laboratory'
   ];
+  const site_list =[
+    'Hail Cement plant',
+
+  ]
 
   // Report form state
   const [reportForm, setReportForm] = useState({
     safeActsObserved: [''],
     unsafeActsObserved: [''],
     date: new Date(),
-    site: '',
+    site: site_list[0] || '', // Default to first site
     area: '',
     shift: 'General',
     duration: '',
@@ -41,6 +56,7 @@ const StopCard = () => {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showSummaryModal, setShowSummaryModal] = useState(false);
   const [showSiteDropdown, setShowSiteDropdown] = useState(false);
+  const [showAreaDropdown, setShowAreaDropdown] = useState(false);
   const [isSending, setIsSending] = useState(false);
 
   const actions = useMemo(() => [
@@ -509,6 +525,18 @@ const StopCard = () => {
       errors.push('Number of people observed is required');
     }
 
+    // Date must be within the last 7 days (including today)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const minDate = new Date(today);
+    // Allow today and previous 6 days = 7 days window
+    minDate.setDate(minDate.getDate() - 6);
+    const chosen = new Date(reportForm.date);
+    chosen.setHours(0, 0, 0, 0);
+    if (chosen < minDate || chosen > today) {
+      errors.push('Date must be within the last 7 days (up to today).');
+    }
+
     return errors;
   };
 
@@ -528,28 +556,18 @@ const StopCard = () => {
 
     try {
       const sheetData = prepareSheetData();
-
-      const firestoreResult = await sendToFirestore(sheetData);
-      const firestoreSuccess = firestoreResult.success;
-
-      let alertTitle, alertMessage;
-
-      if (firestoreSuccess) {
-        alertTitle = 'Success!';
-        alertMessage = 'Your STOP Card report has been submitted successfully.';
+      const res = await sendToFirestore(sheetData);
+      if (res?.success) {
+        window.alert('Your STOP Card report has been submitted successfully.');
       } else {
-        alertTitle = 'Submission Error';
-        alertMessage = 'Failed to submit report. Please check your internet connection and try again.';
+        window.alert('Failed to submit report. Please check your internet connection and try again.');
       }
-
-      if (window.confirm(`${alertTitle}\n\n${alertMessage}\n\nView Summary?`)) {
-        setShowSummaryModal(true);
-      }
+      navigate('/home');
     } catch (error) {
-      if (window.confirm(`Error\n\nAn unexpected error occurred while sending the report. Please try again.\n\nView Summary?`)) {
-        setShowSummaryModal(true);
-      }
+      window.alert('An unexpected error occurred while sending the report. Please try again.');
+      navigate('/home');
     } finally {
+      // Component will likely unmount after navigation
       setIsSending(false);
     }
   };
@@ -738,10 +756,27 @@ const StopCard = () => {
                       <button
                         className="date-button"
                         onClick={() => {
+                          const today = new Date();
+                          today.setHours(0,0,0,0);
+                          const minDate = new Date(today);
+                          minDate.setDate(minDate.getDate() - 6); // 7-day window including today
                           const newDate = new Date(reportForm.date);
                           newDate.setDate(newDate.getDate() - 1);
-                          updateReportForm('date', newDate);
+                          newDate.setHours(0,0,0,0);
+                          if (newDate >= minDate) {
+                            updateReportForm('date', newDate);
+                          }
                         }}
+                        disabled={(() => {
+                          const today = new Date();
+                          today.setHours(0,0,0,0);
+                          const minDate = new Date(today);
+                          minDate.setDate(minDate.getDate() - 6);
+                          const prev = new Date(reportForm.date);
+                          prev.setDate(prev.getDate() - 1);
+                          prev.setHours(0,0,0,0);
+                          return prev < minDate;
+                        })()}
                       >
                         <span className="date-button-text">-</span>
                       </button>
@@ -782,10 +817,21 @@ const StopCard = () => {
                       <button
                         className="quick-button"
                         onClick={() => {
-                          const yesterday = new Date();
+                          const today = new Date();
+                          today.setHours(0,0,0,0);
+                          const yesterday = new Date(today);
                           yesterday.setDate(yesterday.getDate() - 1);
                           updateReportForm('date', yesterday);
                         }}
+                        disabled={(() => {
+                          const today = new Date();
+                          today.setHours(0,0,0,0);
+                          const minDate = new Date(today);
+                          minDate.setDate(minDate.getDate() - 6);
+                          const yesterday = new Date(today);
+                          yesterday.setDate(yesterday.getDate() - 1);
+                          return yesterday < minDate;
+                        })()}
                       >
                         <span className="quick-button-text">Yesterday</span>
                       </button>
@@ -814,12 +860,17 @@ const StopCard = () => {
             {/* Area */}
             <div className="input-group">
               <label className="input-label">Area</label>
-              <input
-                className="text-input"
-                value={reportForm.area}
-                onChange={(e) => updateReportForm('area', e.target.value)}
-                placeholder="Enter area"
-              />
+              <button
+                className="dropdown-button"
+                onClick={() => setShowAreaDropdown(true)}
+              >
+                <span className={!reportForm.area ? 'placeholder-text' : ''}>
+                  {reportForm.area || "Select area"}
+                </span>
+                <svg viewBox="0 0 24 24" fill={colors.textSecondary || '#8E8E93'} width="20" height="20">
+                  <path d="M7 10l5 5 5-5z"/>
+                </svg>
+              </button>
             </div>
 
             {/* Shift Dropdown */}
@@ -1077,6 +1128,46 @@ const StopCard = () => {
                     {site}
                   </span>
                   {reportForm.site === site && (
+                    <svg viewBox="0 0 24 24" fill={colors.primary || '#FF9500'} width="20" height="20">
+                      <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                    </svg>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Area Dropdown Modal */}
+      {showAreaDropdown && (
+        <div className="dropdown-overlay-modal" onClick={() => setShowAreaDropdown(false)}>
+          <div className="dropdown-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="dropdown-header-modal">
+              <h3 className="dropdown-title">Select Area</h3>
+              <button
+                className="close-button"
+                onClick={() => setShowAreaDropdown(false)}
+              >
+                <svg viewBox="0 0 24 24" fill={colors.text || '#1C1C1E'} width="24" height="24">
+                  <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                </svg>
+              </button>
+            </div>
+            <div className="dropdown-list">
+              {area_list.map((area, index) => (
+                <button
+                  key={index}
+                  className={`dropdown-item ${reportForm.area === area ? 'selected-dropdown-item' : ''}`}
+                  onClick={() => {
+                    updateReportForm('area', area);
+                    setShowAreaDropdown(false);
+                  }}
+                >
+                  <span className={`dropdown-item-text ${reportForm.area === area ? 'selected-dropdown-item-text' : ''}`}>
+                    {area}
+                  </span>
+                  {reportForm.area === area && (
                     <svg viewBox="0 0 24 24" fill={colors.primary || '#FF9500'} width="20" height="20">
                       <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
                     </svg>

@@ -28,8 +28,39 @@ function AuditReport() {
   const [loading, setLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [showImageOptions, setShowImageOptions] = useState(false);
+  const [showLocationModal, setShowLocationModal] = useState(false);
+  const [managementAuditLocation, setManagementAuditLocation] = useState('');
   const incident_type_list = ['Unsafe Condition', 'Unsafe Act', 'Near Miss', 'Environment Concern', 'Management Audit'];
-
+  const auditLocation =[
+    'Limestone Crusher Bldg, Operator Room, 211BC1/2 area and 1P1',
+    'Quarry & QWS Building Sorrounding, Fuel Station ',
+    'Surge Bin, Limestone Storage (stacker / Reclaimer) and Water source  Pump area',
+    'Clay Storage (Stacker/Reclaimer side) yard and Hazardous Substance Holding area',
+    'Gypsum Storage yard and 7P1',
+    'STP, Diesel Station and Light Vehicle shop',
+    'Additive Crusher Compressor Room, Additive & Gypsum Crusher',
+    '2P1 and Water Treatment Plant',
+    'Raw Material Transport Bldg',
+    'Power Plant facility',
+    'Raw Mill & Reject BE Building Reject ',
+    'RM Cyclone Building & RM Fan area',
+    'Preheater ID Fan, 3P1 and Main Baghouse',
+    'HFO/LFO Tanks & Pump area and LFO & HFO unloading area',
+    'Kiln Compressor Room and Boiler Room',
+    'Preheater (Top to Bottom)  and Raw Mix Silo top',
+    'Kiln & Cooler Area and ESP',
+    '491DP1, Off spec Silo top and Clinker Silo Top',
+    'Outside Feeding & Clinker Transport Building',
+    'Cement Mill & CM Feed Building',
+    '5P1 and Cement Silo Top to Bottom',
+    'CCR Building & 4P1',
+    'Refractory Store, RM Silo &  Cooler Ground area',
+    'Packing Plant and Cement Silo Ground area',
+    'Weighbridge area, Sales Gates and Sales Building',
+    'Technical Building and Canteen',
+    'Main Gate and Contractor accommodation',
+    'Warehouse facility & Workshop area'
+  ]
 
   const updateFormData = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -37,6 +68,28 @@ function AuditReport() {
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: null }));
     }
+  };
+
+  const handleIncidentTypeSelect = (type) => {
+    const previousType = formData.incident_type;
+    updateFormData('incident_type', type);
+    
+    if (type === 'Management Audit') {
+      // Always show modal for Management Audit (user might want to change location)
+      setShowLocationModal(true);
+    } else {
+      // If switching away from Management Audit, save current location and clear field
+      if (previousType === 'Management Audit' && formData.location) {
+        setManagementAuditLocation(formData.location);
+      }
+      updateFormData('location', '');
+    }
+  };
+
+  const handleLocationSelect = (location) => {
+    updateFormData('location', location);
+    setManagementAuditLocation(location); // Remember this selection
+    setShowLocationModal(false);
   };
 
   const handleImageSelect = (e) => {
@@ -220,7 +273,8 @@ function AuditReport() {
         alert('Audit report submitted successfully!');
         navigate('/home');
         // Reset form
-        setFormData({ location: '', description: '', date: '' });
+        setFormData({ location: '', description: '', date: '', corrective_action: '', incident_type: '' });
+        setManagementAuditLocation(''); // Clear remembered location
         removeImage();
       } catch (error) {
         console.error('Error submitting audit report:', error);
@@ -268,7 +322,7 @@ function AuditReport() {
                 className={`incident-type-button ${
                   formData.incident_type === type ? 'active' : ''
                 }`}
-                onClick={() => updateFormData('incident_type', type)}
+                onClick={() => handleIncidentTypeSelect(type)}
                 style={{
                   backgroundColor:
                     formData.incident_type === type
@@ -495,6 +549,61 @@ function AuditReport() {
           {loading ? 'Submitting...' : 'Submit Audit Report'}
         </button>
       </div>
+
+      {/* Location Selection Modal */}
+      {showLocationModal && (
+        <div className="modal-overlay" onClick={() => setShowLocationModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 style={{ color: colors.text, margin: 0 }}>Select Audit Location</h3>
+              <button 
+                className="modal-close-button"
+                onClick={() => setShowLocationModal(false)}
+                style={{ color: colors.text }}
+              >
+                ×
+              </button>
+            </div>
+            <div className="modal-body">
+              <div className="location-list">
+                {auditLocation.map((location, index) => {
+                  const isSelected = location === managementAuditLocation || location === formData.location;
+                  return (
+                    <button
+                      key={index}
+                      className={`location-option ${isSelected ? 'selected' : ''}`}
+                      onClick={() => handleLocationSelect(location)}
+                      style={{
+                        backgroundColor: isSelected ? colors.primary : '#f8f9fa',
+                        color: isSelected ? 'white' : colors.text,
+                        borderColor: isSelected ? colors.primary : colors.border,
+                        fontWeight: isSelected ? '600' : 'normal'
+                      }}
+                    >
+                      {location}
+                      {isSelected && (
+                        <span style={{ marginLeft: '8px', fontSize: '14px' }}>✓</span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button 
+                className="cancel-button"
+                onClick={() => setShowLocationModal(false)}
+                style={{ 
+                  backgroundColor: colors.textSecondary,
+                  color: 'white'
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

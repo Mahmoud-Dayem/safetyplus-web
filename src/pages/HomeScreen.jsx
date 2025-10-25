@@ -51,6 +51,8 @@ const HomeScreen = () => {
     fetchUserDocument();
   }, [id, dispatch]);
 
+  // No Home banner needed; StopCard handles alerts before navigation
+
 
   const navigateToStopCard = () => {
     navigate('/stopcard');

@@ -25,6 +25,8 @@
   position: relative;
 }
 
+/* Removed status banner — alerts shown on StopCard before navigating home */
+
 /* Logout Button */
 .logout-button {
   position: absolute;

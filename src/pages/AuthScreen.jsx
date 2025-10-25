@@ -67,7 +67,7 @@ const AuthScreen = () => {
       if (!formData.companyId) {
         newErrors.companyId = 'Company ID is required';
       } else if (!companyIdRegex.test(formData.companyId)) {
-        newErrors.companyId = 'Company ID must be 5 digits starting with 3 (e.g., 31234)';
+        newErrors.companyId = 'Company ID must be 5 digits   (e.g., 12345)';
       }
 
     // Signup-only validations
@@ -89,7 +89,7 @@ const AuthScreen = () => {
       if (!formData.companyId) {
         newErrors.companyId = 'Company ID is required';
       } else if (!companyIdRegex.test(formData.companyId)) {
-        newErrors.companyId = 'Company ID must be 5 digits starting with 3 (e.g., 31234)';
+        newErrors.companyId = 'Company ID must be 5 digits  (e.g., 31234)';
       }
     }
 
@@ -395,12 +395,12 @@ const AuthScreen = () => {
                   className="text-input"
                   value={formData.companyId}
                   onChange={(e) => updateFormData('companyId', formatCompanyId(e.target.value))}
-                  placeholder="3XXXX (e.g., 31234)"
+                  placeholder="XXXXX (e.g., 31234)"
                   maxLength={5}
                 />
               </div>
               {errors.companyId && <span className="error-text">{errors.companyId}</span>}
-              <span className="help-text">5-digit ID starting with 3</span>
+              <span className="help-text">5-digit ID  </span>
             </div>
           )}
 
