@@ -3,11 +3,7 @@ const CLOUDINARY_CLOUD_NAME = process.env.REACT_APP_CLOUDINARY_CLOUD_NAME;
 const CLOUDINARY_UPLOAD_PRESET = process.env.REACT_APP_CLOUDINARY_UPLOAD_PRESET;
 
 // Debug configuration
-console.log('Cloudinary Config:', {
-  cloudName: CLOUDINARY_CLOUD_NAME,
-  uploadPreset: CLOUDINARY_UPLOAD_PRESET
-});
-
+ 
 /**
  * Upload image to Cloudinary
  * @param {File} file - The image file to upload
@@ -36,13 +32,7 @@ export const uploadImageToCloudinary = async (file, onProgress = null, folder = 
       throw new Error('File must be an image');
     }
     
-    console.log('Uploading file:', {
-      name: file.name,
-      type: file.type,
-      size: file.size,
-      folder: folder,
-      docId: docId
-    });
+ 
 
     // Create FormData for upload
     const formData = new FormData();
@@ -56,8 +46,7 @@ export const uploadImageToCloudinary = async (file, onProgress = null, folder = 
       // Use the full path including folder for public_id
       const fullPath = `${folder}/${fileName}`;
       formData.append('public_id', fullPath);
-      console.log('Generated filename:', fullPath);
-    } else {
+     } else {
       formData.append('folder', folder);
     }
     

@@ -140,10 +140,10 @@ const StopCardModal = ({ data, visible, setVisible }) => {
                 <p className="card-subtitle">Area: {area} {shift ? `| Shift: ${shift}` : ''}</p>
                 <p>Date: {date}</p>
                 {actionsCompletion != null && (
-                  <p>Actions Completion: {actionsCompletion}%</p>
+                  <p>Safe Actions: {actionsCompletion}%</p>
                 )}
                 {conditionsCompletion != null && (
-                  <p>Conditions Completion: {conditionsCompletion}%</p>
+                  <p>Safe Conditions: {conditionsCompletion}%</p>
                 )}
                 <p>Duration: {duration} mins</p>
                 <p>People Conducted: {peopleConducted}</p>

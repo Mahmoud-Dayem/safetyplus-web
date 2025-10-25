@@ -4,7 +4,8 @@ import {
   query, 
   where,
   doc,
-  getDoc 
+  getDoc,
+  getCountFromServer
 } from 'firebase/firestore';
 import { db } from './firebaseConfig';
 
@@ -14,10 +15,11 @@ export class StopCardReportsService {
 
   // Get all reports for a specific user
   static async getUserReports(companyId, limitCount = 50) {
+ 
     try {
       const q = query(
         collection(db, this.collectionName),
-        where('userInfo.companyId', '==', companyId)
+        where('userInfo.companyId', '==', parseInt(companyId))
       );
       
       const querySnapshot = await getDocs(q);
@@ -189,6 +191,63 @@ export class StopCardReportsService {
         .slice(0, limitCount);
     } catch (error) {
       console.error('Error getting all reports:', error);
+      throw error;
+    }
+  }
+
+  // Get count of reports for a specific user (efficient)
+  static async getUserReportCount(companyId) {
+    try {
+      const q = query(
+        collection(db, this.collectionName),
+        where('userInfo.companyId', '==', parseInt(companyId))
+      );
+      
+      const snapshot = await getCountFromServer(q);
+      return snapshot.data().count;
+    } catch (error) {
+      console.error('Error getting user report count:', error);
+      throw error;
+    }
+  }
+
+  // Get monthly counts for a specific user and year (efficient)
+  static async getUserMonthlyCounts(companyId, year) {
+    try {
+      // Since Firestore doesn't support date range queries with count aggregation,
+      // we'll fetch minimal data (just dates) and count in JavaScript
+      const q = query(
+        collection(db, this.collectionName),
+        where('userInfo.companyId', '==', parseInt(companyId))
+      );
+      
+      const querySnapshot = await getDocs(q);
+      const monthlyCounts = new Array(12).fill(0);
+      
+      querySnapshot.docs.forEach(doc => {
+        const data = doc.data();
+        // Try multiple date sources
+        let reportDate = null;
+        
+        if (data.siteInfo?.date) {
+          reportDate = new Date(data.siteInfo.date);
+        } else if (data.submittedAt) {
+          reportDate = new Date(data.submittedAt);
+        } else if (data.timestamp?.toDate) {
+          reportDate = data.timestamp.toDate();
+        } else if (data.timestamp?.seconds) {
+          reportDate = new Date(data.timestamp.seconds * 1000);
+        }
+        
+        if (reportDate && !isNaN(reportDate) && reportDate.getFullYear() === year) {
+          const month = reportDate.getMonth(); // 0-based
+          monthlyCounts[month]++;
+        }
+      });
+      
+      return monthlyCounts;
+    } catch (error) {
+      console.error('Error getting monthly counts:', error);
       throw error;
     }
   }

@@ -33,8 +33,7 @@ const AllStopReports = () => {
       setRefreshing(true);
       if (id) {
         const userReports = await StopCardReportsService.getAllStopCardReports(200);
-        console.log('All reports fetched:', userReports.length);
-
+ 
         // Clear any cached data for this ID
         const cacheKey = `reports_${id}`;
         try {

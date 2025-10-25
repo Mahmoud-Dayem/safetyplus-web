@@ -516,10 +516,7 @@ const AuditReportDetails = () => {
                                     // Update the report with new messages array, sent_to array, status, and assigned department
 
                                     try {
-                                        console.log('===========assignedChief==============');
-                                        console.log(assignedChief);
-                                        console.log('====================================');
-                                        await setDoc(doc(db, 'audit_reports', report.id), {
+                                         await setDoc(doc(db, 'audit_reports', report.id), {
                                             ...currentReport,
                                             messages: updatedMessages,
                                             send_to: currentSentTo,

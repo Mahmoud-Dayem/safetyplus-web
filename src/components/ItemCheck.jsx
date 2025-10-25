@@ -32,15 +32,32 @@ const ItemCheck = ({ item, itemIndex, type, questionStatus, updateQuestionStatus
                     </span>
                 </div>
             </div>
+            
+            {/* Safe/Unsafe labels header */}
+            <div className="checkbox-labels-header">
+                <span className="safe-label">Safe</span>
+                <span className="unsafe-label">Unsafe</span>
+            </div>
+            
             {item.questions.map((question, questionIndex) => (
                 <div key={questionIndex} className="checkbox-container">
-                    <input
-                        type="checkbox"
-                        checked={questionStatus[`${type}_${itemIndex}_question_${questionIndex}`] || false}
-                        onChange={(e) => updateQuestionStatus(itemIndex, questionIndex, e.target.checked)}
-                        style={{ accentColor: questionStatus[`${type}_${itemIndex}_question_${questionIndex}`] ? colors.primary : undefined }}
-                    />
+                    <div className="checkbox-left">
+                        <input
+                            type="checkbox"
+                            checked={questionStatus[`${type}_${itemIndex}_question_${questionIndex}`] || false}
+                            onChange={(e) => updateQuestionStatus(itemIndex, questionIndex, e.target.checked)}
+                            style={{ accentColor: questionStatus[`${type}_${itemIndex}_question_${questionIndex}`] ? colors.success : undefined }}
+                        />
+                    </div>
                     <label className="checkbox-label">{question.q}</label>
+                    <div className="checkbox-right">
+                        <input
+                            type="checkbox"
+                            checked={!(questionStatus[`${type}_${itemIndex}_question_${questionIndex}`] || false)}
+                            onChange={(e) => updateQuestionStatus(itemIndex, questionIndex, !e.target.checked)}
+                            style={{ accentColor: !(questionStatus[`${type}_${itemIndex}_question_${questionIndex}`] || false) ? colors.error || '#ff4444' : undefined }}
+                        />
+                    </div>
                 </div>
             ))}
         </div>

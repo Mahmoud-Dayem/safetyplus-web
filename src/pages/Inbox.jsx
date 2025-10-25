@@ -17,7 +17,6 @@ function Inbox() {
   const [selectedYear, setSelectedYear] = useState(String(new Date().getFullYear()));
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [isAuthorized, setIsAuthorized] = useState(false);
   const [auditReports, setAuditReports] = useState([]);
   const [filteredReports, setFilteredReports] = useState([]);
   const [selectedFilter, setSelectedFilter] = useState('assigned');
@@ -147,9 +146,6 @@ function Inbox() {
     const loadInboxData = async () => {
       try {
         setLoading(true);
-        // For Inbox, any authenticated user can see their assigned reports
-        setIsAuthorized(true);
-
         // Fetch assigned reports for current user
         await getAuditReports();
       } catch (err) {
@@ -162,16 +158,19 @@ function Inbox() {
 
     if (id) {
       loadInboxData()
+    } else {
+      // If no ID yet (Redux not loaded), stop loading
+      setLoading(false);
     }
   }, [id, getAuditReports]);
 
-  // Show loading screen while fetching data
-  if (loading) {
+  // Show loading screen while fetching data or waiting for user
+  if (loading || !id) {
     return (
       <div className="loading-container">
         <div className="loading-content">
           <div className="loading-spinner"></div>
-          <p className="loading-text">Loading inbox data...</p>
+          <p className="loading-text">{!id ? 'Loading user data...' : 'Loading inbox data...'}</p>
         </div>
       </div>
     )
@@ -190,35 +189,7 @@ function Inbox() {
     )
   }
 
-  // Check authorization after data is loaded
-  if (!isAuthorized) {
-
-    return (
-      <div className="unauthorized-container">
-        <div className="unauthorized-content">
-          <div className="unauthorized-icon">
-            <svg viewBox="0 0 24 24" fill="#dc3545" width="80" height="80">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
-              <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z" />
-            </svg>
-          </div>
-          <h1 className="unauthorized-title">Access Denied</h1>
-          <p className="unauthorized-message">
-            You are not authorized to view the inbox.
-          </p>
-          <p className="unauthorized-submessage">
-            Please contact your administrator if you believe this is an error.
-          </p>
-          <button
-            className="unauthorized-button"
-            onClick={() => navigate('/home')}
-          >
-            Return to Home
-          </button>
-        </div>
-      </div>
-    )
-  }
+  // Authorization is handled by InboxProtectedRoute wrapper, so we can proceed directly to rendering
 
 
   return (
@@ -336,7 +307,7 @@ function Inbox() {
             </svg>
           </button>
           <button
-            className="home-button"
+            className="home-button "
             onClick={() => navigate('/home')}
           >
             <svg viewBox="0 0 24 24" fill="#FFFFFF" width="20" height="20">

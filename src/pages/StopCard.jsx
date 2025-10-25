@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useCallback } from "react";
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase/firebaseConfig';
+import StopCardReportsServiceV2 from '../firebase/stopCardReportsServiceV2';
 import { colors } from "../constants/color";
 import { useNavigate } from 'react-router-dom';
 import ItemCheck from "../components/ItemCheck";
@@ -12,8 +13,7 @@ import './StopCard.css';
 const StopCard = () => {
   const navigate = useNavigate();
   const user = useSelector(state => state.auth.user);
-  console.log(user)
-  const [activeTab, setActiveTab] = useState('actions'); // 'actions', 'conditions', or 'report'
+   const [activeTab, setActiveTab] = useState('actions'); // 'actions', 'conditions', or 'report'
   const name = user?.displayName;
   const id = user?.companyId;
   const area_list = [
@@ -34,7 +34,7 @@ const StopCard = () => {
     'Technical Building Area',
     'CCR & Laboratory'
   ];
-  const site_list =[
+  const site_list = [
     'Hail Cement plant',
 
   ]
@@ -338,10 +338,11 @@ const StopCard = () => {
 
 
 
-  // Function to send data to Firestore
+  // Function to send data to Firestore (both V1 and V2 schemas for testing)
   const sendToFirestore = async (reportData) => {
     try {
-      const docRef = await addDoc(collection(db, 'stopCardReports'), {
+      // Prepare common report structure
+      const commonReportData = {
         reportId: reportData.reportId,
         timestamp: serverTimestamp(),
         submittedAt: new Date().toISOString(),
@@ -350,10 +351,9 @@ const StopCard = () => {
           displayName: name || 'Unknown User',
           companyId: parseInt(id) || 0,
           uid: user?.uid || 'unknown',
-          department:user?.department|| 'unknown',
-          job_title:user?.jobTitle|| 'unknown',
-          full_name:user?.fullName|| 'unknown'
-
+          department: user?.department || 'unknown',
+          job_title: user?.jobTitle || 'unknown',
+          full_name: user?.fullName || 'unknown'
         },
         siteInfo: {
           site: reportData.site,
@@ -394,20 +394,104 @@ const StopCard = () => {
         },
         feedback: {
           suggestions: reportData.suggestions || ''
-        },
- 
-      });
+        }
+      };
+
+      // Send to V1 schema (original - one document per report)
+      const docRef = await addDoc(collection(db, 'stopCardReports'), commonReportData);
+
+      // Send to V2 schema (optimized - one document per day)
+      const v2ReportData = {
+        ...commonReportData,
+        timestamp: new Date() // V2 uses regular Date instead of serverTimestamp
+      };
+      
+      try {
+        await StopCardReportsServiceV2.saveReport(v2ReportData);
+        console.log('✅ Report saved to both V1 and V2 schemas');
+      } catch (v2Error) {
+        console.error('⚠️ V2 save failed, but V1 succeeded:', v2Error);
+        // Continue with success since V1 worked (your main schema)
+      }
 
       return {
         success: true,
-        message: 'Data saved to Firestore successfully',
-        documentId: docRef.id
+        message: 'Data saved to Firestore successfully (both schemas)',
+        documentId: docRef.id,
+        schemas: { v1: true, v2: true }
       };
     } catch (error) {
-      return {
-        success: false,
-        message: `Firestore error: ${error.message}`
-      };
+      // If V1 fails, try V2 only as backup
+      try {
+        const v2ReportData = {
+          reportId: reportData.reportId,
+          submittedAt: new Date().toISOString(),
+          userInfo: {
+            email: user?.email || 'unknown@company.com',
+            displayName: name || 'Unknown User',
+            companyId: parseInt(id) || 0,
+            uid: user?.uid || 'unknown',
+            department: user?.department || 'unknown',
+            job_title: user?.jobTitle || 'unknown',
+            full_name: user?.fullName || 'unknown'
+          },
+          siteInfo: {
+            site: reportData.site,
+            area: reportData.area,
+            date: reportData.date,
+            shift: reportData.shift
+          },
+          observationData: {
+            durationMinutes: reportData.durationMinutes,
+            peopleConducted: reportData.peopleConducted,
+            peopleObserved: reportData.peopleObserved
+          },
+          safetyActs: {
+            safeActsCount: reportData.safeActsCount,
+            safeActsList: reportForm.safeActsObserved.filter(act => act.trim() !== ''),
+            unsafeActsCount: reportData.unsafeActsCount,
+            unsafeActsList: reportForm.unsafeActsObserved.filter(act => act.trim() !== '')
+          },
+          completionRates: {
+            actionsCompletion: reportData.actionsCompletion,
+            conditionsCompletion: reportData.conditionsCompletion
+          },
+          assessmentData: {
+            actions: actions.map((item, itemIndex) => ({
+              category: item.label,
+              questions: item.questions.map((question, questionIndex) => ({
+                question: question.q,
+                status: actionStatus[`action_${itemIndex}_question_${questionIndex}`] || false
+              }))
+            })),
+            conditions: conditions.map((item, itemIndex) => ({
+              category: item.label,
+              questions: item.questions.map((question, questionIndex) => ({
+                question: question.q,
+                status: conditionStatus[`condition_${itemIndex}_question_${questionIndex}`] || false
+              }))
+            }))
+          },
+          feedback: {
+            suggestions: reportData.suggestions || ''
+          }
+        };
+
+        await StopCardReportsServiceV2.saveReport(v2ReportData);
+        console.log('✅ Report saved to V2 schema only (V1 failed)');
+        
+        return {
+          success: true,
+          message: 'Data saved to V2 schema (V1 backup failed)',
+          schemas: { v1: false, v2: true }
+        };
+      } catch (v2Error) {
+        return {
+          success: false,
+          message: `Both schemas failed - V1: ${error.message}, V2: ${v2Error.message}`,
+          schemas: { v1: false, v2: false }
+        };
+      }
     }
   };
 
@@ -576,18 +660,21 @@ const StopCard = () => {
     <div className="stop-card-container">
       {/* Header */}
       <div className="stop-card-header">
-        
+
         <div className="header-title-container">
           <h1 className="header-main-title">STOP Card</h1>
- 
+
         </div>
         <div className="header-right-container">
           <button className="home-button history-button" onClick={() => navigate('/reports')} aria-label="History">
             <span className="button-text">History</span>
           </button>
-          <button className="home-button" onClick={() => navigate('/home')}>
-            <svg className="nav-icon" viewBox="0 0 24 24" fill="#fff">
+          <button className="home-button wide-button" onClick={() => navigate('/home')}>
+            {/* <svg className="nav-icon" viewBox="0 0 24 24" fill="#fff">
               <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+            </svg> */}
+            <svg viewBox="0 0 24 24" fill="#FFFFFF" width="20" height="20">
+              <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
             </svg>
           </button>
         </div>
@@ -666,7 +753,7 @@ const StopCard = () => {
                 <label className="input-label">Safe acts observed</label>
                 <button onClick={addSafeAct} className="add-button">
                   <svg viewBox="0 0 24 24" fill={colors.primary || '#FF9500'} width="20" height="20">
-                    <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                    <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
                   </svg>
                 </button>
               </div>
@@ -685,7 +772,7 @@ const StopCard = () => {
                       className="remove-button"
                     >
                       <svg viewBox="0 0 24 24" fill="#FF3B30" width="20" height="20">
-                        <path d="M19 13H5v-2h14v2z"/>
+                        <path d="M19 13H5v-2h14v2z" />
                       </svg>
                     </button>
                   )}
@@ -699,7 +786,7 @@ const StopCard = () => {
                 <label className="input-label">Unsafe acts observed</label>
                 <button onClick={addUnsafeAct} className="add-button">
                   <svg viewBox="0 0 24 24" fill={colors.primary || '#FF9500'} width="20" height="20">
-                    <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                    <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
                   </svg>
                 </button>
               </div>
@@ -718,7 +805,7 @@ const StopCard = () => {
                       className="remove-button"
                     >
                       <svg viewBox="0 0 24 24" fill="#FF3B30" width="20" height="20">
-                        <path d="M19 13H5v-2h14v2z"/>
+                        <path d="M19 13H5v-2h14v2z" />
                       </svg>
                     </button>
                   )}
@@ -737,7 +824,7 @@ const StopCard = () => {
                   {reportForm.date.toDateString()}
                 </span>
                 <svg viewBox="0 0 24 24" fill={colors.primary} width="20" height="20">
-                  <path d="M20 3h-1V1h-2v2H7V1H5v2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 18H4V8h16v13z"/>
+                  <path d="M20 3h-1V1h-2v2H7V1H5v2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 18H4V8h16v13z" />
                 </svg>
               </button>
 
@@ -757,24 +844,24 @@ const StopCard = () => {
                         className="date-button"
                         onClick={() => {
                           const today = new Date();
-                          today.setHours(0,0,0,0);
+                          today.setHours(0, 0, 0, 0);
                           const minDate = new Date(today);
                           minDate.setDate(minDate.getDate() - 6); // 7-day window including today
                           const newDate = new Date(reportForm.date);
                           newDate.setDate(newDate.getDate() - 1);
-                          newDate.setHours(0,0,0,0);
+                          newDate.setHours(0, 0, 0, 0);
                           if (newDate >= minDate) {
                             updateReportForm('date', newDate);
                           }
                         }}
                         disabled={(() => {
                           const today = new Date();
-                          today.setHours(0,0,0,0);
+                          today.setHours(0, 0, 0, 0);
                           const minDate = new Date(today);
                           minDate.setDate(minDate.getDate() - 6);
                           const prev = new Date(reportForm.date);
                           prev.setDate(prev.getDate() - 1);
-                          prev.setHours(0,0,0,0);
+                          prev.setHours(0, 0, 0, 0);
                           return prev < minDate;
                         })()}
                       >
@@ -818,14 +905,14 @@ const StopCard = () => {
                         className="quick-button"
                         onClick={() => {
                           const today = new Date();
-                          today.setHours(0,0,0,0);
+                          today.setHours(0, 0, 0, 0);
                           const yesterday = new Date(today);
                           yesterday.setDate(yesterday.getDate() - 1);
                           updateReportForm('date', yesterday);
                         }}
                         disabled={(() => {
                           const today = new Date();
-                          today.setHours(0,0,0,0);
+                          today.setHours(0, 0, 0, 0);
                           const minDate = new Date(today);
                           minDate.setDate(minDate.getDate() - 6);
                           const yesterday = new Date(today);
@@ -852,7 +939,7 @@ const StopCard = () => {
                   {reportForm.site || "Select site"}
                 </span>
                 <svg viewBox="0 0 24 24" fill={colors.textSecondary || '#8E8E93'} width="20" height="20">
-                  <path d="M7 10l5 5 5-5z"/>
+                  <path d="M7 10l5 5 5-5z" />
                 </svg>
               </button>
             </div>
@@ -868,7 +955,7 @@ const StopCard = () => {
                   {reportForm.area || "Select area"}
                 </span>
                 <svg viewBox="0 0 24 24" fill={colors.textSecondary || '#8E8E93'} width="20" height="20">
-                  <path d="M7 10l5 5 5-5z"/>
+                  <path d="M7 10l5 5 5-5z" />
                 </svg>
               </button>
             </div>
@@ -974,7 +1061,7 @@ const StopCard = () => {
                 onClick={() => setShowSummaryModal(false)}
               >
                 <svg viewBox="0 0 24 24" fill={colors.text} width="24" height="24">
-                  <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                  <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
                 </svg>
               </button>
             </div>
@@ -1087,7 +1174,7 @@ const StopCard = () => {
                       }}
                     >
                       <svg viewBox="0 0 24 24" fill="#FFFFFF" width="20" height="20">
-                        <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+                        <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
                       </svg>
                       <span className="share-button-text">Home</span>
                     </button>
@@ -1110,7 +1197,7 @@ const StopCard = () => {
                 onClick={() => setShowSiteDropdown(false)}
               >
                 <svg viewBox="0 0 24 24" fill={colors.text || '#1C1C1E'} width="24" height="24">
-                  <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                  <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
                 </svg>
               </button>
             </div>
@@ -1129,7 +1216,7 @@ const StopCard = () => {
                   </span>
                   {reportForm.site === site && (
                     <svg viewBox="0 0 24 24" fill={colors.primary || '#FF9500'} width="20" height="20">
-                      <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                      <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
                     </svg>
                   )}
                 </button>
@@ -1150,7 +1237,7 @@ const StopCard = () => {
                 onClick={() => setShowAreaDropdown(false)}
               >
                 <svg viewBox="0 0 24 24" fill={colors.text || '#1C1C1E'} width="24" height="24">
-                  <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                  <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
                 </svg>
               </button>
             </div>
@@ -1169,7 +1256,7 @@ const StopCard = () => {
                   </span>
                   {reportForm.area === area && (
                     <svg viewBox="0 0 24 24" fill={colors.primary || '#FF9500'} width="20" height="20">
-                      <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                      <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
                     </svg>
                   )}
                 </button>

@@ -223,8 +223,7 @@ function AuditReport() {
             );
             
             setUploadProgress(70);
-            console.log('Image uploaded successfully:', imageUrl);
-            
+             
           } catch (uploadError) {
             console.error('Cloudinary upload error:', uploadError);
             throw new Error(`Failed to upload image: ${uploadError.message}`);

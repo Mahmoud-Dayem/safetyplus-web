@@ -4,6 +4,7 @@ import { colors } from '../constants/color';
 import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import StopCardReportsService from '../firebase/stopCardReportsService';
+import StopCardReportsServiceV2 from '../firebase/stopCardReportsServiceV2';
 import './AuditHistoryReports.css';
 
 const ReportHistory = () => {
@@ -11,10 +12,13 @@ const ReportHistory = () => {
   const user = useSelector(state => state.auth.user);
   const id = user?.companyId;
 
-  const [reports, setReports] = useState([]);
   const [selectedYear, setSelectedYear] = useState(String(new Date().getFullYear()));
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [monthlyCounts, setMonthlyCounts] = useState(new Array(12).fill(0));
+  const [totalReports, setTotalReports] = useState(0);
+  // eslint-disable-next-line no-unused-vars
+  const [useV2Schema, setUseV2Schema] = useState(true); // Toggle for testing performance
 
   const fetchReports = async () => {
     if (!id) {
@@ -25,21 +29,48 @@ const ReportHistory = () => {
 
     try {
       setLoading(true);
-      const userReports = await StopCardReportsService.getUserReports(id, 200);
-      setReports(userReports);
+      
+      const selectedYearInt = parseInt(selectedYear, 10);
+      const startTime = performance.now();
+      
+      // Use V2 schema for better performance, fallback to V1 if needed
+      let monthlyCountsData;
+      let service = 'V2';
+      
+      try {
+        if (useV2Schema) {
+          monthlyCountsData = await StopCardReportsServiceV2.getUserMonthlyCounts(id, selectedYearInt);
+        } else {
+          throw new Error('V1 requested');
+        }
+      } catch (v2Error) {
+        console.log('Falling back to V1 service...');
+        monthlyCountsData = await StopCardReportsService.getUserMonthlyCounts(id, selectedYearInt);
+        service = 'V1';
+      }
+      
+      const endTime = performance.now();
+      console.log(`📊 Fetched monthly counts using ${service} service in ${Math.round(endTime - startTime)}ms`);
+      
+      setMonthlyCounts(monthlyCountsData);
+      
+      // Calculate total for the year
+      const yearTotal = monthlyCountsData.reduce((sum, count) => sum + count, 0);
+      setTotalReports(yearTotal);
+      
     } catch (err) {
-      console.error('Error fetching reports:', err);
+      console.error('Error fetching report counts:', err);
       setError(err.message);
     } finally {
       setLoading(false);
     }
   };
 
-  // Fetch reports on component mount and when id changes
+  // Fetch reports on component mount and when id, selectedYear, or schema changes
   useEffect(() => {
     fetchReports();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  }, [id, selectedYear, useV2Schema]);
 
   // Months list
   const months = [
@@ -51,21 +82,9 @@ const ReportHistory = () => {
   const currentMonth = currentDate.getMonth(); // 0-based
   const currentYear = currentDate.getFullYear();
 
-  // Filter reports for selected year
-  const yearlyReports = reports.filter((r) => {
-    const d = r?.submittedAt ? new Date(r.submittedAt) : (r?.timestamp ? new Date(r.timestamp.toDate()) : null);
-    if (!d || isNaN(d)) return false;
-    return d.getFullYear() === parseInt(selectedYear, 10);
-  });
-
-  // Calculate monthly statistics
+  // Calculate monthly statistics using precomputed counts
   const monthlyStats = months.map((monthName, index) => {
-    const count = yearlyReports.filter((r) => {
-      const d = r?.submittedAt ? new Date(r.submittedAt) : (r?.timestamp ? new Date(r.timestamp.toDate()) : null);
-      if (!d || isNaN(d)) return false;
-      return d.getMonth() === index;
-    }).length;
-
+    const count = monthlyCounts[index] || 0;
     const isCurrentYear = parseInt(selectedYear, 10) === currentYear;
     const isPastOrCurrentMonth = !isCurrentYear || index <= currentMonth;
     
@@ -75,9 +94,6 @@ const ReportHistory = () => {
       isPastOrCurrentMonth
     };
   });
-
-  // Total reports for selected year
-  const totalReports = yearlyReports.length;
 
   // Get count color based on value
   const getCountColor = (count) => {
@@ -113,6 +129,23 @@ const ReportHistory = () => {
                 <option key={y} value={y}>{y}</option>
               ))}
             </select>
+          </div>
+          <div className="schema-toggle">
+            <button
+              onClick={() => setUseV2Schema(!useV2Schema)}
+              style={{ 
+                backgroundColor: useV2Schema ? '#4ecdc4' : '#ff6b6b',
+                color: 'white',
+                border: 'none',
+                padding: '8px 12px',
+                borderRadius: '4px',
+                fontSize: '12px',
+                cursor: 'pointer'
+              }}
+              title={`Currently using ${useV2Schema ? 'V2 (Optimized)' : 'V1 (Original)'} schema`}
+            >
+              {useV2Schema ? 'V2' : 'V1'}
+            </button>
           </div>
         </div>
       </div>
