@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { colors } from '../constants/color';
 import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
-import './AllAuditReports.css';
+import './inbox.css';
 import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firestore'
 import { db } from '../firebase/firebaseConfig';
 
@@ -167,10 +167,10 @@ function Inbox() {
   // Show loading screen while fetching data or waiting for user
   if (loading || !id) {
     return (
-      <div className="loading-container">
-        <div className="loading-content">
-          <div className="loading-spinner"></div>
-          <p className="loading-text">{!id ? 'Loading user data...' : 'Loading inbox data...'}</p>
+      <div className="inbox-loading-container">
+        <div className="inbox-loading-content">
+          <div className="inbox-loading-spinner"></div>
+          <p className="inbox-loading-text">{!id ? 'Loading user data...' : 'Loading inbox data...'}</p>
         </div>
       </div>
     )
@@ -179,8 +179,8 @@ function Inbox() {
   // Show error if data failed to load
   if (error) {
     return (
-      <div className="error-container">
-        <div className="error-content">
+      <div className="inbox-error-container">
+        <div className="inbox-error-content">
           <h2>Error</h2>
           <p>{error}</p>
           <button onClick={() => window.location.reload()}>Retry</button>
@@ -193,11 +193,11 @@ function Inbox() {
 
 
   return (
-    <div className="audit-reports-container">
+    <div className="inbox-container">
       {/* Header */}
-      <div className="audit-reports-header">
+      <div className="inbox-header">
         <button
-          className="back-button"
+          className="inbox-back-button"
           onClick={() => navigate(-1)}
           style={{ backgroundColor: colors.primary }}
         >
@@ -205,16 +205,16 @@ function Inbox() {
             <path d="M19 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" />
           </svg>
         </button>
-        <div className="header-title-section">
-          <h1 className="page-title">Inbox</h1>
-          <div className="header-info">
-            <span className="user-name">Welcome, {user?.displayName || user?.email || 'User'}</span>
-            <span className="total-reports-count">Assigned to me: {auditReports.length} Reports</span>
+        <div className="inbox-header-title-section">
+          <h1 className="inbox-page-title">Inbox</h1>
+          <div className="inbox-header-info">
+            <span className="inbox-user-name">Welcome, {user?.displayName || user?.email || 'User'}</span>
+            <span className="inbox-total-reports-count">Assigned to me: {auditReports.length} Reports</span>
           </div>
         </div>
-        <div className="header-buttons">
+        <div className="inbox-header-buttons">
           <button
-            className="export-button"
+            className="inbox-export-button"
             onClick={() => {
               try {
                 const toExport = auditReports || [];
@@ -282,7 +282,7 @@ function Inbox() {
             </svg>
           </button>
           <button
-            className="refresh-button"
+            className="inbox-refresh-button"
             onClick={async () => {
               setRefreshing(true);
               try {
@@ -302,12 +302,12 @@ function Inbox() {
             disabled={refreshing}
             title="Refresh Data"
           >
-            <svg viewBox="0 0 24 24" fill="#FFFFFF" width="20" height="20" className={refreshing ? 'spinning' : ''}>
+            <svg viewBox="0 0 24 24" fill="#FFFFFF" width="20" height="20" className={refreshing ? 'inbox-spinning' : ''}>
               <path d="M17.65,6.35C16.2,4.9 14.21,4 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20C15.73,20 18.84,17.45 19.73,14H17.65C16.83,16.33 14.61,18 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6C13.66,6 15.14,6.69 16.22,7.78L13,11H20V4L17.65,6.35Z" />
             </svg>
           </button>
           <button
-            className="home-button "
+            className="inbox-home-button "
             onClick={() => navigate('/home')}
           >
             <svg viewBox="0 0 24 24" fill="#FFFFFF" width="20" height="20">
@@ -318,10 +318,10 @@ function Inbox() {
       </div>
 
       {/* Filter Buttons */}
-      <div className="filter-buttons-container">
+      <div className="inbox-filter-buttons">
         {(isChief || !isSupervisor) && (
           <button
-            className={`filter-button ${selectedFilter === 'assigned' ? 'active' : ''} ${isChief ? 'inbox-yellow' : ''}`}
+            className={`inbox-filter-button ${selectedFilter === 'assigned' ? 'active' : ''} ${isChief ? 'inbox-yellow' : ''}`}
             onClick={() => {
               setSelectedFilter('assigned');
               const filteredReports = applyFilters(auditReports, 'assigned', selectedMonth, selectedYear);
@@ -334,7 +334,7 @@ function Inbox() {
           </button>
         )}
         <button
-          className={`filter-button ${selectedFilter === 'rectifying' ? 'active' : ''} ${(!isChief && isSupervisor) ? 'inbox-green' : ''}`}
+          className={`inbox-filter-button ${selectedFilter === 'rectifying' ? 'active' : ''} ${(!isChief && isSupervisor) ? 'inbox-green' : ''}`}
           onClick={() => {
             setSelectedFilter('rectifying');
             const filteredReports = applyFilters(auditReports, 'rectifying', selectedMonth, selectedYear);
@@ -344,18 +344,18 @@ function Inbox() {
           {(!isChief && isSupervisor) ? 'Inbox' : 'Rectifying by Supervisor'} ({applyFilters(auditReports, 'rectifying', selectedMonth, selectedYear).length})
         </button>
         <button
-          className={`filter-button ${selectedFilter === 'verifying' ? 'active' : ''}`}
+          className={`inbox-filter-button ${selectedFilter === 'verifying' ? 'active' : ''}`}
           onClick={() => {
             setSelectedFilter('verifying');
             const filteredReports = applyFilters(auditReports, 'verifying', selectedMonth, selectedYear);
             setFilteredReports(filteredReports);
           }}
         >
-          <span className="filter-text-full">Waiting for Verification ({applyFilters(auditReports, 'verifying', selectedMonth, selectedYear).length})</span>
-          <span className="filter-text-short">Verifying ({applyFilters(auditReports, 'verifying', selectedMonth, selectedYear).length})</span>
+          <span className="inbox-filter-text-full">Waiting for Verification ({applyFilters(auditReports, 'verifying', selectedMonth, selectedYear).length})</span>
+          <span className="inbox-filter-text-short">Verifying ({applyFilters(auditReports, 'verifying', selectedMonth, selectedYear).length})</span>
         </button>
         <button
-          className={`filter-button ${selectedFilter === 'completed' ? 'active' : ''}`}
+          className={`inbox-filter-button ${selectedFilter === 'completed' ? 'active' : ''}`}
           onClick={() => {
             setSelectedFilter('completed');
             const filteredReports = applyFilters(auditReports, 'completed', selectedMonth, selectedYear);
@@ -365,7 +365,7 @@ function Inbox() {
           Completed ({applyFilters(auditReports, 'completed', selectedMonth, selectedYear).length})
         </button>
         <button
-          className={`filter-button ${selectedFilter === 'all' ? 'active' : ''}`}
+          className={`inbox-filter-button ${selectedFilter === 'all' ? 'active' : ''}`}
           onClick={() => {
             setSelectedFilter('all');
             const filteredReports = applyFilters(auditReports, 'all', selectedMonth, selectedYear);
@@ -376,11 +376,11 @@ function Inbox() {
         </button>
 
         {/* Date Filters in same row */}
-        <div className="date-filters-inline">
+        <div className="inbox-date-filters-inline">
           <div className="filter-group">
-            <label className="filter-label">Year:</label>
+            <label className="inbox-filter-label">Year:</label>
             <select
-              className="date-filter-select"
+              className="inbox-date-filter-select"
               value={selectedYear}
               onChange={(e) => {
                 setSelectedYear(e.target.value);
@@ -395,9 +395,9 @@ function Inbox() {
           </div>
 
           <div className="filter-group">
-            <label className="filter-label">Month:</label>
+            <label className="inbox-filter-label">Month:</label>
             <select
-              className="date-filter-select"
+              className="inbox-date-filter-select"
               value={selectedMonth}
               onChange={(e) => {
                 setSelectedMonth(e.target.value);
@@ -428,14 +428,14 @@ function Inbox() {
 
       {/* Reports: Cards or Table */}
       {filteredReports.length === 0 ? (
-        <div className="empty-state">
+        <div className="inbox-empty-state">
           <h3>No {selectedFilter === 'all' ? 'Assigned Reports' : selectedFilter.charAt(0).toUpperCase() + selectedFilter.slice(1) + ' Reports'} Found</h3>
           <p>{selectedFilter === 'all' ? 'No reports have been assigned to you yet.' : `No ${selectedFilter} reports found in your assignments.`}</p>
         </div>
       ) : (
 
-        <div className="reports-table-wrapper">
-          <table className="reports-table">
+        <div className="inbox-reports-table-wrapper">
+          <table className="inbox-reports-table">
             <thead>
               <tr>
                 <th>Location</th>
@@ -453,7 +453,7 @@ function Inbox() {
                 const displayStatus = report.completed ? 'completed' : (report.status || 'pending');
                 return (
                   <tr key={report.id}
-                    className="report-row"
+                    className="inbox-report-row"
                     onClick={() => navigate('/audit-report-details-assigned', { state: { report } })}
                     style={{ cursor: 'pointer' }}
                   >
@@ -464,7 +464,7 @@ function Inbox() {
                     <td>{report.assigned_department || '—'}</td>
                     <td>{report.assigned_supervisor || '—'}</td>
                     <td>
-                      <span className={`card-status-badge ${displayStatus}`}>{displayStatus}</span>
+                      <span className={`inbox-status-badge ${displayStatus}`}>{displayStatus}</span>
                     </td>
                     <td>{report.completed_at ? new Date(report.completed_at).toLocaleString() : '—'}</td>
                   </tr>

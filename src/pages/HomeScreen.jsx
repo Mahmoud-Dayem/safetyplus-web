@@ -1,11 +1,8 @@
-import React, { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { removeUser } from "../helper/authStorage";
 import { colors } from '../constants/color';
 import { useNavigate } from 'react-router-dom';
-import { logout, updateUserProfile } from '../store/authSlice';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../firebase/firebaseConfig';
+import { logout } from '../store/authSlice';
 import './HomeScreen.css';
 
 const HomeScreen = () => {
@@ -15,41 +12,46 @@ const HomeScreen = () => {
 
   const name = user?.displayName;
   const id = user?.companyId;
+  // const department = user?.department
+  // const fullName = user?.fullName
+  // const jobTitle = user?.jobTitle
+  // const stopcard = user?.stopcard
+  // const inbox = user?.inbox
 
   // Fetch employee document and update Redux store
-  useEffect(() => {
-    const fetchUserDocument = async () => {
-      if (!id) {
-         return;
-      }
+  // useEffect(() => {
+  //   const fetchUserDocument = async () => {
+  //     if (!id) {
+  //       return;
+  //     }
 
-      try {
-        const userDocRef = doc(db, 'employees_collection', id);
-        const userDocSnap = await getDoc(userDocRef);
+  //     try {
+  //       const userDocRef = doc(db, 'employees_collection', id);
+  //       const userDocSnap = await getDoc(userDocRef);
 
-        if (userDocSnap.exists()) {
-          const empData = userDocSnap.data();
- 
-          // Combine first_name and last_name with space between
-          const fullName = `${empData.first_name || ''} ${empData.last_name || ''}`.trim();
+  //       if (userDocSnap.exists()) {
+  //         const empData = userDocSnap.data();
 
-          // Dispatch to Redux to store department, fullName, jobTitle, and permissions
-          dispatch(updateUserProfile({
-            department: empData.department || null,
-            fullName: fullName || null,
-            jobTitle: empData.job_title || null,
-            stopcard: empData.stopcard === true, // default to false if not specified
-            inbox: empData.inbox === true, // default to false if not specified
-          }));
-        } else {
-         }
-      } catch (error) {
-        console.error('Error fetching user document:', error);
-      }
-    };
+  //         // Combine first_name and last_name with space between
+  //         const fullName = `${empData.first_name || ''} ${empData.last_name || ''}`.trim();
 
-    fetchUserDocument();
-  }, [id, dispatch]);
+  //         // Dispatch to Redux to store department, fullName, jobTitle, and permissions
+  //         dispatch(updateUserProfile({
+  //           department: empData.department || null,
+  //           fullName: fullName || null,
+  //           jobTitle: empData.job_title || null,
+  //           stopcard: empData.stopcard === true, // default to false if not specified
+  //           inbox: empData.inbox === true, // default to false if not specified
+  //         }));
+  //       } else {
+  //       }
+  //     } catch (error) {
+  //       console.error('Error fetching user document:', error);
+  //     }
+  //   };
+
+  //   fetchUserDocument();
+  // }, [id, dispatch]);
 
   // No Home banner needed; StopCard handles alerts before navigation
 
@@ -103,6 +105,10 @@ const HomeScreen = () => {
           <svg className="shield-checkmark" viewBox="0 0 24 24" fill={colors.primary || '#FF9500'}>
             <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z" />
           </svg>
+     
+ 
+
+
           <h1 className="app-title">Safety Plus</h1>
           <p className="subtitle">Workplace Safety Management</p>
         </div>
@@ -178,7 +184,7 @@ const HomeScreen = () => {
                     <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
                   </svg>
                 </button>
-                         <button
+                <button
                   className="reports-button"
                   onClick={() => navigate('/viewallauditreports')}
                 >
@@ -217,7 +223,7 @@ const HomeScreen = () => {
         </div>
 
         <div className="footer-section">
- 
+
           <p className="footer-text">
             Conduct safety observations and generate reports
           </p>

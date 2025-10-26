@@ -434,7 +434,7 @@
 }
 
 /* Table View */
-.reports-table-wrapper {
+.audit-reports-table-wrapper {
   background: white;
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
@@ -442,12 +442,12 @@
   overflow-x: auto;
 }
 
-.reports-table {
+.audit-reports-table {
   width: 100%;
   border-collapse: collapse;
 }
 
-.reports-table thead th {
+.audit-reports-table thead th {
   background: #f8f9fa;
   color: #2c2c2c;
   font-weight: 700;
@@ -457,7 +457,7 @@
   border-bottom: 2px solid #eee;
 }
 
-.reports-table tbody td {
+.audit-reports-table tbody td {
   padding: 12px;
   border-bottom: 1px solid #f0f0f0;
   color: #2c2c2c;
@@ -465,26 +465,26 @@
   vertical-align: top;
 }
 
-.reports-table tbody tr:hover {
+.audit-reports-table tbody tr:hover {
   background: rgba(0, 0, 0, 0.02);
 }
 
 /* Report Row Styles */
-.report-row {
+.audit-report-row {
   transition: all 0.2s ease;
 }
 
-.report-row td {
+.audit-report-row td {
   font-size: 14px !important; /* Control font size for all row data - Desktop */
   font-weight: 100;
 }
 
-.report-row:hover {
+.audit-report-row:hover {
   background: rgba(44, 44, 44, 0.04);
 }
 
 /* Make long descriptions wrap nicely */
-.reports-table td:nth-child(2) {
+.audit-reports-table td:nth-child(2) {
   white-space: normal;
   word-break: break-word;
 }
@@ -555,20 +555,15 @@
     height: 100px;
   }
 
-  /* Keep only Location, Description, Status on small screens */
-  .reports-table th:nth-child(3),
-  .reports-table th:nth-child(4),
-  .reports-table th:nth-child(5),
-  .reports-table th:nth-child(7),
-  .reports-table td:nth-child(3),
-  .reports-table td:nth-child(4),
-  .reports-table td:nth-child(5),
-  .reports-table td:nth-child(7) {
-    display: none;
+  /* Keep only Location, Description, Supervisor, Status on small screens - Inbox specific */
+  /* .audit-reports-container .reports-table th:not(:nth-child(1)):not(:nth-child(2)):not(:nth-child(13)) ,
+  .audit-reports-container .reports-table td:not(:nth-child(1)):not(:nth-child(2)):not(:nth-child(13)) {
+    display: none !important;
   }
+  */
 
-  .reports-table thead th,
-  .reports-table tbody td {
+  .audit-reports-table thead th,
+  .audit-reports-table tbody td {
     padding: 10px 8px;
     font-size: 12px;
   }
@@ -580,42 +575,55 @@
 }
 
 @media (max-width: 480px) {
-  /* Fully avoid horizontal scroll on mobile */
-  .reports-table-wrapper {
+  /* Inbox-specific responsive rules */
+  .audit-reports-container .audit-reports-table-wrapper {
     overflow-x: hidden;
   }
 
-  .reports-table {
-    table-layout: fixed;
-    width: 100%;
+  .audit-reports-container .audit-reports-table {
+    table-layout: fixed !important;
+    width: 100% !important;
+    min-width: auto !important;
   }
 
-  .reports-table thead th,
-  .reports-table tbody td {
+  .audit-reports-container .audit-reports-table thead th,
+  .audit-reports-container .audit-reports-table tbody td {
     padding: 8px 6px;
     font-size: 12px;
   }
 
-  /* Column widths: Location | Description | Status */
-  .reports-table th:nth-child(1),
-  .reports-table td:nth-child(1) {
-    width: 15%;
+  /* Keep only Location, Description, Supervisor, Status on small screens - Inbox specific */
+  .audit-reports-container .audit-reports-table th:not(:nth-child(1)):not(:nth-child(2)):not(:nth-child(13)),
+  .audit-reports-container .audit-reports-table td:not(:nth-child(1)):not(:nth-child(2)):not(:nth-child(13))   {
+    display: none !important;
+  }
+ 
+  /* Column widths: Location | Description | Supervisor | Status */
+  .audit-reports-container .audit-reports-table th:nth-child(1),
+  .audit-reports-container .audit-reports-table td:nth-child(1) {
+    width: 30% !important;
     word-break: break-word;
+  }  
+
+  .audit-reports-container .audit-reports-table th:nth-child(2),
+  .audit-reports-container .audit-reports-table td:nth-child(2) {
+    width: 30% !important;
   }
 
-  .reports-table th:nth-child(2),
-  .reports-table td:nth-child(2) {
-    width: 65%;
-  }
-
-  .reports-table th:nth-child(6),
-  .reports-table td:nth-child(6) {
-    width: 15%;
+  .audit-reports-container .audit-reports-table th:nth-child(13),
+  .audit-reports-container .audit-reports-table td:nth-child(13) {
+    width: 30% !important;
     white-space: nowrap;
-  }
+  } 
+/* 
+  .audit-reports-container .reports-table th:nth-child(7),
+  .audit-reports-container .reports-table td:nth-child(7) {
+    width: 20% !important;
+    white-space: nowrap;
+  } */
 
   /* Clamp description to 2 lines with ellipsis */
-  .reports-table td:nth-child(2) {
+  .audit-reports-container .audit-reports-table td:nth-child(2) {
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
@@ -623,13 +631,8 @@
     overflow: hidden;
   }
 
-  /* Responsive font size for mobile */
-  .report-row td {
-    font-size: 10px !important;
-  }
-
   /* Slightly reduce badge size to fit */
-  .card-status-badge {
+  .audit-reports-container .card-status-badge {
     font-size: 10px;
     padding: 3px 8px;
   }

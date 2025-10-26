@@ -51,40 +51,40 @@ const StopCardProtectedRoute = ({ children }) => {
       }
 
       // If we have a companyId but no stopcard permission loaded, fetch from Firestore
-      if (user.companyId && user.stopcard !== true) {
-        try {
-          const { doc, getDoc } = await import('firebase/firestore');
-          const { db } = await import('./firebase/firebaseConfig');
-          const { updateUserProfile } = await import('./store/authSlice');
+      // if (user.companyId && user.stopcard !== true) {
+      //   try {
+      //     const { doc, getDoc } = await import('firebase/firestore');
+      //     const { db } = await import('./firebase/firebaseConfig');
+      //     const { updateUserProfile } = await import('./store/authSlice');
           
-          const userDocRef = doc(db, 'employees_collection', user.companyId);
-          const userDocSnap = await getDoc(userDocRef);
+      //     const userDocRef = doc(db, 'employees_collection', user.companyId);
+      //     const userDocSnap = await getDoc(userDocRef);
           
-          if (userDocSnap.exists()) {
-            const empData = userDocSnap.data();
-            const fullName = `${empData.first_name || ''} ${empData.last_name || ''}`.trim();
+      //     if (userDocSnap.exists()) {
+      //       const empData = userDocSnap.data();
+      //       const fullName = `${empData.first_name || ''} ${empData.last_name || ''}`.trim();
             
-            // Update Redux with employee data
-            dispatch(updateUserProfile({
-              department: empData.department || null,
-              fullName: fullName || null,
-              jobTitle: empData.job_title || null,
-              stopcard: empData.stopcard === true,
-              inbox: empData.inbox === true,
-            }));
+      //       // Update Redux with employee data
+      //       dispatch(updateUserProfile({
+      //         department: empData.department || null,
+      //         fullName: fullName || null,
+      //         jobTitle: empData.job_title || null,
+      //         stopcard: empData.stopcard === true,
+      //         inbox: empData.inbox === true,
+      //       }));
             
-            // Check stopcard permission
-            setHasPermission(empData.stopcard === true);
-          } else {
-            setHasPermission(false);
-          }
-        } catch (error) {
-          console.error('Error checking stopcard permission:', error);
-          setHasPermission(false);
-        }
-      } else {
-        setHasPermission(false);
-      }
+      //       // Check stopcard permission
+      //       setHasPermission(empData.stopcard === true);
+      //     } else {
+      //       setHasPermission(false);
+      //     }
+      //   } catch (error) {
+      //     console.error('Error checking stopcard permission:', error);
+      //     setHasPermission(false);
+      //   }
+      // } else {
+      //   setHasPermission(false);
+      // }
       
       setLoading(false);
     };
@@ -138,40 +138,40 @@ const InboxProtectedRoute = ({ children }) => {
       }
 
       // If we have a companyId but no inbox permission loaded, fetch from Firestore
-      if (user.companyId && user.inbox !== true) {
-        try {
-          const { doc, getDoc } = await import('firebase/firestore');
-          const { db } = await import('./firebase/firebaseConfig');
-          const { updateUserProfile } = await import('./store/authSlice');
+      // if (user.companyId && user.inbox !== true) {
+      //   try {
+      //     const { doc, getDoc } = await import('firebase/firestore');
+      //     const { db } = await import('./firebase/firebaseConfig');
+      //     const { updateUserProfile } = await import('./store/authSlice');
           
-          const userDocRef = doc(db, 'employees_collection', user.companyId);
-          const userDocSnap = await getDoc(userDocRef);
+      //     const userDocRef = doc(db, 'employees_collection', user.companyId);
+      //     const userDocSnap = await getDoc(userDocRef);
           
-          if (userDocSnap.exists()) {
-            const empData = userDocSnap.data();
-            const fullName = `${empData.first_name || ''} ${empData.last_name || ''}`.trim();
+      //     if (userDocSnap.exists()) {
+      //       const empData = userDocSnap.data();
+      //       const fullName = `${empData.first_name || ''} ${empData.last_name || ''}`.trim();
             
-            // Update Redux with employee data
-            dispatch(updateUserProfile({
-              department: empData.department || null,
-              fullName: fullName || null,
-              jobTitle: empData.job_title || null,
-              stopcard: empData.stopcard === true,
-              inbox: empData.inbox === true,
-            }));
+      //       // Update Redux with employee data
+      //       dispatch(updateUserProfile({
+      //         department: empData.department || null,
+      //         fullName: fullName || null,
+      //         jobTitle: empData.job_title || null,
+      //         stopcard: empData.stopcard === true,
+      //         inbox: empData.inbox === true,
+      //       }));
             
-            // Check inbox permission
-            setHasPermission(empData.inbox === true);
-          } else {
-            setHasPermission(false);
-          }
-        } catch (error) {
-          console.error('Error checking inbox permission:', error);
-          setHasPermission(false);
-        }
-      } else {
-        setHasPermission(false);
-      }
+      //       // Check inbox permission
+      //       setHasPermission(empData.inbox === true);
+      //     } else {
+      //       setHasPermission(false);
+      //     }
+      //   } catch (error) {
+      //     console.error('Error checking inbox permission:', error);
+      //     setHasPermission(false);
+      //   }
+      // } else {
+      //   setHasPermission(false);
+      // }
       
       setLoading(false);
     };

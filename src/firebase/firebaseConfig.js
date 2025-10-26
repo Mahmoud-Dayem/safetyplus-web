@@ -1,6 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
-import { collection, getDocs, setDoc, doc, getDoc } from "firebase/firestore";
+import {   setDoc, doc, getDoc } from "firebase/firestore";
 
 import { getAuth, createUserWithEmailAndPassword, updateProfile, signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
 
@@ -94,13 +94,44 @@ export async function signup({ displayName, email, password, companyId }) {
     } catch (e) {
       console.warn("Failed to write users_by_uid mapping:", e);
     }
+    //get stop card and inbox status
+    let department = null;
+    let jobTitle = null;
+    let stopcard = false;
+    let inbox = false;
+    let fullName = "";
+    try {
+      const userDocRef = doc(db, 'employees_collection', companyId);
+      const userDocSnap = await getDoc(userDocRef);
 
+      if (userDocSnap.exists()) {
+        const empData = userDocSnap.data();
+ 
+        // Combine first_name and last_name with space between
+        fullName = `${empData.first_name || ''} ${empData.last_name || ''}`.trim();
+
+        // Dispatch to Redux to store department, fullName, jobTitle, and permissions
+
+        department = empData.department || null;
+        jobTitle = empData.job_title || null;
+        stopcard = empData.stopcard === true; // default to false if not specified
+        inbox = empData.inbox === true; // default to false if not specified
+      }
+    } catch (error) {
+      console.error('Error fetching user document:', error);
+    }
 
 
     return {
       status: 'ok',
       error: false,
       message: user,
+      department,
+      jobTitle,
+      stopcard,
+      inbox,
+      fullName
+
     };
   } catch (error) {
     return {
@@ -116,8 +147,8 @@ export async function signin({ email, password, companyId }) {
   const auth = getAuth();
   try {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
-  const user = userCredential.user;
- 
+    const user = userCredential.user;
+
     // Fetch user document by company ID
     const docRef = doc(db, "users", companyIdString);
     const docSnap = await getDoc(docRef);
@@ -131,6 +162,33 @@ export async function signin({ email, password, companyId }) {
         message: "Company ID not found. Please check your Company ID and try again.",
       };
     }
+    //fetch user document by his id to check inbox and stop card eligibility
+    let department = null;
+    let jobTitle = null;
+    let stopcard = false;
+    let inbox = false;
+    let fullName = "";
+    try {
+      const userDocRef = doc(db, 'employees_collection', companyIdString);
+      const userDocSnap = await getDoc(userDocRef);
+
+      if (userDocSnap.exists()) {
+        const empData = userDocSnap.data();
+ 
+        // Combine first_name and last_name with space between
+        fullName = `${empData.first_name || ''} ${empData.last_name || ''}`.trim();
+
+        // Dispatch to Redux to store department, fullName, jobTitle, and permissions
+
+        department = empData.department || null;
+        jobTitle = empData.job_title || null;
+        stopcard = empData.stopcard === true; // default to false if not specified
+        inbox = empData.inbox === true; // default to false if not specified
+      }
+    } catch (error) {
+      console.error('Error fetching user document:', error);
+    }
+    ///end of inbox and stop
 
     const userData = docSnap.data();
     const storedCompanyId = userData?.companyId;
@@ -138,7 +196,7 @@ export async function signin({ email, password, companyId }) {
     const isPrivileged = userData?.isPrivileged || false;
     const userId = userData?.uid;
 
- 
+
     // Verify user email matches the company ID
     if (userId === user.uid) {
       // Maintain users_by_uid mapping for rules and lookups
@@ -158,13 +216,19 @@ export async function signin({ email, password, companyId }) {
       } catch (e) {
         console.warn("Failed to upsert users_by_uid mapping on signin:", e);
       }
-       return {
+      return {
         status: 'ok',
         error: false,
         message: user,
         companyId: storedCompanyId,
         isAdmin,
-        isPrivileged
+        isPrivileged,
+        department,
+        jobTitle,
+        stopcard,
+        inbox,
+        fullName
+
       };
     } else {
       // Sign out the user since they're not authorized for this company ID
@@ -189,45 +253,45 @@ export const db = getFirestore(app);
 
 /* use it to get detailed tasks from firestore */
 
-export const updateDetailedTasks = async () => {
-  try {
-    const querySnapshot = await getDocs(collection(db, "allTasks"));
-    const tasks = [];
+// export const updateDetailedTasks = async () => {
+//   try {
+//     const querySnapshot = await getDocs(collection(db, "allTasks"));
+//     const tasks = [];
 
-    querySnapshot.forEach((doc) => {
-      tasks.push({ id: doc.id, ...doc.data() });
-    });
+//     querySnapshot.forEach((doc) => {
+//       tasks.push({ id: doc.id, ...doc.data() });
+//     });
 
-    // Save to cache
-    await storeData('cached_tasks', tasks);
+//     // Save to cache
+//     await storeData('cached_tasks', tasks);
 
-  } catch (error) {
-    console.error("Error fetching tasks:", error);
-  }
-};
+//   } catch (error) {
+//     console.error("Error fetching tasks:", error);
+//   }
+// };
 
 
 //  updateDetailedTasks();
 
-const storeData = async (key, value) => {
-  try {
-    const jsonValue = JSON.stringify(value);
-    localStorage.setItem(key, jsonValue);
-  } catch (e) {
-    console.error('Error saving to storage', e);
-  }
-};
+// const storeData = async (key, value) => {
+//   try {
+//     const jsonValue = JSON.stringify(value);
+//     localStorage.setItem(key, jsonValue);
+//   } catch (e) {
+//     console.error('Error saving to storage', e);
+//   }
+// };
 
 
-export const loadData = async (key) => {
-  try {
-    const jsonValue = localStorage.getItem(key);
-    return jsonValue != null ? JSON.parse(jsonValue) : null;
-  } catch (e) {
-    console.error('Failed to load data from cache', e);
-    return null;
-  }
-};
+// export const loadData = async (key) => {
+//   try {
+//     const jsonValue = localStorage.getItem(key);
+//     return jsonValue != null ? JSON.parse(jsonValue) : null;
+//   } catch (e) {
+//     console.error('Failed to load data from cache', e);
+//     return null;
+//   }
+// };
 
 
 // const cached  = await loadData('cached_tasks');
@@ -235,55 +299,39 @@ export const loadData = async (key) => {
 //
 //
 //
-export const updateSpares = async () => {
-  try {
-    const querySnapshot = await getDocs(collection(db, "spares"));
-    const spares = [];
-
-    querySnapshot.forEach((doc) => {
-      spares.push({ id: doc.id, ...doc.data() });
-    });
-
-    // Save to cache
-    await storeData('cached_spares', spares);
-
-  } catch (error) {
-    console.error("Error fetching spares:", error);
-  }
-};
 
 
-//  Load spares from cache();
-export const loadSpares = async (key) => {
-  try {
-    const jsonValue = localStorage.getItem(key);
-    return jsonValue != null ? JSON.parse(jsonValue) : null;
-  } catch (e) {
-    console.error('Failed to load data from cache', e);
-    return null;
-  }
-};
+// //  Load spares from cache();
+// export const loadSpares = async (key) => {
+//   try {
+//     const jsonValue = localStorage.getItem(key);
+//     return jsonValue != null ? JSON.parse(jsonValue) : null;
+//   } catch (e) {
+//     console.error('Failed to load data from cache', e);
+//     return null;
+//   }
+// };
 ////////////////////////// Load favorites
-export const loadFavorites = async (key) => {
-  try {
-    const jsonValue = localStorage.getItem(key);
-    return jsonValue != null ? JSON.parse(jsonValue) : null;
-  } catch (e) {
-    console.error('Failed to load favorites from cache', e);
-    return null;
-  }
-};
+// export const loadFavorites = async (key) => {
+//   try {
+//     const jsonValue = localStorage.getItem(key);
+//     return jsonValue != null ? JSON.parse(jsonValue) : null;
+//   } catch (e) {
+//     console.error('Failed to load favorites from cache', e);
+//     return null;
+//   }
+// };
 
 //////////////////// update to favorites
-export const storeFavorites = async (key, value) => {
+// export const storeFavorites = async (key, value) => {
 
-  try {
-    const jsonValue = JSON.stringify(value);
-    localStorage.setItem(key, jsonValue);
-  } catch (e) {
-    console.error('Error saving to storage', e);
-  }
-};
+//   try {
+//     const jsonValue = JSON.stringify(value);
+//     localStorage.setItem(key, jsonValue);
+//   } catch (e) {
+//     console.error('Error saving to storage', e);
+//   }
+// };
 
 //////////////////
 
@@ -350,7 +398,7 @@ export async function resetPassword(email) {
   } catch (error) {
     console.error("Password reset error:", error);
     let errorMessage = "Failed to send password reset email.";
-    
+
     if (error.code === 'auth/user-not-found') {
       errorMessage = "No account found with this email address.";
     } else if (error.code === 'auth/invalid-email') {
@@ -358,7 +406,7 @@ export async function resetPassword(email) {
     } else if (error.code === 'auth/too-many-requests') {
       errorMessage = "Too many reset attempts. Please try again later.";
     }
-    
+
     return {
       status: "error",
       message: errorMessage

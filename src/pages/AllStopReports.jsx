@@ -5,7 +5,6 @@ import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import StopCardReportsService from '../firebase/stopCardReportsService';
 import StopCardModal from '../components/StopCardModal';
-import './AllAuditReports.css';
 import './AllStopReports.css';
 
 
@@ -210,11 +209,11 @@ const AllStopReports = () => {
   ];
 
   return (
-    <div className="audit-reports-container">
+    <div className="stop-container">
       {/* Header */}
-      <div className="audit-reports-header">
+      <div className="stop-header">
         <button
-          className="back-button"
+          className="stop-back-button"
           onClick={() => navigate(-1)}
           style={{ backgroundColor: colors.primary }}
         >
@@ -222,21 +221,21 @@ const AllStopReports = () => {
             <path d="M19 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
           </svg>
         </button>
-        <div className="header-title-section">
-          <h1 className="page-title">All Stop Card Reports</h1>
-          <div className="header-info">
-            <span className="user-name">Welcome, {name || 'User'}</span>
-            <span className="total-reports-count">Showing: {filteredReports.length} of {reports.length} Reports</span>
+        <div className="stop-header-title-section">
+          <h1 className="stop-page-title">All Stop Card Reports</h1>
+          <div className="stop-header-info">
+            <span className="stop-user-name">Welcome, {name || 'User'}</span>
+            <span className="stop-total-reports-count">Showing: {filteredReports.length} of {reports.length} Reports</span>
           </div>
         </div>
-        <div className="filter-controls">
-          <div className="filter-group">
+        <div className="stop-filter-controls">
+          <div className="stop-filter-group">
             <label htmlFor="yearSelect">Year:</label>
             <select
               id="yearSelect"
               value={selectedYear}
               onChange={(e) => setSelectedYear(e.target.value)}
-              className="filter-select"
+              className="stop-filter-select"
             >
               {years.map((year) => (
                 <option key={year.value} value={year.value}>
@@ -245,13 +244,13 @@ const AllStopReports = () => {
               ))}
             </select>
           </div>
-          <div className="filter-group">
+          <div className="stop-filter-group">
             <label htmlFor="monthSelect">Month:</label>
             <select
               id="monthSelect"
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(e.target.value)}
-              className="filter-select"
+              className="stop-filter-select"
             >
               {months.map((month) => (
                 <option key={month.value} value={month.value}>
@@ -261,9 +260,9 @@ const AllStopReports = () => {
             </select>
           </div>
         </div>
-        <div className="header-buttons">
+        <div className="stop-header-buttons">
           <button
-            className="export-button"
+            className="stop-export-button"
             onClick={exportToExcel}
             title="Export to Excel"
             disabled={filteredReports.length === 0}
@@ -274,7 +273,7 @@ const AllStopReports = () => {
             Export
           </button>
           <button
-            className="home-button wide-button"
+            className="stop-home-button"
             onClick={() => navigate('/home')}
             title="Go to Home"
           >
@@ -288,23 +287,23 @@ const AllStopReports = () => {
 
       {/* Loading/Refreshing Indicator */}
       {refreshing && (
-        <div className="loading-container">
-          <div className="spinner"></div>
+        <div className="stop-loading-container">
+          <div className="stop-spinner"></div>
           <p>Loading reports...</p>
         </div>
       )}
 
       {/* Reports Table */}
       {filteredReports.length === 0 && !refreshing ? (
-        <div className="empty-state">
-          <div className="empty-content">
+        <div className="stop-empty-state">
+          <div className="stop-empty-content">
             <h3>No Reports Found</h3>
             <p>{reports.length === 0 ? 'No stop card reports found. Create your first report to get started.' : 'No reports match the selected filters. Try adjusting your filter criteria.'}</p>
           </div>
         </div>
       ) : (
-        <div className="reports-table-container">
-          <table className="reports-table">
+        <div className="stop-reports-table-container">
+          <table className="stop-reports-table">
             <thead>
               <tr>
                 <th>Name</th>
@@ -327,7 +326,7 @@ const AllStopReports = () => {
               {filteredReports.map((item) => (
                 <tr 
                   key={item.id}
-                  className="report-row"
+                  className="stop-report-row"
                   onClick={() => handleReportPress(item)}
                 >
                   <td className="reporter-cell">

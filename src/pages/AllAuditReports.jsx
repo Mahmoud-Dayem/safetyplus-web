@@ -461,8 +461,8 @@ function AllAuditReports() {
       ) : 
          
           
-            <div className="reports-table-wrapper">
-              <table className="reports-table">
+            <div className="audit-reports-table-wrapper">
+              <table className="audit-reports-table">
                 <thead>
                   <tr>
                     <th>Incident Type</th>
@@ -484,8 +484,8 @@ function AllAuditReports() {
                   {filteredReports.map((report) => {
                     const displayStatus = report.completed ? 'completed' : (report.status || 'pending');
                     return (
-                      <tr key={report.id}
-                          className="report-row"
+            <tr key={report.id}
+              className="audit-report-row"
                           onClick={() => navigate('/audit-report-details', { state: { report } })}
                           style={{ cursor: 'pointer' }}
                       >
