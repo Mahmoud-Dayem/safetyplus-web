@@ -44,14 +44,12 @@ const ReportHistory = () => {
           throw new Error('V1 requested');
         }
       } catch (v2Error) {
-        console.log('Falling back to V1 service...');
-        monthlyCountsData = await StopCardReportsService.getUserMonthlyCounts(id, selectedYearInt);
+         monthlyCountsData = await StopCardReportsService.getUserMonthlyCounts(id, selectedYearInt);
         service = 'V1';
       }
       
       const endTime = performance.now();
-      console.log(`📊 Fetched monthly counts using ${service} service in ${Math.round(endTime - startTime)}ms`);
-      
+       
       setMonthlyCounts(monthlyCountsData);
       
       // Calculate total for the year

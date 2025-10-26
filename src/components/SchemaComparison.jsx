@@ -27,8 +27,7 @@ const SchemaComparison = () => {
 
     try {
       // Test V1 Schema (Original)
-      console.log('🔍 Testing V1 Schema...');
-      const startTimeV1 = performance.now();
+       const startTimeV1 = performance.now();
       
       try {
         const v1Reports = await StopCardReportsService.getUserReports(id, 10);
@@ -45,15 +44,13 @@ const SchemaComparison = () => {
           reports: v1Reports.slice(0, 3), // Show first 3 for preview
           error: null
         };
-        console.log('✅ V1 Schema test completed');
-      } catch (error) {
+       } catch (error) {
         console.error('❌ V1 Schema error:', error);
         newResults.v1.error = error.message;
       }
 
       // Test V2 Schema (Optimized)
-      console.log('🔍 Testing V2 Schema...');
-      const startTimeV2 = performance.now();
+       const startTimeV2 = performance.now();
       
       try {
         const v2Reports = await StopCardReportsServiceV2.getUserReports(id, 10);
@@ -72,8 +69,7 @@ const SchemaComparison = () => {
           reports: v2Reports.slice(0, 3), // Show first 3 for preview
           error: null
         };
-        console.log('✅ V2 Schema test completed');
-      } catch (error) {
+       } catch (error) {
         console.error('❌ V2 Schema error:', error);
         newResults.v2.error = error.message;
       }

@@ -45,8 +45,7 @@ export class StopCardReportsServiceV2 {
           lastUpdated: new Date(),
           reportCount: (currentData.reportCount || 0) + 1
         });
-        console.log(`✅ Report appended to V2 schema (${(currentData.reportCount || 0) + 1} total)`);
-      } else {
+       } else {
         // 5b. Document does not exist → create new with first report
         await setDoc(docRef, {
           date: today,
@@ -55,8 +54,7 @@ export class StopCardReportsServiceV2 {
           lastUpdated: new Date(),
           reportCount: 1
         });
-        console.log('✅ New V2 document created for', today);
-      }
+       }
 
       return { success: true, reportId: newReport.id, date: today };
     } catch (error) {

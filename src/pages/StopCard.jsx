@@ -408,8 +408,7 @@ const StopCard = () => {
       
       try {
         await StopCardReportsServiceV2.saveReport(v2ReportData);
-        console.log('✅ Report saved to both V1 and V2 schemas');
-      } catch (v2Error) {
+       } catch (v2Error) {
         console.error('⚠️ V2 save failed, but V1 succeeded:', v2Error);
         // Continue with success since V1 worked (your main schema)
       }
@@ -420,7 +419,7 @@ const StopCard = () => {
         documentId: docRef.id,
         schemas: { v1: true, v2: true }
       };
-    } catch (error) {
+    } catch (v1Error) {
       // If V1 fails, try V2 only as backup
       try {
         const v2ReportData = {
@@ -478,7 +477,6 @@ const StopCard = () => {
         };
 
         await StopCardReportsServiceV2.saveReport(v2ReportData);
-        console.log('✅ Report saved to V2 schema only (V1 failed)');
         
         return {
           success: true,
@@ -488,7 +486,7 @@ const StopCard = () => {
       } catch (v2Error) {
         return {
           success: false,
-          message: `Both schemas failed - V1: ${error.message}, V2: ${v2Error.message}`,
+          message: `Both schemas failed - V1: ${v1Error.message}, V2: ${v2Error.message}`,
           schemas: { v1: false, v2: false }
         };
       }
