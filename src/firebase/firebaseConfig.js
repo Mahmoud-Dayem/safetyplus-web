@@ -2,7 +2,7 @@ import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import {   setDoc, doc, getDoc } from "firebase/firestore";
 
-import { getAuth, createUserWithEmailAndPassword, updateProfile, signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
+import { getAuth, createUserWithEmailAndPassword, updateProfile, signInWithEmailAndPassword, sendPasswordResetEmail, setPersistence, browserLocalPersistence } from "firebase/auth";
 
 // Get environment variables (for web)
 // const getEnvVar = (key, fallback = '') => {
@@ -40,8 +40,14 @@ const validateConfig = () => {
 validateConfig();
 
 const app = initializeApp(firebaseConfig);
-// Initialize Firebase Authentication and get a reference to the service
-const auth = getAuth(app);
+// Initialize Firebase Authentication and set durable persistence for PWA/browser
+export const auth = getAuth(app);
+try {
+  // Ensure auth persists across app restarts (installed PWA + browser)
+  setPersistence(auth, browserLocalPersistence);
+} catch (e) {
+  console.warn('Failed setting auth persistence, falling back to default:', e);
+}
 
 
 export async function signup({ displayName, email, password, companyId }) {

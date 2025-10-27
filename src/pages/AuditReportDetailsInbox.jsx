@@ -63,10 +63,10 @@ const AuditReportDetailsInbox = () => {
         if (deptSnap.exists()) {
           const allDeptData = deptSnap.data();
           // Find the specific department by name from the departments object
-          const deptData = Object.values(allDeptData.departments || {}).find(dept => 
+          const deptData = Object.values(allDeptData.departments || {}).find(dept =>
             dept.dept_name === assignedDepartment
           );
-          
+
           if (deptData) {
             const isChiefInDepartments = String(deptData.chief_code) === String(user?.companyId);
             setIsChief(isChiefInDepartments);
@@ -225,6 +225,15 @@ const AuditReportDetailsInbox = () => {
             </p>
           </div>
         </div>
+        {/* Corrective Action */}
+        <div className="audit-details-section">
+          <h3 className="audit-details-section-title">Corrective Action</h3>
+          <div className="audit-details-description-content">
+            <p className="audit-details-full-description">
+              {report.corrective_action || 'No corrective action specified'}
+            </p>
+          </div>
+        </div>
 
         {/* Image Section */}
         {report.image_url && (
@@ -318,7 +327,7 @@ const AuditReportDetailsInbox = () => {
                 onChange={(e) => {
                   setSelectedEmployee(e.target.value);
                 }}
-                disabled={loading || isCompleted || reportStatus === 'verifying' ||reportStatus === 'rectifying'}
+                disabled={loading || isCompleted || reportStatus === 'verifying' || reportStatus === 'rectifying'}
               >
                 <option value="">Choose Supervisor...</option>
                 {employeesUnderChief.map((employee) => (
@@ -658,7 +667,7 @@ const AuditReportDetailsInbox = () => {
                     setSending(false);
                   }
                 }}
-                disabled={sending || isCompleted ||reportStatus === 'verifying' ||reportStatus === 'rectifying'}
+                disabled={sending || isCompleted || reportStatus === 'verifying' || reportStatus === 'rectifying'}
               >
                 {sending ? 'Processing...' : 'Reject'}
               </button>

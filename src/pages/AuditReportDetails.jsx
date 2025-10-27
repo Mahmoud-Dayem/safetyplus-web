@@ -84,11 +84,11 @@ const AuditReportDetails = () => {
 
     if (!report) {
         return (
-            <div className="details-container">
-                <div className="error-message">
+            <div className="audit-details-container">
+                <div className="audit-details-error-message">
                     <h2>Report not found</h2>
                     <p>The requested audit report could not be found.</p>
-                    <button onClick={() => navigate(-1)} className="back-btn">
+                    <button onClick={() => navigate(-1)} className="audit-details-back-btn">
                         Go Back
                     </button>
                 </div>
@@ -97,11 +97,11 @@ const AuditReportDetails = () => {
     }
 
     return (
-        <div className="details-container">
+        <div className="audit-details-container">
             {/* Header */}
-            <div className="details-header">
+            <div className="audit-details-header">
                 <button
-                    className="details-back-button"
+                    className="audit-details-back-button"
                     onClick={() => navigate(-1)}
                     style={{ backgroundColor: colors.primary }}
                 >
@@ -109,9 +109,9 @@ const AuditReportDetails = () => {
                         <path d="M19 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" />
                     </svg>
                 </button>
-                <h1 className="details-title">Audit Report Details</h1>
+                <h1 className="audit-details-title">Audit Report Details</h1>
                 <button
-                    className="details-home-button"
+                    className="audit-details-home-button"
                     onClick={() => navigate('/home')}
                 >
                     <svg viewBox="0 0 24 24" fill="#FFFFFF" width="20" height="20">
@@ -121,45 +121,45 @@ const AuditReportDetails = () => {
             </div>
 
             {/* Report Content */}
-            <div className="details-content">
-                <div className="details-card">
+            <div className="audit-details-content">
+                <div className="audit-details-card">
                     {/* Employee Information */}
-                    <div className="details-section">
-                        <h3 className="section-title">Employee Information</h3>
-                        <div className="info-row">
-                            <span className="info-label">Employee Name:</span>
-                            <span className="info-value">
+                    <div className="audit-details-section">
+                        <h3 className="audit-details-section-title">Employee Information</h3>
+                        <div className="audit-details-info-row">
+                            <span className="audit-details-info-label">Employee Name:</span>
+                            <span className="audit-details-info-value">
                                 {report.full_name ?
                                     report.full_name :
                                     'N/A'
                                 }
                             </span>
                         </div>
-                        <div className="info-row">
-                            <span className="info-label">Job Title:</span>
-                            <span className="info-value">
+                        <div className="audit-details-info-row">
+                            <span className="audit-details-info-label">Job Title:</span>
+                            <span className="audit-details-info-value">
                                 {report?.job_title || 'N/A'}
                             </span>
                         </div>
-                        <div className="info-row">
-                            <span className="info-label">Employee Code:</span>
-                            <span className="employee-code-badge">{report.emp_code || 'N/A'}</span>
+                        <div className="audit-details-info-row">
+                            <span className="audit-details-info-label">Employee Code:</span>
+                            <span className="audit-details-employee-code-badge">{report.emp_code || 'N/A'}</span>
                         </div>
-                        <div className="info-row">
-                            <span className="info-label">Department:</span>
-                            <span className="employee-code-badge">{report.department || 'N/A'}</span>
+                        <div className="audit-details-info-row">
+                            <span className="audit-details-info-label">Department:</span>
+                            <span className="audit-details-employee-code-badge">{report.department || 'N/A'}</span>
                         </div>
                     </div>
 
                     {/* Report Status */}
-                    <div className="details-section">
-                        <h3 className="section-title">Report Status</h3>
-                        <div className="info-row">
-                            <span className="info-label">Status:</span>
-                            <span className={`status-badge ${reportStatus}`}>
+                    <div className="audit-details-section">
+                        <h3 className="audit-details-section-title">Report Status</h3>
+                        <div className="audit-details-info-row">
+                            <span className="audit-details-info-label">Status:</span>
+                            <span className={`audit-details-status-badge ${reportStatus}`}>
                                 {reportStatus}
                                 {assignedDepartment && (
-                                    <span className="assigned-department">
+                                    <span className="audit-details-assigned-department">
                                         {'| Assigned to '}
                                         {departments.find(d => d.dept_code === assignedDepartment)?.name || assignedDepartment}
                                     </span>
@@ -167,9 +167,9 @@ const AuditReportDetails = () => {
                             </span>
                         </div>
                         {reportStatus === 'pending' && !isCompleted && (
-                            <div className="mark-complete-container">
+                            <div className="audit-details-mark-complete-container">
                                 <button
-                                    className="mark-complete-button"
+                                    className="audit-details-mark-complete-button"
                                     onClick={async () => {
                                         // Show confirmation dialog
                                         const confirmed = window.confirm(
@@ -183,9 +183,9 @@ const AuditReportDetails = () => {
                                             const inputField = document.getElementById('safety-officer-input');
                                             if (inputField) {
                                                 inputField.focus();
-                                                inputField.classList.add('highlight-required');
+                                                inputField.classList.add('audit-details-highlight-required');
                                                 setTimeout(() => {
-                                                    inputField.classList.remove('highlight-required');
+                                                    inputField.classList.remove('audit-details-highlight-required');
                                                 }, 3000);
                                             }
                                             return;
@@ -233,28 +233,28 @@ const AuditReportDetails = () => {
                             </div>
                         )}
                         {isCompleted && (
-                            <div className="completion-notice">
-                                <span className="completed-badge">✓ Completed</span>
+                            <div className="audit-details-completion-notice">
+                                <span className="audit-details-completed-badge">✓ Completed</span>
                             </div>
                         )}
                     </div>
 
                     {/* Location & Date */}
-                    <div className="details-section">
-                        <h3 className="section-title">Location & Date</h3>
-                        <div className="info-row">
-                            <span className="info-label">Location:</span>
-                            <span className="info-value">
-                                <svg viewBox="0 0 24 24" fill="#666" width="16" height="16" className="location-icon">
+                    <div className="audit-details-section">
+                        <h3 className="audit-details-section-title">Location & Date</h3>
+                        <div className="audit-details-info-row">
+                            <span className="audit-details-info-label">Location:</span>
+                            <span className="audit-details-info-value">
+                                <svg viewBox="0 0 24 24" fill="#666" width="16" height="16" className="audit-details-location-icon">
                                     <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
                                 </svg>
                                 {report.location || 'N/A'}
                             </span>
                         </div>
-                        <div className="info-row">
-                            <span className="info-label">Date:</span>
-                            <span className="info-value">
-                                <svg viewBox="0 0 24 24" fill="#666" width="16" height="16" className="date-icon">
+                        <div className="audit-details-info-row">
+                            <span className="audit-details-info-label">Date:</span>
+                            <span className="audit-details-info-value">
+                                <svg viewBox="0 0 24 24" fill="#666" width="16" height="16" className="audit-details-date-icon">
                                     <path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z" />
                                 </svg>
                                 {report.date ? new Date(report.date).toLocaleDateString('en-US', {
@@ -268,30 +268,30 @@ const AuditReportDetails = () => {
                     </div>
 
                     {/* Incident Type */}
-                    <div className="details-section">
-                        <h3 className="section-title">Incident Type</h3>
-                        <div className="info-row">
-                            <span className="info-value incident-type-badge">
+                    <div className="audit-details-section">
+                        <h3 className="audit-details-section-title">Incident Type</h3>
+                        <div className="audit-details-info-row">
+                            <span className="audit-details-info-value audit-details-incident-type-badge">
                                 {report.incident_type || 'N/A'}
                             </span>
                         </div>
                     </div>
 
                     {/* Description */}
-                    <div className="details-section">
-                        <h3 className="section-title">Description</h3>
-                        <div className="description-content">
-                            <p className="full-description">
+                    <div className="audit-details-section">
+                        <h3 className="audit-details-section-title">Description</h3>
+                        <div className="audit-details-description-content">
+                            <p className="audit-details-full-description">
                                 {report.description || 'No description available'}
                             </p>
                         </div>
                     </div>
 
                     {/* Corrective Action */}
-                    <div className="details-section">
-                        <h3 className="section-title">Corrective Action</h3>
-                        <div className="description-content">
-                            <p className="full-description">
+                    <div className="audit-details-section">
+                        <h3 className="audit-details-section-title">Corrective Action</h3>
+                        <div className="audit-details-description-content">
+                            <p className="audit-details-full-description">
                                 {report.corrective_action || 'No corrective action specified'}
                             </p>
                         </div>
@@ -299,13 +299,13 @@ const AuditReportDetails = () => {
 
                     {/* Image Section */}
                     {report.image_url && (
-                        <div className="details-section">
-                            <h3 className="section-title">Attached Image</h3>
-                            <div className="image-container">
+                        <div className="audit-details-section">
+                            <h3 className="audit-details-section-title">Attached Image</h3>
+                            <div className="audit-details-image-container">
                                 <img
                                     src={report.image_url}
                                     alt="Audit report"
-                                    className="details-image"
+                                    className="audit-details-image"
                                     draggable={false}
                                     onClick={(e) => { e.preventDefault(); }}
                                     onContextMenu={(e) => { e.preventDefault(); }}
@@ -316,16 +316,16 @@ const AuditReportDetails = () => {
                     )}
 
                     {/* Report Metadata */}
-                    <div className="details-section">
-                        <h3 className="section-title">Report Information</h3>
-                        <div className="metadata-grid">
-                            <div className="metadata-item">
-                                <span className="metadata-label">Report ID:</span>
-                                <span className="metadata-value">{report.id || 'N/A'}</span>
+                    <div className="audit-details-section">
+                        <h3 className="audit-details-section-title">Report Information</h3>
+                        <div className="audit-details-metadata-grid">
+                            <div className="audit-details-metadata-item">
+                                <span className="audit-details-metadata-label">Report ID:</span>
+                                <span className="audit-details-metadata-value">{report.id || 'N/A'}</span>
                             </div>
-                            <div className="metadata-item">
-                                <span className="metadata-label">Created:</span>
-                                <span className="metadata-value">
+                            <div className="audit-details-metadata-item">
+                                <span className="audit-details-metadata-label">Created:</span>
+                                <span className="audit-details-metadata-value">
                                     {report.created_at ? new Date(report.created_at).toLocaleString() : 'N/A'}
                                 </span>
                             </div>
@@ -333,15 +333,15 @@ const AuditReportDetails = () => {
                     </div>
 
                     {/* Department Selector */}
-                    <div className="details-section">
-                        <h3 className="section-title">Department Assignment</h3>
-                        <div className="department-selector-container">
-                            <label className="selector-label" htmlFor="department-select">
+                    <div className="audit-details-section">
+                        <h3 className="audit-details-section-title">Department Assignment</h3>
+                        <div className="audit-details-department-selector-container">
+                            <label className="audit-details-selector-label" htmlFor="department-select">
                                 {isCompleted ? 'Final Department:' : 'Select Department:'}
                             </label>
                             <select
                                 id="department-select"
-                                className="department-select"
+                                className="audit-details-department-select"
                                 value={selectedDepartment}
                                 onChange={(e) => setSelectedDepartment(e.target.value)}
                                 disabled={loading || isCompleted || reportStatus === 'verifying' || reportStatus === 'rectifying' || (reportStatus === 'assigned' && !isReassigning)}
@@ -361,7 +361,7 @@ const AuditReportDetails = () => {
 
                             {reportStatus === 'assigned' && (
                                 <button
-                                    className="reassign-button"
+                                    className="audit-details-reassign-button"
                                     onClick={() => {
                                         setIsReassigning(!isReassigning);
                                         if (!isReassigning) {
@@ -375,27 +375,27 @@ const AuditReportDetails = () => {
                             )}
 
                             {isCompleted && (
-                                <div className="completion-notice-dept">
-                                    <span className="notice-text">
+                                <div className="audit-details-completion-notice-dept">
+                                    <span className="audit-details-notice-text">
                                         ✓ This report has been completed and is now closed. No further modifications are allowed.
                                     </span>
                                 </div>
                             )}
 
                             {selectedDepartment && (
-                                <div className="selected-department-info">
+                                <div className="audit-details-selected-department-info">
                                     {(() => {
                                         const selected = departments.find(d => d.dept_name === selectedDepartment);
                                         return selected ? (
-                                            <div className="department-details">
-                                                <div className="dept-info-row">
-                                                    <span className="dept-label">Department:</span>
-                                                    <span className="dept-value">{selected.dept_name}</span>
+                                            <div className="audit-details-department-details">
+                                                <div className="audit-details-dept-info-row">
+                                                    <span className="audit-details-dept-label">Department:</span>
+                                                    <span className="audit-details-dept-value">{selected.dept_name}</span>
                                                 </div>
 
-                                                <div className="dept-info-row">
-                                                    <span className="dept-label">Department Chief:</span>
-                                                    <span className="dept-value">
+                                                <div className="audit-details-dept-info-row">
+                                                    <span className="audit-details-dept-label">Department Chief:</span>
+                                                    <span className="audit-details-dept-value">
                                                         {
                                                             (selected.chief_code ? ` ${selected.chief_name}` : 'N/A')
                                                         }
@@ -408,7 +408,7 @@ const AuditReportDetails = () => {
                             )}
 
                             {loading && (
-                                <div className="loading-departments">
+                                <div className="audit-details-loading-departments">
                                     Loading departments...
                                 </div>
                             )}
@@ -419,21 +419,21 @@ const AuditReportDetails = () => {
 
 
                     {/* Message History */}
-                    <div className="details-section">
-                        <h3 className="section-title">Message History</h3>
-                        <div className="message-history-container">
+                    <div className="audit-details-section">
+                        <h3 className="audit-details-section-title">Message History</h3>
+                        <div className="audit-details-message-history-container">
                             {messages.length === 0 ? (
-                                <p className="no-messages">No messages yet.</p>
+                                <p className="audit-details-no-messages">No messages yet.</p>
                             ) : (
                                 messages.map((msg, index) => (
-                                    <div key={index} className="message-item">
-                                        <div className="message-header">
-                                            <span className="message-sender">Sender: {msg.id}</span>
+                                    <div key={index} className="audit-details-message-item">
+                                        <div className="audit-details-message-header">
+                                            <span className="audit-details-message-sender">Sender: {msg.id}</span>
 
                                         </div>
-                                        <div className="message-content">{msg.message}</div>
+                                        <div className="audit-details-message-content">{msg.message}</div>
                                         {msg.department && (
-                                            <div className="message-department">
+                                            <div className="audit-details-message-department">
                                                 Department: {msg.department.name} ({msg.department.dept_code})
                                             </div>
                                         )}
@@ -442,16 +442,16 @@ const AuditReportDetails = () => {
                             )}
                         </div>
                     </div>
-                    <div className="details-section">
-                        <h3 className="section-title">Safety Officer Assignment</h3>
-                        <div className="safety-officer-container">
-                            <label className="selector-label" htmlFor="safety-officer-input">
+                    <div className="audit-details-section">
+                        <h3 className="audit-details-section-title">Safety Officer Assignment</h3>
+                        <div className="audit-details-safety-officer-container">
+                            <label className="audit-details-selector-label" htmlFor="safety-officer-input">
                                 Safety Officer Comment:
                             </label>
                             <input
                                 id="safety-officer-input"
                                 type="text"
-                                className="safety-officer-input"
+                                className="audit-details-safety-officer-input"
                                 value={safetyOfficer}
                                 onChange={(e) => {
                                     setSafetyOfficer(e.target.value);
@@ -469,9 +469,9 @@ const AuditReportDetails = () => {
             {/* Assign to department Send Message Button - Fixed at Bottom */}
             {
                 reportStatus === 'pending' && !isCompleted && (
-                    <div className="send-message-bottom">
+                    <div className="audit-details-send-message-bottom">
                         <button
-                            className="send-message-button-bottom"
+                            className="audit-details-send-message-button-bottom"
 
                             onClick={async () => {
                                 if (!selectedDepartment) {
@@ -553,10 +553,10 @@ const AuditReportDetails = () => {
             }
             {
                 reportStatus === 'verifying' && (
-                    <div className="send-message-bottom">
-                        <div className="verification-buttons">
+                    <div className="audit-details-send-message-bottom">
+                        <div className="audit-details-verification-buttons">
                             <button
-                                className="accept-button"
+                                className="audit-details-accept-button"
                                 onClick={async () => {
 
                                     // if (!safetyOfficer.trim()) {
@@ -625,16 +625,16 @@ const AuditReportDetails = () => {
                             </button>
 
                             <button
-                                className="reject-button"
+                                className="audit-details-reject-button"
                                 onClick={async () => {
                                     if (!safetyOfficer.trim()) {
                                         // Highlight the input field
                                         const inputField = document.getElementById('safety-officer-input');
                                         if (inputField) {
                                             inputField.focus();
-                                            inputField.classList.add('highlight-required');
+                                            inputField.classList.add('audit-details-highlight-required');
                                             setTimeout(() => {
-                                                inputField.classList.remove('highlight-required');
+                                                inputField.classList.remove('audit-details-highlight-required');
                                             }, 3000);
                                         }
                                         return;
@@ -696,9 +696,9 @@ const AuditReportDetails = () => {
             }
             {
                 reportStatus === 'assigned' && isReassigning && (
-                    <div className="send-message-bottom">
+                    <div className="audit-details-send-message-bottom">
                         <button
-                            className="send-message-button-bottom"
+                            className="audit-details-send-message-button-bottom"
                             onClick={async () => {
                                 if (!selectedDepartment) {
                                     alert('Please select a department before sending the message.');

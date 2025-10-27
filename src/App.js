@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { login } from './store/authSlice';
+import { storeUser } from './helper/authStorage';
+import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { getUser } from './helper/authStorage';
 import AuthScreen from './pages/AuthScreen';
 import HomeScreen from './pages/HomeScreen';
@@ -225,11 +227,14 @@ function App() {
                   document.referrer.includes('android-app://');
     
     if (isPWA) {
-       // Add PWA-specific initialization here if needed
+       // Request persistent storage to reduce data eviction by the OS
+       if (navigator.storage && navigator.storage.persist) {
+         navigator.storage.persist().catch(() => {});
+       }
     }
   }, []);
 
-  // Restore user from localStorage on app mount
+  // Restore user from localStorage on app mount and also listen to Firebase auth state
   useEffect(() => {
     const restoreUser = async () => {
       try {
@@ -247,6 +252,44 @@ function App() {
     };
     
     restoreUser();
+
+    // Also hydrate from Firebase if it has an existing session (important for PWA installs)
+    const auth = getAuth();
+    const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
+      if (fbUser) {
+        // If Redux already has a user, skip
+        const currentStored = await getUser();
+        if (!currentStored) {
+          // Try to enrich with companyId from users_by_uid mapping
+          let enriched = {
+            uid: fbUser.uid,
+            email: fbUser.email,
+            emailVerified: fbUser.emailVerified,
+            displayName: fbUser.displayName,
+            photoURL: fbUser.photoURL,
+            token: fbUser.accessToken,
+          };
+          try {
+            const { doc, getDoc } = await import('firebase/firestore');
+            const { db } = await import('./firebase/firebaseConfig');
+            const mapSnap = await getDoc(doc(db, 'users_by_uid', fbUser.uid));
+            if (mapSnap.exists()) {
+              const data = mapSnap.data();
+              enriched = {
+                ...enriched,
+                companyId: data.companyId,
+                isAdmin: false,
+                isPrivileged: false,
+              };
+            }
+          } catch (e) {
+            // Non-fatal; proceed with minimal info
+          }
+          dispatch(login(enriched));
+          await storeUser(enriched);
+        }
+      }
+    });
     
     // Also listen for storage changes (in case user logs in from another tab)
     const handleStorageChange = (e) => {
@@ -264,6 +307,7 @@ function App() {
     
     return () => {
       window.removeEventListener('storage', handleStorageChange);
+      unsubscribe && unsubscribe();
     };
   }, [dispatch]);
 
