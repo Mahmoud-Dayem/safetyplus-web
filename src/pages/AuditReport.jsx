@@ -4,7 +4,7 @@ import { colors } from '../constants/color';
 import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import './AuditReport.css';
-import { setDoc, doc } from 'firebase/firestore';
+import { setDoc, doc, arrayUnion, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase/firebaseConfig';
 
 function AuditReport() {
@@ -266,6 +266,48 @@ function AuditReport() {
         // await firestore.collection('audit_reports').add(auditReportData);
         // await firestore.collection('audit_reports').doc(docId).set(auditReportData);
         await setDoc(doc(db, 'audit_reports', docId), auditReportData);
+
+        // Also append a compact history entry into employees_collection/{employeeId}.my_reports
+        try {
+          const employeeId = String(user?.companyId || '');
+          if (employeeId) {
+            const historyRef = doc(db, 'employees_collection', employeeId);
+            const historyEntry = {
+              date: formData.date,
+              location: formData.location.toUpperCase(),
+              report_type: 'audit',
+              report_id: docId,
+            };
+            // Use setDoc with merge and arrayUnion to avoid a read and create doc/field if missing
+            await setDoc(
+              historyRef,
+              { my_reports: arrayUnion(historyEntry) },
+              { merge: true }
+            );
+          } else {
+            console.warn('Skipping history update: user.companyId is missing');
+          }
+        } catch (histErr) {
+          console.error('Failed to append to employees_collection.my_reports:', histErr);
+          // Non-fatal: report is already saved; continue flow
+        }
+
+        // Append full report data to daily aggregate document in audit_reports_daily/{YYYY-MM-DD}
+        try {
+          const today = new Date().toISOString().split('T')[0];
+          const dailyRef = doc(db, 'audit_reports_daily', today);
+          // Use full auditReportData (same shape as saved in audit_reports) and include id
+          const fullDailyEntry = { id: docId, ...auditReportData };
+          const dailySnap = await getDoc(dailyRef);
+          if (dailySnap.exists()) {
+            await updateDoc(dailyRef, { reports: arrayUnion(fullDailyEntry) });
+          } else {
+            await setDoc(dailyRef, { date: today, reports: [fullDailyEntry] });
+          }
+        } catch (dailyErr) {
+          console.error('Failed to append to audit_reports_daily:', dailyErr);
+          // Non-fatal: main report already saved
+        }
 
         setUploadProgress(100);
         // Show alert and navigate to home after user clicks OK

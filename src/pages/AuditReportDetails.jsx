@@ -1,5 +1,5 @@
 // for safety supervisor
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { colors } from '../constants/color';
@@ -11,6 +11,8 @@ const AuditReportDetails = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const report = location.state?.report;
+    // Departments are cached in Redux/localStorage; no Firestore fetch here
+    const cachedDepartments = useSelector(state => state.departments.list);
     const [departments, setDepartments] = useState([]);
     const [selectedDepartment, setSelectedDepartment] = useState('');
     const [loading, setLoading] = useState(false);
@@ -26,55 +28,63 @@ const AuditReportDetails = () => {
     const user = useSelector(state => state.auth.user);
     const [assignedChief, setAssignedChief] = useState('');
 
-    const fetchMessages = useCallback(async () => {
-        try {
-            // Fetch current messages, status, assigned department, and completed status from Firestore
-            const docRef = doc(db, 'audit_reports', report.id);
-            const docSnap = await getDoc(docRef);
-            if (!docSnap.exists()) {
-                console.error('Audit report not found:', report.id);
-                return;
-            }
-            const reportData = docSnap.data();
-            setMessages(reportData?.messages || []);
-            setReportStatus(reportData?.status || 'pending');
-            setAssignedDepartment(reportData?.assigned_department || '');
-            setIsCompleted(reportData?.completed || false);
-        } catch (err) {
-            console.error('Error fetching messages:', err);
-        }
-    }, [report.id]);
+    // Initialize from navigation-passed report to avoid a redundant Firestore read
+    useEffect(() => {
+        if (!report) return;
+        setMessages(Array.isArray(report.messages) ? report.messages : []);
+        setReportStatus(report.status || 'pending');
+        setAssignedDepartment(report.assigned_department || '');
+        setIsCompleted(!!report.completed);
+    }, [report]);
+
+    // Also lookup the same report inside audit_reports_daily/{YYYY-MM-DD} and log it (non-invasive)
+    // useEffect(() => {
+    //     if (!report) return;
+    //     const run = async () => {
+    //         try {
+    //             const rawDate = report.date || report.created_at;
+    //             const d = rawDate ? new Date(rawDate) : null;
+    //             if (!d || isNaN(d.getTime())) {
+    //                 console.log('audit_reports_daily: invalid or missing date on report, skipping');
+    //                 return;
+    //             }
+    //             const yyyy = d.getFullYear();
+    //             const mm = String(d.getMonth() + 1).padStart(2, '0');
+    //             const dd = String(d.getDate()).padStart(2, '0');
+    //             const dateKey = `${yyyy}-${mm}-${dd}`;
+
+    //             const dailyRef = doc(db, 'audit_reports_daily', dateKey);
+    //             const dailySnap = await getDoc(dailyRef);
+    //             if (!dailySnap.exists()) {
+    //                 console.log('audit_reports_daily: no daily doc for', dateKey);
+    //                 return;
+    //             }
+
+    //             const dailyData = dailySnap.data();
+    //             const reportsArr = Array.isArray(dailyData?.reports) ? dailyData.reports : [];
+    //             console.log('audit_reports_daily: reports for', dateKey, reportsArr);
+
+    //             const match = reportsArr.find(r => r?.id === report.id);
+    //             if (match) {
+    //                 console.log('audit_reports_daily: matched report entry', match);
+    //             } else {
+    //                 console.log('audit_reports_daily: no matching report with id', report.id);
+    //             }
+    //         } catch (err) {
+    //             console.error('audit_reports_daily: error fetching/logging daily doc', err);
+    //         }
+    //     };
+    //     run();
+    //     // Re-run when the report reference changes
+    // }, [report]);
 
     useEffect(() => {
-        const fetchDepartments = async () => {
-            try {
-                setLoading(true);
-                // Fetch departments from single Firestore document
-                const docRef = doc(db, 'departments', 'all_departments');
-                const docSnap = await getDoc(docRef);
-                
-                if (docSnap.exists()) {
-                    const data = docSnap.data();
-                    // Convert departments object to array and sort by dept_name
-                    const deptArray = Object.values(data.departments || {}).sort((a, b) => 
-                        a.dept_name.localeCompare(b.dept_name)
-                    );
-                    setDepartments(deptArray);
-                } else {
-                    console.error('Departments document not found');
-                    setDepartments([]);
-                }
-            } catch (err) {
-                console.error('Error fetching departments:', err);
-                setDepartments([]);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchMessages();
-        fetchDepartments();
-    }, [report.id, fetchMessages]);
+        // Populate local state from cached Redux departments (0 reads)
+        const list = Array.isArray(cachedDepartments) ? [...cachedDepartments] : [];
+        list.sort((a, b) => String(a?.dept_name || '').localeCompare(String(b?.dept_name || '')));
+        setDepartments(list);
+        setLoading(false);
+    }, [cachedDepartments]);
 
     // Update assignedChief when selectedDepartment changes
     useEffect(() => {

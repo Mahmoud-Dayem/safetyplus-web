@@ -29,6 +29,8 @@ const authSlice = createSlice({
         jobTitle: firebaseUser.jobTitle || null,
         stopcard: firebaseUser.stopcard === true, // default to false
         inbox: firebaseUser.inbox === true, // default to false
+        isChief: firebaseUser.isChief === true, // default to false
+        isSupervisor: firebaseUser.isSupervisor === true, // default to false
       };
       state.isAuthenticated = true;
     },

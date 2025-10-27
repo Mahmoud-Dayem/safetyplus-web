@@ -1,11 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useSelector } from 'react-redux';
-import { updateDoc } from 'firebase/firestore';
-import { doc, getDoc } from 'firebase/firestore'
+import { updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { colors } from '../constants/color';
 
-import { db } from '../firebase/firebaseConfig';
+// Firestore db is dynamically imported in action handlers to avoid unused imports
 
 import './AuditReportDetailsInbox.css';
 
@@ -26,96 +25,49 @@ const AuditReportDetailsInbox = () => {
   const [isSupervisor, setIsSupervisor] = useState(false);
   const user = useSelector(state => state.auth.user);
   const navigate = useNavigate();
-  const fetchMessages = useCallback(async () => {
-    try {
+  // Initialize from report passed via navigation (no Firestore fetch needed)
+  useEffect(() => {
+    if (!report) return;
+    setMessages(Array.isArray(report.messages) ? report.messages : []);
+    setReportStatus(report.status || 'pending');
+    setAssignedDepartment(report.assigned_department || '');
+    setIsCompleted(!!report.completed);
+  }, [report]);
 
-      const docId = report.id;
-
-      const reportRef = doc(db, 'audit_reports', docId);
-      const reportSnap = await getDoc(reportRef);
-      if (!reportSnap.exists()) {
-        console.error('Report not found in Firestore');
-        return;
-      }
-      const reportData = reportSnap.data();
-      setMessages(reportData?.messages || []);
-      setReportStatus(reportData?.status || 'pending');
-      setAssignedDepartment(reportData?.assigned_department || '');
-      setIsCompleted(reportData?.completed || false);
-    } catch (err) {
-      console.error('Error fetching messages from Firestore:', err);
+  // Determine chief/supervisors from cached departments in Redux (no Firestore read)
+  const departments = useSelector(state => state.departments.list);
+  useEffect(() => {
+    if (!assignedDepartment) {
+      setIsChief(false);
+      setEmployeesUnderChief([]);
+      return;
     }
-  }, [report.id]);
-
-  useEffect(() => {
-    const fetchSupervisors = async () => {
-      if (!assignedDepartment) {
+    setLoading(true);
+    try {
+      const deptData = (Array.isArray(departments) ? departments : []).find(
+        d => String(d?.dept_name) === String(assignedDepartment)
+      );
+      if (deptData) {
+        const isChiefInDepartments = String(deptData.chief_code) === String(user?.companyId);
+        setIsChief(isChiefInDepartments);
+        setEmployeesUnderChief(isChiefInDepartments && Array.isArray(deptData.supervisors) ? deptData.supervisors : []);
+      } else {
         setIsChief(false);
         setEmployeesUnderChief([]);
-
-        return;
       }
-      setLoading(true);
-      try {
+    } finally {
+      setLoading(false);
+    }
+  }, [assignedDepartment, departments, user?.companyId]);
 
-        const deptRef = doc(db, 'departments', 'all_departments');
-        const deptSnap = await getDoc(deptRef);
-        if (deptSnap.exists()) {
-          const allDeptData = deptSnap.data();
-          // Find the specific department by name from the departments object
-          const deptData = Object.values(allDeptData.departments || {}).find(dept =>
-            dept.dept_name === assignedDepartment
-          );
-
-          if (deptData) {
-            const isChiefInDepartments = String(deptData.chief_code) === String(user?.companyId);
-            setIsChief(isChiefInDepartments);
-            setEmployeesUnderChief(isChiefInDepartments && Array.isArray(deptData.supervisors) ? deptData.supervisors : []);
-          } else {
-            setIsChief(false);
-            setEmployeesUnderChief([]);
-          }
-        } else {
-          setIsChief(false);
-          setEmployeesUnderChief([]);
-        }
-      } catch (err) {
-        setIsChief(false);
-        setEmployeesUnderChief([]);
-        console.error('Error fetching department doc from Firestore:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchMessages();
-    fetchSupervisors();
-  }, [report.id, fetchMessages, user?.companyId, assignedDepartment]);
-
-  // Check if current user is a Supervisor from assigned_list/supervisors
+  // Check if current user is a Supervisor using cached Redux flag (no Firestore fetch)
   useEffect(() => {
-    const checkSupervisor = async () => {
-      try {
-        if (!user?.companyId) {
-          setIsSupervisor(false);
-          return;
-        }
-        const supervisorsRef = doc(db, 'assigned_list', 'supervisors');
-        const supervisorsSnap = await getDoc(supervisorsRef);
-        if (!supervisorsSnap.exists()) {
-          setIsSupervisor(false);
-          return;
-        }
-        const data = supervisorsSnap.data();
-        const list = Array.isArray(data?.supervisors_id) ? data.supervisors_id : [];
-        const isSup = list.map(String).includes(String(user.companyId));
-        setIsSupervisor(isSup);
-      } catch (err) {
-        console.error('Error checking supervisor list:', err);
-        setIsSupervisor(false);
-      }
-    };
-    checkSupervisor();
-  }, [user?.companyId]);
+    if (user?.isSupervisor === true) {
+      setIsSupervisor(true);
+    } else {
+      setIsSupervisor(false);
+    }
+  }, [user?.isSupervisor]);
 
   return (
     <div className="details-content">
@@ -452,44 +404,12 @@ const AuditReportDetailsInbox = () => {
                   try {
                     setSending(true);
 
-                    // Get current messages array from the report
-                    const { getDoc, doc } = await import('firebase/firestore');
-                    const { db } = await import('../firebase/firebaseConfig');
-                    const reportRef = doc(db, 'audit_reports', report.id);
-                    const reportSnap = await getDoc(reportRef);
-
-                    if (!reportSnap.exists()) {
-                      console.error('Report not found in Firestore');
-                      alert('Failed to send message. Report not found.');
-                      return;
-                    }
-
-                    const reportData = reportSnap.data();
-
                     // Create new message object
                     const newMessage = {
                       id: user?.displayName || user?.id || 'unknown',
                       message: safetyOfficer.trim(),
                       timestamp: new Date().toISOString()
                     };
-
-                    // Add new message to existing messages array
-                    const updatedMessages = reportData.messages || [];
-                    updatedMessages.push(newMessage);
-
-                    // Determine the next department to send the report to
-                    let currentSentTo = reportData.send_to || [];
-                    if (!Array.isArray(currentSentTo)) {
-                      currentSentTo = [currentSentTo];
-                    }
-
-                    // If the report is being sent to a supervisor, add them to the send_to array
-                    if (selectedEmployee && !currentSentTo.includes(selectedEmployee)) {
-                      currentSentTo.push(selectedEmployee);
-                    }
-
-                    // Ensure all values in currentSentTo are integers
-                    currentSentTo = currentSentTo.map(val => parseInt(val, 10));
 
                     // Determine supervisor name for assigned_supervisor field
                     const supervisor = (Array.isArray(employeesUnderChief) ? employeesUnderChief : []).find(
@@ -498,9 +418,12 @@ const AuditReportDetailsInbox = () => {
                     const supervisorName = supervisor?.emp_name || supervisor?.name || String(selectedEmployee);
 
                     // Update the report with new message and status to 'rectifying'
+                    const { doc } = await import('firebase/firestore');
+                    const { db } = await import('../firebase/firebaseConfig');
+                    const reportRef = doc(db, 'audit_reports', report.id);
                     await updateDoc(reportRef, {
-                      messages: updatedMessages,
-                      send_to: currentSentTo,
+                      messages: arrayUnion(newMessage),
+                      send_to: arrayUnion(parseInt(selectedEmployee, 10)),
                       status: 'rectifying',
                       assigned_supervisor: supervisorName,
                       chief_comment: safetyOfficer.trim()
@@ -533,34 +456,17 @@ const AuditReportDetailsInbox = () => {
                   try {
                     setMarkingComplete(true);
 
-                    // Get current messages array from the report
-                    const { getDoc, doc } = await import('firebase/firestore');
-                    const { db } = await import('../firebase/firebaseConfig');
-                    const reportRef = doc(db, 'audit_reports', report.id);
-                    const reportSnap = await getDoc(reportRef);
-
-                    if (!reportSnap.exists()) {
-                      console.error('Report not found in Firestore');
-                      alert('Failed to mark as completed. Report not found.');
-                      return;
-                    }
-
-                    const reportData = reportSnap.data();
-
                     // Create new message object
                     const newMessage2 = {
                       id: user?.displayName || user?.id || 'unknown',
                       message: safetyOfficer.trim() || 'Marked as completed by chief',
                       timestamp: new Date().toISOString()
                     };
-
-                    // Add new message to existing messages array
-                    const updatedMessages = reportData.messages || [];
-                    updatedMessages.push(newMessage2);
-
-                    // Update the report with new message and status to 'verifying'
+                    const { doc } = await import('firebase/firestore');
+                    const { db } = await import('../firebase/firebaseConfig');
+                    const reportRef = doc(db, 'audit_reports', report.id);
                     await updateDoc(reportRef, {
-                      messages: updatedMessages,
+                      messages: arrayUnion(newMessage2),
                       status: 'verifying',
                       completed_at: new Date().toLocaleString(),
                       rectified_by: user?.displayName || user?.email || user?.id || 'unknown',
@@ -602,20 +508,9 @@ const AuditReportDetailsInbox = () => {
 
                   try {
                     setSending(true);
-
-                    // Get current messages array from Firestore
-                    const { doc, getDoc, updateDoc } = await import('firebase/firestore');
+                    const { doc, updateDoc } = await import('firebase/firestore');
                     const { db } = await import('../firebase/firebaseConfig');
                     const reportRef = doc(db, 'audit_reports', report.id);
-                    const reportSnap = await getDoc(reportRef);
-
-                    if (!reportSnap.exists()) {
-                      console.error('Report not found in Firestore');
-                      alert('Failed to fetch current report data.');
-                      return;
-                    }
-
-                    const reportData = reportSnap.data();
 
                     // Create new message object with rejection reason
                     const newMessage = {
@@ -623,37 +518,27 @@ const AuditReportDetailsInbox = () => {
                       message: `${safetyOfficer.trim()} | Rejected by Chief `,
                       timestamp: new Date().toISOString()
                     };
-
-                    // Add new message to existing messages array
-                    const updatedMessages = reportData.messages || [];
-                    updatedMessages.push(newMessage);
-
-                    // If user is Chief, clear the send_to array completely
-                    // If user is Supervisor, remove only their ID from send_to array
-                    let updatedSendTo = reportData.send_to || [];
-                    let updateFields = {
-                      messages: updatedMessages,
-                      status: 'pending',
-                      chief_comment: safetyOfficer.trim(),
-                      send_to: updatedSendTo
-                    };
-
                     if (isChief) {
-                      // Chief rejection: clear entire send_to array and all assignment fields
-                      updatedSendTo = [];
-                      updateFields.send_to = updatedSendTo;
-                      updateFields.assigned_department = '';
-                      updateFields.assigned_chief = '';
-                      updateFields.assigned_supervisor = '';
+                      // Chief rejection: clear send_to and reset assignments without reading the doc
+                      await updateDoc(reportRef, {
+                        messages: arrayUnion(newMessage),
+                        status: 'pending',
+                        chief_comment: safetyOfficer.trim(),
+                        send_to: [],
+                        assigned_department: '',
+                        assigned_chief: '',
+                        assigned_supervisor: ''
+                      });
                     } else {
-                      // Supervisor rejection: remove only current user's ID and clear assigned_supervisor
-                      updatedSendTo = updatedSendTo.filter(id => parseInt(id) !== parseInt(user?.companyId));
-                      updateFields.send_to = updatedSendTo;
-                      updateFields.assigned_supervisor = '';
+                      // Supervisor rejection: remove only current user's ID from send_to
+                      await updateDoc(reportRef, {
+                        messages: arrayUnion(newMessage),
+                        status: 'assigned',
+                        supervisor_comment: safetyOfficer.trim(),
+                        send_to: arrayRemove(parseInt(user?.companyId)),
+                        assigned_supervisor: ''
+                      });
                     }
-
-                    // Update the report with new message, status change, and field updates
-                    await updateDoc(reportRef, updateFields);
 
                     alert('Report rejected and sent back to  for revision.');
                     setSafetyOfficer(''); // Clear the input
@@ -699,20 +584,6 @@ const AuditReportDetailsInbox = () => {
                   try {
                     setMarkingComplete(true);
 
-                    // Get current messages array from the report
-                    const { getDoc, doc } = await import('firebase/firestore');
-                    const { db } = await import('../firebase/firebaseConfig');
-                    const reportRef = doc(db, 'audit_reports', report.id);
-                    const reportSnap = await getDoc(reportRef);
-
-                    if (!reportSnap.exists()) {
-                      console.error('Report not found in Firestore');
-                      alert('Failed to mark as completed. Report not found.');
-                      return;
-                    }
-
-                    const reportData = reportSnap.data();
-
                     // Create new message object
                     const newMessage2 = {
                       id: user?.displayName || user?.id || 'unknown',
@@ -720,13 +591,12 @@ const AuditReportDetailsInbox = () => {
                       timestamp: new Date().toISOString()
                     };
 
-                    // Add new message to existing messages array
-                    const updatedMessages = reportData.messages || [];
-                    updatedMessages.push(newMessage2);
-
-                    // Update the report with new message and status to 'verifying'
+                    // Update the report with new message and status to 'verifying' (no prior read)
+                    const { doc } = await import('firebase/firestore');
+                    const { db } = await import('../firebase/firebaseConfig');
+                    const reportRef = doc(db, 'audit_reports', report.id);
                     await updateDoc(reportRef, {
-                      messages: updatedMessages,
+                      messages: arrayUnion(newMessage2),
                       status: 'verifying',
                       completed_at: new Date().toLocaleString(),
                       rectified_by: user?.displayName || user?.email || user?.id || 'unknown',
@@ -769,20 +639,9 @@ const AuditReportDetailsInbox = () => {
 
                   try {
                     setSending(true);
-
-                    // Get current messages array from Firestore
-                    const { doc, getDoc, updateDoc } = await import('firebase/firestore');
+                    const { doc, updateDoc } = await import('firebase/firestore');
                     const { db } = await import('../firebase/firebaseConfig');
                     const reportRef = doc(db, 'audit_reports', report.id);
-                    const reportSnap = await getDoc(reportRef);
-
-                    if (!reportSnap.exists()) {
-                      console.error('Report not found in Firestore');
-                      alert('Failed to fetch current report data.');
-                      return;
-                    }
-
-                    const reportData = reportSnap.data();
 
                     // Create new message object with rejection reason
                     const newMessage = {
@@ -790,37 +649,14 @@ const AuditReportDetailsInbox = () => {
                       message: `${safetyOfficer.trim()} | Rejected by Supervisor `,
                       timestamp: new Date().toISOString()
                     };
-
-                    // Add new message to existing messages array
-                    const updatedMessages = reportData.messages || [];
-                    updatedMessages.push(newMessage);
-
-                    // If user is Chief, clear the send_to array completely
-                    // If user is Supervisor, remove only their ID from send_to array
-                    let updatedSendTo = reportData.send_to || [];
-                    let updateFields = {
-                      messages: updatedMessages,
+                    // Supervisor rejection: remove only current user's ID and clear assigned_supervisor
+                    await updateDoc(reportRef, {
+                      messages: arrayUnion(newMessage),
                       status: 'assigned',
                       supervisor_comment: safetyOfficer.trim(),
-                      send_to: updatedSendTo
-                    };
-
-                    if (isChief) {
-                      // Chief rejection: clear entire send_to array and all assignment fields
-                      updatedSendTo = [];
-                      updateFields.send_to = updatedSendTo;
-                      updateFields.assigned_department = '';
-                      updateFields.assigned_chief = '';
-                      updateFields.assigned_supervisor = '';
-                    } else {
-                      // Supervisor rejection: remove only current user's ID and clear assigned_supervisor
-                      updatedSendTo = updatedSendTo.filter(id => parseInt(id) !== parseInt(user?.companyId));
-                      updateFields.send_to = updatedSendTo;
-                      updateFields.assigned_supervisor = '';
-                    }
-
-                    // Update the report with new message, status change, and field updates
-                    await updateDoc(reportRef, updateFields);
+                      send_to: arrayRemove(parseInt(user?.companyId)),
+                      assigned_supervisor: ''
+                    });
 
                     alert('Report rejected and sent back to safety officer for revision.');
                     setSafetyOfficer(''); // Clear the input

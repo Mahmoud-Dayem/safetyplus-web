@@ -3,7 +3,7 @@ import { colors } from '../constants/color';
 import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import './inbox.css';
-import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firestore'
+import { collection, getDocs, query, where } from 'firebase/firestore'
 import { db } from '../firebase/firebaseConfig';
 
 function Inbox() {
@@ -23,6 +23,7 @@ function Inbox() {
   const [refreshing, setRefreshing] = useState(false);
   const [isChief, setIsChief] = useState(false);
   const [isSupervisor, setIsSupervisor] = useState(false);
+  const departments = useSelector((state) => state.departments.list);
   const [defaultFilterApplied, setDefaultFilterApplied] = useState(false);
   // const [viewMode, setViewMode] = useState('table'); // 'card' | 'table'
 
@@ -86,45 +87,68 @@ function Inbox() {
     }
   }, [applyFilters, id]);
 
-  // Role detection: Supervisor via assigned_list/supervisors
+  // Role detection: Supervisor via cached Redux flag (no Firestore read)
   useEffect(() => {
-    const checkSupervisor = async () => {
-      try {
-        if (!id) { setIsSupervisor(false); return; }
-        const supervisorsRef = doc(db, 'assigned_list', 'supervisors');
-        const supervisorsSnap = await getDoc(supervisorsRef);
-        if (!supervisorsSnap.exists()) { setIsSupervisor(false); return; }
-        const data = supervisorsSnap.data();
-        const list = Array.isArray(data?.supervisors_id) ? data.supervisors_id : [];
-        setIsSupervisor(list.map(String).includes(String(id)));
-      } catch (e) {
-        console.error('Error checking supervisor role:', e);
-        setIsSupervisor(false);
-      }
-    };
-    checkSupervisor();
-  }, [id]);
+    setIsSupervisor(user?.isSupervisor === true);
+  }, [user?.isSupervisor]);
 
-  // Role detection: Chief via departments collection (chief_code == user id)
+  /*
+   * Disabled temporarily: Supervisor role detection via Firestore
+   * Kept here for reference/fallback. We're using the cached Redux flag instead.
+   *
+   * useEffect(() => {
+   *   const checkSupervisor = async () => {
+   *     try {
+   *       if (!id) { setIsSupervisor(false); return; }
+   *       const { doc, getDoc } = await import('firebase/firestore');
+   *       const { db } = await import('../firebase/firebaseConfig');
+   *       const supervisorsRef = doc(db, 'assigned_list', 'supervisors');
+   *       const supervisorsSnap = await getDoc(supervisorsRef);
+   *       if (!supervisorsSnap.exists()) { setIsSupervisor(false); return; }
+   *       const data = supervisorsSnap.data();
+   *       const list = Array.isArray(data?.supervisors_id) ? data.supervisors_id : [];
+   *       setIsSupervisor(list.map(String).includes(String(id)));
+   *     } catch (e) {
+   *       console.error('Error checking supervisor role:', e);
+   *       setIsSupervisor(false);
+   *     }
+   *   };
+   *   checkSupervisor();
+   * }, [id]);
+   */
+
+  // Role detection: Chief via cached departments list from Redux (no Firestore read)
   useEffect(() => {
-    const checkChief = async () => {
-      try {
-        if (!id) { setIsChief(false); return; }
-        // Try numeric match first
-        const numId = parseInt(id);
-        let snap = await getDocs(query(collection(db, 'departments'), where('chief_code', '==', numId)));
-        if (snap.empty) {
-          // Fallback: try string match if stored as string in Firestore
-          snap = await getDocs(query(collection(db, 'departments'), where('chief_code', '==', String(id))));
-        }
-        setIsChief(!snap.empty);
-      } catch (e) {
-        console.error('Error checking chief role:', e);
-        setIsChief(false);
-      }
-    };
-    checkChief();
-  }, [id]);
+    if (!id) { setIsChief(false); return; }
+    const list = Array.isArray(departments) ? departments : [];
+    const match = list.some((d) => String(d?.chief_code) === String(id));
+    setIsChief(match);
+  }, [departments, id]);
+
+  /*
+   * Disabled temporarily: Chief role detection via Firestore departments queries
+   * Kept here for reference/fallback. We're using the cached departments list instead.
+   *
+   * useEffect(() => {
+   *   const checkChief = async () => {
+   *     try {
+   *       if (!id) { setIsChief(false); return; }
+   *       const { collection, getDocs, query, where } = await import('firebase/firestore');
+   *       const { db } = await import('../firebase/firebaseConfig');
+   *       const numId = parseInt(id);
+   *       let snap = await getDocs(query(collection(db, 'departments'), where('chief_code', '==', numId)));
+   *       if (snap.empty) {
+   *         snap = await getDocs(query(collection(db, 'departments'), where('chief_code', '==', String(id))));
+   *       }
+   *       setIsChief(!snap.empty);
+   *     } catch (e) {
+   *       console.error('Error checking chief role:', e);
+   *       setIsChief(false);
+   *     }
+   *   };
+   *   checkChief();
+   * }, [id]);
+   */
 
   // Apply default filter once roles and reports are known
   useEffect(() => {

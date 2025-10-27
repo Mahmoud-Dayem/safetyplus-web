@@ -1,6 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
-import {   setDoc, doc, getDoc } from "firebase/firestore";
+import { setDoc, doc, getDoc } from "firebase/firestore";
 
 import { getAuth, createUserWithEmailAndPassword, updateProfile, signInWithEmailAndPassword, sendPasswordResetEmail, setPersistence, browserLocalPersistence } from "firebase/auth";
 
@@ -106,13 +106,15 @@ export async function signup({ displayName, email, password, companyId }) {
     let stopcard = false;
     let inbox = false;
     let fullName = "";
+    let isChief = false;
+    let isSupervisor = false;
     try {
       const userDocRef = doc(db, 'employees_collection', companyId);
       const userDocSnap = await getDoc(userDocRef);
 
       if (userDocSnap.exists()) {
         const empData = userDocSnap.data();
- 
+
         // Combine first_name and last_name with space between
         fullName = `${empData.first_name || ''} ${empData.last_name || ''}`.trim();
 
@@ -122,6 +124,8 @@ export async function signup({ displayName, email, password, companyId }) {
         jobTitle = empData.job_title || null;
         stopcard = empData.stopcard === true; // default to false if not specified
         inbox = empData.inbox === true; // default to false if not specified
+        isChief = empData.isChief === true; // default to false if not specified
+        isSupervisor = empData.isSupervisor === true; // default to false if not specified
       }
     } catch (error) {
       console.error('Error fetching user document:', error);
@@ -136,7 +140,10 @@ export async function signup({ displayName, email, password, companyId }) {
       jobTitle,
       stopcard,
       inbox,
-      fullName
+      fullName,
+      isChief,
+      isSupervisor
+
 
     };
   } catch (error) {
@@ -174,13 +181,15 @@ export async function signin({ email, password, companyId }) {
     let stopcard = false;
     let inbox = false;
     let fullName = "";
+    let isChief = false;
+    let isSupervisor = false;
     try {
       const userDocRef = doc(db, 'employees_collection', companyIdString);
       const userDocSnap = await getDoc(userDocRef);
 
       if (userDocSnap.exists()) {
         const empData = userDocSnap.data();
- 
+
         // Combine first_name and last_name with space between
         fullName = `${empData.first_name || ''} ${empData.last_name || ''}`.trim();
 
@@ -190,6 +199,9 @@ export async function signin({ email, password, companyId }) {
         jobTitle = empData.job_title || null;
         stopcard = empData.stopcard === true; // default to false if not specified
         inbox = empData.inbox === true; // default to false if not specified
+        isChief = empData.isChief === true; // default to false if not specified
+        isSupervisor = empData.isSupervisor === true; // default to false if not specified
+
       }
     } catch (error) {
       console.error('Error fetching user document:', error);
@@ -233,7 +245,9 @@ export async function signin({ email, password, companyId }) {
         jobTitle,
         stopcard,
         inbox,
-        fullName
+        fullName,
+        isChief,
+        isSupervisor
 
       };
     } else {

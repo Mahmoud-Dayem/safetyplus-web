@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { login } from './store/authSlice';
@@ -19,6 +19,7 @@ import AuditReportDetails from './pages/AuditReportDetails'
 import AuditReportDetailsInbox from './pages/AuditReportDetailsInbox'
 import DataAnalytics from './pages/DataAnalytics'
 import AccessDenied from './components/AccessDenied'
+import { hydrateDepartmentsFromStorage, refreshDepartmentsIfStale, fetchAndCacheDepartments } from './store/departmentsSlice';
 
 // Protected Route component
 const ProtectedRoute = ({ children }) => {
@@ -209,6 +210,8 @@ function App() {
   const dispatch = useDispatch();
   const [loading, setLoading] = useState(true);
   const user = useSelector(state => state.auth.user);
+  const departments = useSelector(state => state.departments.list);
+  const fetchedDepsOnLoginRef = useRef(false);
 
   // Update browser tab title with user name globally
   useEffect(() => {
@@ -252,6 +255,15 @@ function App() {
     };
     
     restoreUser();
+
+    // Hydrate departments from localStorage for zero Firestore reads on mount
+    dispatch(hydrateDepartmentsFromStorage());
+
+    // Background refresh departments after initial mount if cache is stale.
+    // Delay to avoid counting as an "on mount" read and to keep first paint fast.
+    let refreshTimer = setTimeout(() => {
+      dispatch(refreshDepartmentsIfStale());
+    }, 1500);
 
     // Also hydrate from Firebase if it has an existing session (important for PWA installs)
     const auth = getAuth();
@@ -308,8 +320,23 @@ function App() {
     return () => {
       window.removeEventListener('storage', handleStorageChange);
       unsubscribe && unsubscribe();
+      clearTimeout(refreshTimer);
     };
   }, [dispatch]);
+
+  // On login/signup: fetch a fresh departments copy only for supervisors or chiefs
+  useEffect(() => {
+    if (!user) return;
+    if (fetchedDepsOnLoginRef.current) return;
+    const isSupervisor = user?.isSupervisor === true;
+    const isChief = Array.isArray(departments)
+      ? departments.some(d => String(d?.chief_code) === String(user?.companyId))
+      : false;
+    if (isSupervisor || isChief) {
+      fetchedDepsOnLoginRef.current = true;
+      dispatch(fetchAndCacheDepartments());
+    }
+  }, [user, departments, dispatch]);
 
   // Show loading state while checking localStorage
   if (loading) {

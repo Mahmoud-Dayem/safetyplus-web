@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback } from "react";
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, setDoc, doc, arrayUnion } from 'firebase/firestore';
 import { db } from '../firebase/firebaseConfig';
 import StopCardReportsServiceV2 from '../firebase/stopCardReportsServiceV2';
 import { colors } from "../constants/color";
@@ -398,7 +398,7 @@ const StopCard = () => {
       };
 
       // Send to V1 schema (original - one document per report)
-      const docRef = await addDoc(collection(db, 'stopCardReports'), commonReportData);
+  const docRef = await addDoc(collection(db, 'stopCardReports'), commonReportData);
 
       // Send to V2 schema (optimized - one document per day)
       const v2ReportData = {
@@ -411,6 +411,28 @@ const StopCard = () => {
        } catch (v2Error) {
         console.error('⚠️ V2 save failed, but V1 succeeded:', v2Error);
         // Continue with success since V1 worked (your main schema)
+      }
+
+      // Append compact history entry for the employee (employees_collection/{employeeId}.my_reports)
+      try {
+        const employeeId = String(user?.companyId || '');
+        if (employeeId) {
+          const historyRef = doc(db, 'employees_collection', employeeId);
+          const historyEntry = {
+            date: reportData.date,
+            location: reportData.area,
+            report_type: 'STOP',
+            report_id: reportData.reportId,
+          };
+          await setDoc(
+            historyRef,
+            { my_reports: arrayUnion(historyEntry) },
+            { merge: true }
+          );
+        }
+      } catch (histErr) {
+        console.error('Failed to append STOP history to employees_collection.my_reports:', histErr);
+        // Non-fatal; proceed
       }
 
       return {
@@ -477,6 +499,27 @@ const StopCard = () => {
         };
 
         await StopCardReportsServiceV2.saveReport(v2ReportData);
+
+        // Even if V1 failed, still append a compact history entry for the employee
+        try {
+          const employeeId = String(user?.companyId || '');
+          if (employeeId) {
+            const historyRef = doc(db, 'employees_collection', employeeId);
+            const historyEntry = {
+              date: reportData.date,
+              location: reportData.area,
+              report_type: 'STOP',
+              report_id: reportData.reportId,
+            };
+            await setDoc(
+              historyRef,
+              { my_reports: arrayUnion(historyEntry) },
+              { merge: true }
+            );
+          }
+        } catch (histErr) {
+          console.error('Failed to append STOP history to employees_collection.my_reports (V2 path):', histErr);
+        }
         
         return {
           success: true,

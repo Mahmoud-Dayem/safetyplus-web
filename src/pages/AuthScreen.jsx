@@ -122,7 +122,9 @@ const AuthScreen = () => {
           jobTitle: result.jobTitle,
           stopcard: result.stopcard,
           inbox: result.inbox,
-          fullName: result.fullName
+          fullName: result.fullName,
+          isChief: result.isChief,
+          isSupervisor: result.isSupervisor
 
         };
 
@@ -210,7 +212,10 @@ const AuthScreen = () => {
             jobTitle: result.jobTitle,
             stopcard: result.stopcard,
             inbox: result.inbox,
-            fullName: result.fullName
+            fullName: result.fullName,
+            isChief: result.isChief,
+            isSupervisor: result.isSupervisor
+
           };
 
           // Store user in localStorage
