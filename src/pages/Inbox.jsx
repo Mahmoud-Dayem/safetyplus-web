@@ -92,6 +92,7 @@ function Inbox() {
     setIsSupervisor(user?.isSupervisor === true);
   }, [user?.isSupervisor]);
 
+
   /*
    * Disabled temporarily: Supervisor role detection via Firestore
    * Kept here for reference/fallback. We're using the cached Redux flag instead.
