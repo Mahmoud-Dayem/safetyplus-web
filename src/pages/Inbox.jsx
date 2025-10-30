@@ -3,7 +3,7 @@ import { colors } from '../constants/color';
 import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import './inbox.css';
-import { collection, getDocs, query, where } from 'firebase/firestore'
+import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firestore'
 import { db } from '../firebase/firebaseConfig';
 
 function Inbox() {
@@ -21,11 +21,16 @@ function Inbox() {
   const [filteredReports, setFilteredReports] = useState([]);
   const [selectedFilter, setSelectedFilter] = useState('assigned');
   const [refreshing, setRefreshing] = useState(false);
+  const [completedCount, setCompletedCount] = useState(0);
   const [isChief, setIsChief] = useState(false);
   const [isSupervisor, setIsSupervisor] = useState(false);
   const departments = useSelector((state) => state.departments.list);
   const [defaultFilterApplied, setDefaultFilterApplied] = useState(false);
   // const [viewMode, setViewMode] = useState('table'); // 'card' | 'table'
+  
+  // Completed reports state
+  const [completedReports, setCompletedReports] = useState([]);
+  const [loadingCompleted, setLoadingCompleted] = useState(false);
 
   const applyFilters = useCallback((reports, statusFilter, monthFilter, yearFilter) => {
     let filtered = reports;
@@ -86,6 +91,138 @@ function Inbox() {
       setError('Failed to load inbox reports');
     }
   }, [applyFilters, id]);
+
+  const getCompletedReportsCount = useCallback(async () => {
+    try {
+      if (!id) {
+        setCompletedCount(0);
+        return 0;
+      }
+
+      // Get user's completion stats from the user_completion_stats collection
+      const userStatsRef = doc(db, 'user_completion_stats', id.toString());
+      const userStatsSnap = await getDoc(userStatsRef);
+      
+      if (!userStatsSnap.exists()) {
+        setCompletedCount(0);
+        return 0;
+      }
+
+      const userData = userStatsSnap.data();
+      const completions = Array.isArray(userData?.completions) ? userData.completions : [];
+      
+      // Filter completions by selected month and year
+      const year = parseInt(selectedYear === 'all' ? new Date().getFullYear() : selectedYear);
+      const month = selectedMonth === 'All' ? null : parseInt(selectedMonth) - 1; // Convert to 0-based index
+      
+      let filteredCompletions = completions;
+      
+      if (selectedYear !== 'all' || selectedMonth !== 'All') {
+        filteredCompletions = completions.filter(completion => {
+          if (!completion.completedAt) return false;
+          
+          const completionDate = new Date(completion.completedAt);
+          const completionYear = completionDate.getFullYear();
+          const completionMonth = completionDate.getMonth();
+          
+          // Check year match
+          if (selectedYear !== 'all' && completionYear !== year) return false;
+          
+          // Check month match
+          if (selectedMonth !== 'All' && completionMonth !== month) return false;
+          
+          return true;
+        });
+      }
+
+      const totalCount = filteredCompletions.length;
+      setCompletedCount(totalCount);
+      return totalCount;
+    } catch (err) {
+      console.error('Error counting completed reports:', err);
+      setCompletedCount(0);
+      return 0;
+    }
+  }, [selectedMonth, selectedYear, id]);
+
+  // Function to fetch completed reports for display in main table
+  const fetchCompletedReports = useCallback(async () => {
+    try {
+      setLoadingCompleted(true);
+      
+      if (!id) {
+        setCompletedReports([]);
+        return;
+      }
+
+      // Get user's completion stats from the user_completion_stats collection
+      const userStatsRef = doc(db, 'user_completion_stats', id.toString());
+      const userStatsSnap = await getDoc(userStatsRef);
+      
+      if (!userStatsSnap.exists()) {
+        setCompletedReports([]);
+        return;
+      }
+
+      const userData = userStatsSnap.data();
+      const completions = Array.isArray(userData?.completions) ? userData.completions : [];
+      
+      // Filter completions by selected month and year
+      const year = parseInt(selectedYear === 'all' ? new Date().getFullYear() : selectedYear);
+      const month = selectedMonth === 'All' ? null : parseInt(selectedMonth) - 1; // Convert to 0-based index
+      
+      let filteredCompletions = completions;
+      
+      if (selectedYear !== 'all' || selectedMonth !== 'All') {
+        filteredCompletions = completions.filter(completion => {
+          if (!completion.completedAt) return false;
+          
+          const completionDate = new Date(completion.completedAt);
+          const completionYear = completionDate.getFullYear();
+          const completionMonth = completionDate.getMonth();
+          
+          // Check year match
+          if (selectedYear !== 'all' && completionYear !== year) return false;
+          
+          // Check month match
+          if (selectedMonth !== 'All' && completionMonth !== month) return false;
+          
+          return true;
+        });
+      }
+
+      // Sort by completion date (newest first)
+      filteredCompletions.sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt));
+      
+      // Format completions to match the main table structure
+      const formattedReports = filteredCompletions.map((completion, index) => ({
+        id: completion.reportId || `completed-${index}`,
+        incident_type: completion.incidentType || 'N/A',
+        location: completion.location || 'N/A',
+        date: completion.date || completion.completedAt,
+        created_at: completion.date || completion.completedAt,
+        completed_at: completion.completedAt,
+        completed: true,
+        status: 'completed',
+        send_to: [parseInt(id)], // Current user was involved
+        completedBy: completion.completedBy || 'N/A'
+      }));
+      
+      setCompletedReports(formattedReports);
+    } catch (err) {
+      console.error('Error fetching completed reports:', err);
+      setCompletedReports([]);
+    } finally {
+      setLoadingCompleted(false);
+    }
+  }, [selectedMonth, selectedYear, id]);
+
+  useEffect(() => {
+    // Count completed reports when month, year, or id changes
+    if (id) {
+      getCompletedReportsCount();
+    }
+  }, [getCompletedReportsCount, id]);
 
   // Role detection: Supervisor via cached Redux flag (no Firestore read)
   useEffect(() => {
@@ -381,13 +518,14 @@ function Inbox() {
         </button>
         <button
           className={`inbox-filter-button ${selectedFilter === 'completed' ? 'active' : ''}`}
-          onClick={() => {
+          onClick={async () => {
             setSelectedFilter('completed');
-            const filteredReports = applyFilters(auditReports, 'completed', selectedMonth, selectedYear);
-            setFilteredReports(filteredReports);
+            await fetchCompletedReports();
+            setFilteredReports(completedReports);
           }}
+          disabled={loadingCompleted}
         >
-          Completed ({applyFilters(auditReports, 'completed', selectedMonth, selectedYear).length})
+          {loadingCompleted ? 'Loading...' : `Completed (${completedCount})`}
         </button>
         <button
           className={`inbox-filter-button ${selectedFilter === 'all' ? 'active' : ''}`}
@@ -499,7 +637,6 @@ function Inbox() {
           </table>
         </div>
       )}
-
 
     </div>
   )

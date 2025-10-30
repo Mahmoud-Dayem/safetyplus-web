@@ -921,3 +921,30 @@
     font-size: 14px;
   }
 }
+
+/* Completed Reports Display (Non-clickable) */
+.inbox-completed-display {
+  background: #f8f9fa !important;
+  border: 2px solid #dee2e6 !important;
+  color: #6c757d !important;
+  cursor: default !important;
+  opacity: 0.8;
+  position: relative;
+}
+
+.inbox-completed-display:hover {
+  background: #f8f9fa !important;
+  border-color: #dee2e6 !important;
+  transform: none !important;
+  cursor: help !important;
+}
+
+.inbox-completed-display::after {
+  content: "📁";
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 12px;
+  opacity: 0.6;
+}
