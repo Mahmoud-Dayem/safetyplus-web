@@ -209,8 +209,7 @@ function AllAuditReports() {
         //   console.log(isAuthorized);
         //   console.log('====================================');
           await getAuditReports();
-          // Also initialize completed reports for current month/year
-          await getCompletedReports(selectedMonth, selectedYear);
+          // Note: Completed reports are now fetched only when the completed button is clicked
         // }
       } catch (err) {
         console.error('Error:', err)
@@ -223,7 +222,7 @@ function AllAuditReports() {
     if (id) {
       getSafetyOfficers()
     }
-  }, [id, getAuditReports, getCompletedReports, selectedMonth, selectedYear]);
+  }, [id, getAuditReports, selectedMonth, selectedYear]);
 
   // Show loading screen while fetching data
   if (loading) {

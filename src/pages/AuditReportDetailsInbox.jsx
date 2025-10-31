@@ -559,14 +559,11 @@ const AuditReportDetailsInbox = () => {
             </>
           ) : (
             <>
-
+              {/* //accept and close the report */}
               <button
                 className="mark-complete-button-bottom"
                 onClick={async () => {
-                  // if (!safetyOfficer.trim()) {
-                  //   alert('Please enter a message before marking as completed.');
-                  //   return;
-                  // }
+ 
                   if (!safetyOfficer.trim()) {
                     // Highlight the input field
                     const inputField = document.getElementById('safety-officer-input');
@@ -620,7 +617,7 @@ const AuditReportDetailsInbox = () => {
                 {isCompleted ? 'Report Completed' : (markingComplete ? 'Marking Complete...' : 'Mark as Completed')}
               </button>
 
-              {/* reject by chief */}
+              {/* reject by supervisor */}
               <button
                 className="reject-button"
                 onClick={async () => {

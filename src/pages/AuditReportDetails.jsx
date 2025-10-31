@@ -36,29 +36,31 @@ const AuditReportDetails = () => {
             console.log("📊 updateUserCompletionStats called with:");
             console.log("📊 - Report data:", reportData);
             console.log("📊 - send_to users:", sendToUsers);
-            
+
             if (sendToUsers.length === 0) {
                 console.log("⚠️ No users in send_to array, skipping user stats update");
                 return;
             }
 
             const { arrayUnion, updateDoc } = await import('firebase/firestore');
-            
+
             // Create completion entry
             const completionEntry = {
                 location: reportData.location || 'N/A',
                 description: reportData.description || 'N/A',
-                date: reportData.date || reportData.date || new Date().toISOString(),
-                created_at: reportData.created_at || reportData.created_at || new Date().toISOString(),
-                assigned_supervisor: reportData.assigned_supervisor ||'N/A',
-                rectified_by:  reportData.rectified_by || 'N/A',
+                corrective_action: reportData.corrective_action || 'N/A',
+                // date: reportData.date || reportData.date || new Date().toISOString(),
+                created_at: reportData.created_at || reportData.created_at || new Date().toLocaleString(),
+                assigned_supervisor: reportData.assigned_supervisor || 'N/A',
+                // rectified_by: reportData.rectified_by || 'N/A',
                 reportId: reportData.id || report?.id || 'unknown-report-id',
-                completedAt: reportData.completed_at||new Date().toISOString(),
-                incidentType: reportData.incident_type || 'N/A',
+                completedAt: reportData.completed_at || new Date().toISOString(),
+                status: reportData.status || 'completed',
+                // incidentType: reportData.incident_type || 'N/A',
             };
-            
+
             console.log("📊 Completion entry to be saved:", completionEntry);
-            
+
             // Validate that no values are undefined
             const hasUndefined = Object.entries(completionEntry).find(([key, value]) => value === undefined);
             if (hasUndefined) {
@@ -73,10 +75,10 @@ const AuditReportDetails = () => {
                 try {
                     console.log(`📊 Processing user ${userId}...`);
                     const userStatsRef = doc(db, 'user_completion_stats', String(userId));
-                    
+
                     // Check if document exists
                     const userStatsSnap = await getDoc(userStatsRef);
-                    
+
                     if (userStatsSnap.exists()) {
                         console.log(`📊 Document exists for user ${userId}, updating...`);
                         // Document exists → append completion entry
@@ -96,7 +98,7 @@ const AuditReportDetails = () => {
                             lastUpdated: new Date().toISOString()
                         });
                     }
-                    
+
                     console.log(`✅ Successfully updated completion stats for user ${userId}`);
                 } catch (userError) {
                     console.error(`❌ Error updating completion stats for user ${userId}:`, userError);
@@ -272,7 +274,7 @@ const AuditReportDetails = () => {
                                             console.log("🔥 User cancelled completion");
                                             return; // User cancelled
                                         }
-                                        
+
                                         console.log("🔥 User confirmed completion, proceeding...");
                                         if (!safetyOfficer.trim()) {
                                             // Highlight the input field
@@ -302,11 +304,11 @@ const AuditReportDetails = () => {
                                             }
                                             const currentData = reportSnap.data();
                                             console.log("🔍 Mark as Completed - Full currentData:", currentData);
-                                            
+
                                             // Save original send_to array before any modifications alfredo id is 31674
                                             const originalSendTo = currentData.send_to ? [...currentData.send_to] : [];
                                             console.log("🔍 Mark as Completed - Original send_to:", originalSendTo);
-                                            
+
                                             // Add completion info with safety officer comment
                                             const completionMessage = safetyOfficer.trim() || 'Marked as completed by safety officer';
                                             const newMessage = {
@@ -314,14 +316,14 @@ const AuditReportDetails = () => {
                                                 message: completionMessage,
                                                 timestamp: new Date().toISOString()
                                             };
-                                            
+
                                             // Add completion message to existing messages array
                                             const updatedMessages = currentData.messages || [];
                                             updatedMessages.push(newMessage);
-                                            
+
                                             // Update main report with completion data
-                                            await setDoc(reportRef, {
-                                                ...currentData,
+                                            const { updateDoc } = await import('firebase/firestore');
+                                            await updateDoc(reportRef, {
                                                 messages: updatedMessages,
                                                 completed: true,
                                                 status: 'completed',
@@ -331,30 +333,30 @@ const AuditReportDetails = () => {
 
                                             // Archive to audit_reports_closed before deletion
                                             let closedWriteSuccess = false;
-                                            
+
                                             try {
                                                 const { arrayUnion, updateDoc } = await import('firebase/firestore');
-                                                
+
                                                 // Get today's date string: YYYY-MM-DD
                                                 const today = new Date().toISOString().split("T")[0];
-                                                
+
                                                 // Reference to today's document in audit_reports_closed
                                                 const closedDocRef = doc(db, "audit_reports_closed", today);
-                                                
+
                                                 // Prepare completed report data
                                                 const completedReport = {
                                                     id: report.id,
-                                                    completed_at: new Date().toISOString(),
+                                                    completed_at: new Date().toLocaleString(),
                                                     completed_by: user?.displayName || user?.email || user?.id || 'unknown',
                                                     ...currentData,
                                                     messages: updatedMessages,
                                                     status: 'completed',
                                                     completed: true
                                                 };
-                                                
+
                                                 // Check if today's document exists in audit_reports_closed
                                                 const closedDocSnap = await getDoc(closedDocRef);
-                                                
+
                                                 if (closedDocSnap.exists()) {
                                                     // Document exists → append completed report
                                                     await updateDoc(closedDocRef, {
@@ -367,7 +369,7 @@ const AuditReportDetails = () => {
                                                         reports: [completedReport],
                                                     });
                                                 }
-                                                
+
                                                 closedWriteSuccess = true;
                                                 console.log("✅ Completed report saved to audit_reports_closed for:", today);
                                             } catch (closedError) {
@@ -376,15 +378,15 @@ const AuditReportDetails = () => {
                                                 return; // Don't proceed with deletion
                                             }
 
-                              
+
 
                                             // Only delete from audit_reports if both writes succeeded
-                                            if (closedWriteSuccess ) {
+                                            if (closedWriteSuccess) {
                                                 try {
                                                     const { deleteDoc } = await import('firebase/firestore');
                                                     await deleteDoc(reportRef);
                                                     console.log("✅ Report deleted from audit_reports after successful archival");
-                                                    
+
                                                     // Update user completion stats for all users in send_to array
                                                     // Use data with original send_to array before any modifications
                                                     const dataForStats = {
@@ -702,7 +704,7 @@ const AuditReportDetails = () => {
                                     // Update the report with new messages array, sent_to array, status, and assigned department
 
                                     try {
-                                         await setDoc(doc(db, 'audit_reports', report.id), {
+                                        await setDoc(doc(db, 'audit_reports', report.id), {
                                             ...currentReport,
                                             messages: updatedMessages,
                                             send_to: currentSentTo,
@@ -737,6 +739,7 @@ const AuditReportDetails = () => {
 
                 )
             }
+            {/* // accept button safety officer */}
             {
                 reportStatus === 'verifying' && (
                     <div className="audit-details-send-message-bottom">
@@ -746,17 +749,7 @@ const AuditReportDetails = () => {
                                 onClick={async () => {
                                     console.log("🔥 Accept button clicked!");
 
-                                    // if (!safetyOfficer.trim()) {
-                                    //     // Highlight the input field
-                                    //     const inputField = document.getElementById('safety-officer-input');
-                                    //     if (inputField) {
-                                    //         inputField.focus();
-                                    //         inputField.classList.add('highlight-required');
-                                    //         setTimeout(() => {
-                                    //             inputField.classList.remove('highlight-required');
-                                    //         }, 3000);
-                                    //     }
-                                    // }
+
 
                                     try {
                                         setSending(true);
@@ -775,7 +768,7 @@ const AuditReportDetails = () => {
 
                                         const reportData = reportSnap.data();
                                         console.log("🔍 Accept - Full reportData:", reportData);
-                                        
+
                                         // Save original send_to array before any modifications
                                         const originalSendToAccept = reportData.send_to ? [...reportData.send_to] : [];
                                         console.log("🔍 Accept - Original send_to:", originalSendToAccept);
@@ -801,30 +794,30 @@ const AuditReportDetails = () => {
 
                                         // Also save to audit_reports_closed collection
                                         let closedWriteSuccess = false;
-                                        
+
                                         try {
                                             const { arrayUnion, setDoc } = await import('firebase/firestore');
-                                            
+
                                             // Get today's date string: YYYY-MM-DD
                                             const today = new Date().toISOString().split("T")[0];
-                                            
+
                                             // Reference to today's document in audit_reports_closed
                                             const closedDocRef = doc(db, "audit_reports_closed", today);
-                                            
+
                                             // Prepare completed report data
                                             const completedReport = {
                                                 id: report.id,
-                                                completed_at: new Date().toISOString(),
-                                                completed_by: user?.displayName || user?.email || user?.id || 'unknown',
+                                                // completed_at: new Date().toISOString(),
+                                                // completed_by: user?.displayName || user?.email || user?.id || 'unknown',
                                                 ...reportData,
                                                 messages: updatedMessages,
                                                 status: 'completed',
                                                 completed: true
                                             };
-                                            
+
                                             // Check if today's document exists in audit_reports_closed
                                             const closedDocSnap = await getDoc(closedDocRef);
-                                            
+
                                             if (closedDocSnap.exists()) {
                                                 // Document exists → append completed report
                                                 await updateDoc(closedDocRef, {
@@ -837,7 +830,7 @@ const AuditReportDetails = () => {
                                                     reports: [completedReport],
                                                 });
                                             }
-                                            
+
                                             closedWriteSuccess = true;
                                             console.log("✅ Completed report saved to audit_reports_closed for:", today);
                                         } catch (closedError) {
@@ -845,7 +838,7 @@ const AuditReportDetails = () => {
                                             alert('Failed to save to audit_reports_closed. Report will not be deleted from main collection.');
                                             return; // Don't proceed with deletion
                                         }
- 
+
 
                                         // Only delete from audit_reports if both writes succeeded
                                         if (closedWriteSuccess) {
@@ -853,7 +846,7 @@ const AuditReportDetails = () => {
                                                 const { deleteDoc } = await import('firebase/firestore');
                                                 await deleteDoc(reportRef);
                                                 console.log("✅ Report deleted from audit_reports after successful archival");
-                                                
+
                                                 // Update user completion stats for all users in send_to array
                                                 // Use data with original send_to array before any modifications
                                                 const dataForStatsAccept = {
@@ -883,7 +876,7 @@ const AuditReportDetails = () => {
                             >
                                 {sending ? 'Processing...' : 'Accept'}
                             </button>
-
+                            {/* // handle reject button  */}
                             <button
                                 className="audit-details-reject-button"
                                 onClick={async () => {
@@ -954,6 +947,7 @@ const AuditReportDetails = () => {
                     </div>
                 )
             }
+            {/* //reassign button */}
             {
                 reportStatus === 'assigned' && isReassigning && (
                     <div className="audit-details-send-message-bottom">
