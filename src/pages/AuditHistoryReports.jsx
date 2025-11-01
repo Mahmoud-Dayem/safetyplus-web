@@ -1,10 +1,10 @@
-//this page shows audit report statistics with monthly breakdown
+//this page shows audit report statistics with monthly breakdown from employee's my_reports array
 import React, { useState } from 'react'
 import { colors } from '../constants/color';
 import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import './AuditHistoryReports.css';
-import { collection, getDocs, query, where } from 'firebase/firestore'
+import { doc, getDoc } from 'firebase/firestore'
 import { db } from '../firebase/firebaseConfig';
 
 function AuditHistoryReports() {
@@ -28,14 +28,31 @@ function AuditHistoryReports() {
 
     try {
       setLoading(true);
-      const q = query(
-        collection(db, "audit_reports"),
-        where("emp_code", "==", id)
-      );
-
-      const data = await getDocs(q);
-      const reportsArray = data.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setReports(reportsArray);
+      
+      // Fetch employee document
+      const employeeDocRef = doc(db, "employees_collection", id);
+      const employeeDoc = await getDoc(employeeDocRef);
+      
+      if (!employeeDoc.exists()) {
+        setError('Employee not found');
+        setLoading(false);
+        return;
+      }
+      
+      const employeeData = employeeDoc.data();
+      const myReports = employeeData.my_reports || [];
+      
+      // Filter for audit reports only and transform to match expected format
+      const auditReports = myReports
+        .filter(report => report.report_type === "audit")
+        .map(report => ({
+          id: report.report_id,
+          date: report.date,
+          location: report.location,
+          report_type: report.report_type
+        }));
+      
+      setReports(auditReports);
     } catch (err) {
       console.error('Error fetching reports:', err);
       setError(err.message);

@@ -269,8 +269,7 @@
   .inbox-reports-table td:nth-child(3),
     .inbox-reports-table th:nth-child(4),
   .inbox-reports-table td:nth-child(4),
-    .inbox-reports-table th:nth-child(6),
-  .inbox-reports-table td:nth-child(6),
+ 
       .inbox-reports-table th:nth-child(7),
   .inbox-reports-table td:nth-child(7) {
     display: none;
@@ -284,9 +283,16 @@
   /* } */
 
   /* Column widths */
-  .inbox-reports-table th:nth-child(1), .inbox-reports-table td:nth-child(1) {   word-break: break-word; }
-  .inbox-reports-table th:nth-child(3), .inbox-reports-table td:nth-child(2) {   word-break: break-word; }
-  .inbox-reports-table th:nth-child(7), .inbox-reports-table td:nth-child(5) {  word-break: break-word; }
+  .inbox-reports-table th:nth-child(1), .inbox-reports-table td:nth-child(1) {  overflow: hidden;
+white-space: nowrap;
+text-overflow: ellipsis; }
+  .inbox-reports-table th:nth-child(3), .inbox-reports-table td:nth-child(2) {  overflow: hidden;
+white-space: nowrap;
+text-overflow: ellipsis; }
+  .inbox-reports-table th:nth-child(7), .inbox-reports-table td:nth-child(5) {  overflow: hidden;
+white-space: nowrap;
+text-overflow: ellipsis;}
+ 
 
   /* Badge size */
   .inbox-status-badge { font-size: 10px; padding: 3px 8px; }
@@ -398,14 +404,14 @@
   flex-wrap: wrap;
 }
 
-.filter-group {
+.inbox-filter-group {
   display: flex;
   align-items: center;
   gap: 8px;
   min-width: 120px;
 }
 
-.filter-label {
+.inbox-filter-label {
   font-size: 12px;
   font-weight: 600;
   color: #2c2c2c;
@@ -623,7 +629,7 @@
     justify-content: flex-start;
   }
   
-  .filter-group {
+  .inbox-filter-group {
     min-width: auto;
   }
   
@@ -861,8 +867,7 @@
   .inbox-reports-table td:nth-child(3),
     .inbox-reports-table th:nth-child(4),
   .inbox-reports-table td:nth-child(4),
-    .inbox-reports-table th:nth-child(6),
-  .inbox-reports-table td:nth-child(6),
+ 
       .inbox-reports-table th:nth-child(7),
   .inbox-reports-table td:nth-child(7) {
     display: none;

@@ -93,7 +93,7 @@ const AuditReportDetailsInbox = () => {
         </button>
       </div>
       {/* Chief Badge */}
-      {isChief && (
+      {/* {isChief && (
         <div className="chief-status-banner">
           <div className="chief-status-content">
             <svg viewBox="0 0 24 24" fill="#fff" width="20" height="20">
@@ -102,9 +102,9 @@ const AuditReportDetailsInbox = () => {
             <span className="chief-status-text">You are a Department Chief</span>
           </div>
         </div>
-      )}
+      )} */}
       {/* Supervisor Badge (only if not Chief) */}
-      {!isChief && isSupervisor && (
+      {/* {!isChief && isSupervisor && (
         <div className="chief-status-banner">
           <div className="chief-status-content">
             <svg viewBox="0 0 24 24" fill="#fff" width="20" height="20">
@@ -113,7 +113,7 @@ const AuditReportDetailsInbox = () => {
             <span className="chief-status-text">You are a Supervisor</span>
           </div>
         </div>
-      )}
+      )} */}
 
       {/* Report Content */}
       <div className="details-card">
@@ -361,7 +361,7 @@ const AuditReportDetailsInbox = () => {
         {/* user  Input */}
         <div className="details-section">
           {
-            (reportStatus === 'assigned' || reportStatus === 'rectifying') && (
+            ((reportStatus === 'assigned' && isChief )|| (reportStatus === 'rectifying' &&isSupervisor)) && (
               <>
                 <h3 className="section-title">Assignment Message</h3>
                 <div className="safety-officer-container">
@@ -396,10 +396,7 @@ const AuditReportDetailsInbox = () => {
               <button
                 className="send-message-button-bottom"
                 onClick={async () => {
-                  // if (!safetyOfficer.trim()) {
-                  //   alert('Please enter a message before sending.');
-                  //   return;
-                  // }
+ 
 
                   try {
                     setSending(true);
@@ -655,7 +652,7 @@ const AuditReportDetailsInbox = () => {
                       assigned_supervisor: ''
                     });
 
-                    alert('Report rejected and sent back to safety officer for revision.');
+                    alert('Report rejected and sent back for revision.');
                     setSafetyOfficer(''); // Clear the input
                     // fetchMessages(); // Refresh message history
                     navigate('/inbox'); // Navigate back to inbox after rejection
@@ -667,7 +664,7 @@ const AuditReportDetailsInbox = () => {
                     setSending(false);
                   }
                 }}
-                disabled={sending || isCompleted}
+                disabled={sending || isCompleted || reportStatus === 'verifying'}
               >
                 {sending ? 'Processing...' : 'Reject'}
               </button>

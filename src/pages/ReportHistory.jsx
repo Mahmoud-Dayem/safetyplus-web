@@ -1,10 +1,10 @@
-//this page shows stop card report statistics with monthly breakdown
+//this page shows stop card report statistics with monthly breakdown from employee's my_reports array
 import React, { useState, useEffect } from 'react';
 import { colors } from '../constants/color';
 import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
-import StopCardReportsService from '../firebase/stopCardReportsService';
-import StopCardReportsServiceV2 from '../firebase/stopCardReportsServiceV2';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../firebase/firebaseConfig';
 import './AuditHistoryReports.css';
 
 const ReportHistory = () => {
@@ -17,8 +17,6 @@ const ReportHistory = () => {
   const [error, setError] = useState(null);
   const [monthlyCounts, setMonthlyCounts] = useState(new Array(12).fill(0));
   const [totalReports, setTotalReports] = useState(0);
-  // eslint-disable-next-line no-unused-vars
-  const [useV2Schema, setUseV2Schema] = useState(true); // Toggle for testing performance
 
   const fetchReports = async () => {
     if (!id) {
@@ -30,26 +28,38 @@ const ReportHistory = () => {
     try {
       setLoading(true);
       
-      const selectedYearInt = parseInt(selectedYear, 10);
-      const startTime = performance.now();
+      // Fetch employee document from employees_collection
+      const employeeDocRef = doc(db, "employees_collection", id);
+      const employeeDoc = await getDoc(employeeDocRef);
       
-      // Use V2 schema for better performance, fallback to V1 if needed
-      let monthlyCountsData;
-      let service = 'V2';
-      
-      try {
-        if (useV2Schema) {
-          monthlyCountsData = await StopCardReportsServiceV2.getUserMonthlyCounts(id, selectedYearInt);
-        } else {
-          throw new Error('V1 requested');
-        }
-      } catch (v2Error) {
-         monthlyCountsData = await StopCardReportsService.getUserMonthlyCounts(id, selectedYearInt);
-        service = 'V1';
+      if (!employeeDoc.exists()) {
+        setError('Employee not found');
+        setLoading(false);
+        return;
       }
       
-      const endTime = performance.now();
-       
+      const employeeData = employeeDoc.data();
+      const myReports = employeeData.my_reports || [];
+      
+      // Filter for stop reports only
+      const stopReports = myReports.filter(report => report.report_type === "STOP");
+      
+      const selectedYearInt = parseInt(selectedYear, 10);
+      
+      // Initialize monthly counts array
+      const monthlyCountsData = new Array(12).fill(0);
+      
+      // Count reports by month for the selected year
+      stopReports.forEach(report => {
+        if (report.date) {
+          const reportDate = new Date(report.date);
+          if (reportDate.getFullYear() === selectedYearInt) {
+            const monthIndex = reportDate.getMonth(); // 0-based
+            monthlyCountsData[monthIndex]++;
+          }
+        }
+      });
+      
       setMonthlyCounts(monthlyCountsData);
       
       // Calculate total for the year
@@ -64,11 +74,11 @@ const ReportHistory = () => {
     }
   };
 
-  // Fetch reports on component mount and when id, selectedYear, or schema changes
+  // Fetch reports on component mount and when id or selectedYear changes
   useEffect(() => {
     fetchReports();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, selectedYear, useV2Schema]);
+  }, [id, selectedYear]);
 
   // Months list
   const months = [
@@ -127,23 +137,6 @@ const ReportHistory = () => {
                 <option key={y} value={y}>{y}</option>
               ))}
             </select>
-          </div>
-          <div className="schema-toggle">
-            <button
-              onClick={() => setUseV2Schema(!useV2Schema)}
-              style={{ 
-                backgroundColor: useV2Schema ? '#4ecdc4' : '#ff6b6b',
-                color: 'white',
-                border: 'none',
-                padding: '8px 12px',
-                borderRadius: '4px',
-                fontSize: '12px',
-                cursor: 'pointer'
-              }}
-              title={`Currently using ${useV2Schema ? 'V2 (Optimized)' : 'V1 (Original)'} schema`}
-            >
-              {useV2Schema ? 'V2' : 'V1'}
-            </button>
           </div>
         </div>
       </div>

@@ -11,8 +11,8 @@ function Inbox() {
   const navigate = useNavigate();
   const user = useSelector((state) => state.auth.user);
   const id = user?.companyId;
-  // const [selectedMonth, setSelectedMonth] = useState('All');
-  const [selectedMonth, setSelectedMonth] = useState(String(new Date().getMonth() + 1));
+  const [selectedMonth, setSelectedMonth] = useState('All');
+   // const [selectedMonth, setSelectedMonth] = useState(String(new Date().getMonth() + 1));
 
   const [selectedYear, setSelectedYear] = useState(String(new Date().getFullYear()));
   const [loading, setLoading] = useState(true);
@@ -203,6 +203,7 @@ function Inbox() {
         location: completion.location || 'N/A',
         description: completion.description || 'N/A',
         created_at: completion.created_at || 'N/A',
+        date: completion.created_at || 'N/A',
         department: 'N/A',
         assigned_supervisor: completion.assigned_supervisor || 'N/A',
         completed_at: completion.completedAt,
@@ -446,7 +447,7 @@ function Inbox() {
               }
             }}
             title="Export inbox reports to Excel"
-            disabled={true}
+            disabled={false}
           // disabled={!auditReports || auditReports.length === 0}
           >
             <svg viewBox="0 0 24 24" fill="#FFFFFF" width="20" height="20">
@@ -573,7 +574,7 @@ function Inbox() {
 
         {/* Date Filters in same row */}
         <div className="inbox-date-filters-inline">
-          <div className="filter-group">
+          <div className="inbox-filter-group">
             <label className="inbox-filter-label">Year:</label>
             <select
               className="inbox-date-filter-select"
@@ -596,7 +597,7 @@ function Inbox() {
             </select>
           </div>
 
-          <div className="filter-group">
+          <div className="inbox-filter-group">
             <label className="inbox-filter-label">Month:</label>
             <select
               className="inbox-date-filter-select"

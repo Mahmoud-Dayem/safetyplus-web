@@ -31,15 +31,11 @@ const AuditReportDetails = () => {
     // Helper function to update user completion stats
     const updateUserCompletionStats = async (reportData) => {
         try {
-            console.log("📊 updateUserCompletionStats - Current user:", user);
-            const sendToUsers = Array.isArray(reportData.send_to) ? reportData.send_to : [];
-            console.log("📊 updateUserCompletionStats called with:");
-            console.log("📊 - Report data:", reportData);
-            console.log("📊 - send_to users:", sendToUsers);
+             const sendToUsers = Array.isArray(reportData.send_to) ? reportData.send_to : [];
+ 
 
             if (sendToUsers.length === 0) {
-                console.log("⚠️ No users in send_to array, skipping user stats update");
-                return;
+                 return;
             }
 
             const { arrayUnion, updateDoc } = await import('firebase/firestore');
@@ -59,8 +55,7 @@ const AuditReportDetails = () => {
                 // incidentType: reportData.incident_type || 'N/A',
             };
 
-            console.log("📊 Completion entry to be saved:", completionEntry);
-
+ 
             // Validate that no values are undefined
             const hasUndefined = Object.entries(completionEntry).find(([key, value]) => value === undefined);
             if (hasUndefined) {
@@ -73,23 +68,20 @@ const AuditReportDetails = () => {
             // Update completion stats for each user in send_to array
             for (const userId of sendToUsers) {
                 try {
-                    console.log(`📊 Processing user ${userId}...`);
-                    const userStatsRef = doc(db, 'user_completion_stats', String(userId));
+                     const userStatsRef = doc(db, 'user_completion_stats', String(userId));
 
                     // Check if document exists
                     const userStatsSnap = await getDoc(userStatsRef);
 
                     if (userStatsSnap.exists()) {
-                        console.log(`📊 Document exists for user ${userId}, updating...`);
-                        // Document exists → append completion entry
+                         // Document exists → append completion entry
                         await updateDoc(userStatsRef, {
                             completions: arrayUnion(completionEntry),
                             lastUpdated: new Date().toISOString(),
                             totalCount: userStatsSnap.data().totalCount ? userStatsSnap.data().totalCount + 1 : 1
                         });
                     } else {
-                        console.log(`📊 Document does not exist for user ${userId}, creating new...`);
-                        // Document does not exist → create new with first completion
+                         // Document does not exist → create new with first completion
                         await setDoc(userStatsRef, {
                             userId: String(userId),
                             completions: [completionEntry],
@@ -99,8 +91,7 @@ const AuditReportDetails = () => {
                         });
                     }
 
-                    console.log(`✅ Successfully updated completion stats for user ${userId}`);
-                } catch (userError) {
+                 } catch (userError) {
                     console.error(`❌ Error updating completion stats for user ${userId}:`, userError);
                     // Continue with other users even if one fails
                 }
@@ -265,18 +256,15 @@ const AuditReportDetails = () => {
                                 <button
                                     className="audit-details-mark-complete-button"
                                     onClick={async () => {
-                                        console.log("🔥 Mark as Completed button clicked!");
-                                        // Show confirmation dialog
+                                         // Show confirmation dialog
                                         const confirmed = window.confirm(
                                             'Are you sure you want to mark this report as completed? This action cannot be undone.'
                                         );
                                         if (!confirmed) {
-                                            console.log("🔥 User cancelled completion");
-                                            return; // User cancelled
+                                             return; // User cancelled
                                         }
 
-                                        console.log("🔥 User confirmed completion, proceeding...");
-                                        if (!safetyOfficer.trim()) {
+                                         if (!safetyOfficer.trim()) {
                                             // Highlight the input field
                                             const inputField = document.getElementById('safety-officer-input');
                                             if (inputField) {
@@ -303,12 +291,10 @@ const AuditReportDetails = () => {
                                                 return;
                                             }
                                             const currentData = reportSnap.data();
-                                            console.log("🔍 Mark as Completed - Full currentData:", currentData);
-
+ 
                                             // Save original send_to array before any modifications alfredo id is 31674
                                             const originalSendTo = currentData.send_to ? [...currentData.send_to] : [];
-                                            console.log("🔍 Mark as Completed - Original send_to:", originalSendTo);
-
+ 
                                             // Add completion info with safety officer comment
                                             const completionMessage = safetyOfficer.trim() || 'Marked as completed by safety officer';
                                             const newMessage = {
@@ -371,8 +357,7 @@ const AuditReportDetails = () => {
                                                 }
 
                                                 closedWriteSuccess = true;
-                                                console.log("✅ Completed report saved to audit_reports_closed for:", today);
-                                            } catch (closedError) {
+                                             } catch (closedError) {
                                                 console.error("❌ Error saving to audit_reports_closed:", closedError);
                                                 alert('Failed to save to audit_reports_closed. Report will not be deleted from main collection.');
                                                 return; // Don't proceed with deletion
@@ -385,8 +370,7 @@ const AuditReportDetails = () => {
                                                 try {
                                                     const { deleteDoc } = await import('firebase/firestore');
                                                     await deleteDoc(reportRef);
-                                                    console.log("✅ Report deleted from audit_reports after successful archival");
-
+ 
                                                     // Update user completion stats for all users in send_to array
                                                     // Use data with original send_to array before any modifications
                                                     const dataForStats = {
@@ -747,8 +731,7 @@ const AuditReportDetails = () => {
                             <button
                                 className="audit-details-accept-button"
                                 onClick={async () => {
-                                    console.log("🔥 Accept button clicked!");
-
+ 
 
 
                                     try {
@@ -767,12 +750,10 @@ const AuditReportDetails = () => {
                                         }
 
                                         const reportData = reportSnap.data();
-                                        console.log("🔍 Accept - Full reportData:", reportData);
-
+ 
                                         // Save original send_to array before any modifications
                                         const originalSendToAccept = reportData.send_to ? [...reportData.send_to] : [];
-                                        console.log("🔍 Accept - Original send_to:", originalSendToAccept);
-
+ 
                                         // Create new message object - use custom message or default acceptance message
                                         const messageText = safetyOfficer.trim() || 'Verified and Accepted by safety officer';
                                         const newMessage = {
@@ -832,8 +813,7 @@ const AuditReportDetails = () => {
                                             }
 
                                             closedWriteSuccess = true;
-                                            console.log("✅ Completed report saved to audit_reports_closed for:", today);
-                                        } catch (closedError) {
+                                         } catch (closedError) {
                                             console.error("❌ Error saving to audit_reports_closed:", closedError);
                                             alert('Failed to save to audit_reports_closed. Report will not be deleted from main collection.');
                                             return; // Don't proceed with deletion
@@ -845,8 +825,7 @@ const AuditReportDetails = () => {
                                             try {
                                                 const { deleteDoc } = await import('firebase/firestore');
                                                 await deleteDoc(reportRef);
-                                                console.log("✅ Report deleted from audit_reports after successful archival");
-
+ 
                                                 // Update user completion stats for all users in send_to array
                                                 // Use data with original send_to array before any modifications
                                                 const dataForStatsAccept = {
