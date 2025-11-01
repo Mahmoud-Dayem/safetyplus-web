@@ -1045,3 +1045,213 @@
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
+
+/* Export Modal Styles */
+.all-audit-reports-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.all-audit-reports-modal {
+  background: white;
+  border-radius: 12px;
+  padding: 0;
+  max-width: 500px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+}
+
+.all-audit-reports-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid #e5e5e5;
+  background: #f8f9fa;
+  border-radius: 12px 12px 0 0;
+}
+
+.all-audit-reports-modal-header h3 {
+  margin: 0;
+  color: #2c2c2c;
+  font-size: 1.2rem;
+}
+
+.all-audit-reports-modal-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background-color 0.2s;
+}
+
+.all-audit-reports-modal-close:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.all-audit-reports-modal-close:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.all-audit-reports-modal-body {
+  padding: 20px;
+}
+
+.all-audit-reports-form-group {
+  margin-bottom: 16px;
+}
+
+.all-audit-reports-form-group label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 500;
+  color: #2c2c2c;
+}
+
+.all-audit-reports-form-group input[type="date"] {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: border-color 0.2s;
+}
+
+.all-audit-reports-form-group input[type="date"]:focus {
+  outline: none;
+  border-color: #2c2c2c;
+  box-shadow: 0 0 0 2px rgba(44, 44, 44, 0.1);
+}
+
+.all-audit-reports-form-group input[type="date"]:disabled {
+  background: #f5f5f5;
+  cursor: not-allowed;
+}
+
+.all-audit-reports-checkbox-label {
+  display: flex !important;
+  align-items: center;
+  cursor: pointer;
+  margin-bottom: 0 !important;
+}
+
+.all-audit-reports-checkbox-label input[type="checkbox"] {
+  margin-right: 8px;
+  width: auto;
+}
+
+.all-audit-reports-error-message {
+  color: #dc3545;
+  font-size: 14px;
+  margin-top: 8px;
+  padding: 8px;
+  background: #f8d7da;
+  border: 1px solid #f5c6cb;
+  border-radius: 4px;
+}
+
+.all-audit-reports-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 20px;
+  border-top: 1px solid #e5e5e5;
+  background: #f8f9fa;
+  border-radius: 0 0 12px 12px;
+}
+
+.all-audit-reports-modal-cancel,
+.all-audit-reports-modal-export {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.all-audit-reports-modal-cancel {
+  background: #6c757d;
+  color: white;
+}
+
+.all-audit-reports-modal-cancel:hover:not(:disabled) {
+  background: #5a6268;
+}
+
+.all-audit-reports-modal-export {
+  background: #2c2c2c;
+  color: white;
+}
+
+.all-audit-reports-modal-export:hover:not(:disabled) {
+  background: #1a1a1a;
+}
+
+.all-audit-reports-modal-cancel:disabled,
+.all-audit-reports-modal-export:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Completed Reports Date Selection Dropdown */
+.all-audit-reports-completed-dropdown {
+  background: white;
+  border: 1px solid #e1e5e9;
+  border-radius: 8px;
+  padding: 20px;
+  margin: 20px 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.all-audit-reports-completed-dropdown .all-audit-reports-filter-group {
+  margin-bottom: 0;
+}
+
+.all-audit-reports-completed-dropdown .all-audit-reports-filter-label {
+  font-weight: 600;
+  color: #2c2c2c;
+  margin-bottom: 8px;
+}
+
+.all-audit-reports-completed-dropdown .all-audit-reports-date-filter-select {
+  width: 100%;
+  max-width: 400px;
+}
+
+.all-audit-reports-loading-indicator {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 15px;
+  color: #666;
+  font-style: italic;
+}
+
+.all-audit-reports-loading-indicator::before {
+  content: '';
+  width: 16px;
+  height: 16px;
+  border: 2px solid #e3e3e3;
+  border-top: 2px solid #2c2c2c;
+  border-radius: 50%;
+  animation: all-audit-reports-spin 1s linear infinite;
+}

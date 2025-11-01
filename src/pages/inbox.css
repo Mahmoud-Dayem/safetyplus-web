@@ -74,6 +74,14 @@
   align-items: center;
   gap: 2px;
 }
+.inbox-user-report-count{
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 2px;
+  }
+
+ 
 
 .inbox-page-title {
   color: white;
@@ -96,6 +104,17 @@
   padding: 4px 12px;
   border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.inbox-completed-count {
+  color: #ffffff; /* Success green text */
+  font-size: 13px;
+  font-weight: 600;
+  background: rgb(255, 149, 0); /* Light green background */
+  padding: 4px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(40, 167, 69, 0.3);
+  text-shadow: 0 0 2px rgba(40, 167, 69, 0.5);
 }
 
 /* Filters */
@@ -686,6 +705,13 @@ text-overflow: ellipsis;}
   .description-text {
     font-size: 12px;
   }
+.inbox-user-report-count{
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  }
+
 }
 
 /* Empty State */

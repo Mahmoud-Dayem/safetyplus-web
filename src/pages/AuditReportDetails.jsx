@@ -28,70 +28,46 @@ const AuditReportDetails = () => {
     const user = useSelector(state => state.auth.user);
     const [assignedChief, setAssignedChief] = useState('');
 
-    // Helper function to update user completion stats
+    // Helper function to update user completion counters (year-based)
     const updateUserCompletionStats = async (reportData) => {
         try {
-             const sendToUsers = Array.isArray(reportData.send_to) ? reportData.send_to : [];
- 
+            const sendToUsers = Array.isArray(reportData.send_to) ? reportData.send_to : [];
 
             if (sendToUsers.length === 0) {
-                 return;
-            }
-
-            const { arrayUnion, updateDoc } = await import('firebase/firestore');
-
-            // Create completion entry
-            const completionEntry = {
-                location: reportData.location || 'N/A',
-                description: reportData.description || 'N/A',
-                corrective_action: reportData.corrective_action || 'N/A',
-                // date: reportData.date || reportData.date || new Date().toISOString(),
-                created_at: reportData.created_at || reportData.created_at || new Date().toLocaleString(),
-                assigned_supervisor: reportData.assigned_supervisor || 'N/A',
-                // rectified_by: reportData.rectified_by || 'N/A',
-                reportId: reportData.id || report?.id || 'unknown-report-id',
-                completedAt: reportData.completed_at || new Date().toISOString(),
-                status: reportData.status || 'completed',
-                // incidentType: reportData.incident_type || 'N/A',
-            };
-
- 
-            // Validate that no values are undefined
-            const hasUndefined = Object.entries(completionEntry).find(([key, value]) => value === undefined);
-            if (hasUndefined) {
-                console.error("❌ Found undefined value in completion entry:", hasUndefined);
-                console.error("❌ Full reportData:", reportData);
-                console.error("❌ Full report:", report);
                 return;
             }
 
-            // Update completion stats for each user in send_to array
+            const { updateDoc, increment } = await import('firebase/firestore');
+            const currentYear = new Date().getFullYear();
+            const yearField = `completions_${currentYear}`;
+
+            // Update completion counter for each user in send_to array
             for (const userId of sendToUsers) {
                 try {
-                     const userStatsRef = doc(db, 'user_completion_stats', String(userId));
+                    const userStatsRef = doc(db, 'user_completion_stats', String(userId));
 
                     // Check if document exists
                     const userStatsSnap = await getDoc(userStatsRef);
 
                     if (userStatsSnap.exists()) {
-                         // Document exists → append completion entry
+                        // Document exists → increment year counter
                         await updateDoc(userStatsRef, {
-                            completions: arrayUnion(completionEntry),
+                            [yearField]: increment(1),
                             lastUpdated: new Date().toISOString(),
-                            totalCount: userStatsSnap.data().totalCount ? userStatsSnap.data().totalCount + 1 : 1
+                            totalCount: increment(1)
                         });
                     } else {
-                         // Document does not exist → create new with first completion
+                        // Document does not exist → create new with initial counter
                         await setDoc(userStatsRef, {
                             userId: String(userId),
-                            completions: [completionEntry],
+                            [yearField]: 1,
                             totalCount: 1,
                             createdAt: new Date().toISOString(),
                             lastUpdated: new Date().toISOString()
                         });
                     }
 
-                 } catch (userError) {
+                } catch (userError) {
                     console.error(`❌ Error updating completion stats for user ${userId}:`, userError);
                     // Continue with other users even if one fails
                 }

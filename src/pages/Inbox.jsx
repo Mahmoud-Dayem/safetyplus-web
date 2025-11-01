@@ -12,7 +12,7 @@ function Inbox() {
   const user = useSelector((state) => state.auth.user);
   const id = user?.companyId;
   const [selectedMonth, setSelectedMonth] = useState('All');
-   // const [selectedMonth, setSelectedMonth] = useState(String(new Date().getMonth() + 1));
+  // const [selectedMonth, setSelectedMonth] = useState(String(new Date().getMonth() + 1));
 
   const [selectedYear, setSelectedYear] = useState(String(new Date().getFullYear()));
   const [loading, setLoading] = useState(true);
@@ -27,12 +27,6 @@ function Inbox() {
   const departments = useSelector((state) => state.departments.list);
   const [defaultFilterApplied, setDefaultFilterApplied] = useState(false);
   // const [viewMode, setViewMode] = useState('table'); // 'card' | 'table'
-
-  // Completed reports state
-  const [completedReports, setCompletedReports] = useState([]);
-  const [loadingCompleted, setLoadingCompleted] = useState(false);
-  const [completedReportsCached, setCompletedReportsCached] = useState(false);
-  const [cachedCompletedFilters, setCachedCompletedFilters] = useState({ month: '', year: '' });
 
   const applyFilters = useCallback((reports, statusFilter, monthFilter, yearFilter) => {
     let filtered = reports;
@@ -111,33 +105,25 @@ function Inbox() {
       }
 
       const userData = userStatsSnap.data();
-      const completions = Array.isArray(userData?.completions) ? userData.completions : [];
 
-      // Filter completions by selected month and year
+      // Get completion count for the selected year
       const year = parseInt(selectedYear === 'all' ? new Date().getFullYear() : selectedYear);
-      const month = selectedMonth === 'All' ? null : parseInt(selectedMonth) - 1; // Convert to 0-based index
+      const yearField = `completions_${year}`;
 
-      let filteredCompletions = completions;
+      let totalCount = 0;
 
-      if (selectedYear !== 'all' || selectedMonth !== 'All') {
-        filteredCompletions = completions.filter(completion => {
-          if (!completion.completedAt) return false;
-
-          const completionDate = new Date(completion.completedAt);
-          const completionYear = completionDate.getFullYear();
-          const completionMonth = completionDate.getMonth();
-
-          // Check year match
-          if (selectedYear !== 'all' && completionYear !== year) return false;
-
-          // Check month match
-          if (selectedMonth !== 'All' && completionMonth !== month) return false;
-
-          return true;
+      if (selectedYear === 'all') {
+        // Sum all year fields if "all" is selected
+        Object.keys(userData).forEach(key => {
+          if (key.startsWith('completions_')) {
+            totalCount += userData[key] || 0;
+          }
         });
+      } else {
+        // Get count for specific year
+        totalCount = userData[yearField] || 0;
       }
 
-      const totalCount = filteredCompletions.length;
       setCompletedCount(totalCount);
       return totalCount;
     } catch (err) {
@@ -145,82 +131,7 @@ function Inbox() {
       setCompletedCount(0);
       return 0;
     }
-  }, [selectedMonth, selectedYear, id]);
-
-  // Function to fetch completed reports for display in main table
-  const fetchCompletedReports = useCallback(async () => {
-    try {
-      setLoadingCompleted(true);
-
-      if (!id) {
-        setCompletedReports([]);
-        return;
-      }
-
-      // Get user's completion stats from the user_completion_stats collection
-      const userStatsRef = doc(db, 'user_completion_stats', id.toString());
-      const userStatsSnap = await getDoc(userStatsRef);
-
-      if (!userStatsSnap.exists()) {
-        setCompletedReports([]);
-        return;
-      }
-
-      const userData = userStatsSnap.data();
-      const completions = Array.isArray(userData?.completions) ? userData.completions : [];
-
-      // Filter completions by selected month and year
-      const year = parseInt(selectedYear === 'all' ? new Date().getFullYear() : selectedYear);
-      const month = selectedMonth === 'All' ? null : parseInt(selectedMonth) - 1; // Convert to 0-based index
-
-      let filteredCompletions = completions;
-
-      if (selectedYear !== 'all' || selectedMonth !== 'All') {
-        filteredCompletions = completions.filter(completion => {
-          if (!completion.completedAt) return false;
-
-          const completionDate = new Date(completion.completedAt);
-          const completionYear = completionDate.getFullYear();
-          const completionMonth = completionDate.getMonth();
-
-          // Check year match
-          if (selectedYear !== 'all' && completionYear !== year) return false;
-
-          // Check month match
-          if (selectedMonth !== 'All' && completionMonth !== month) return false;
-
-          return true;
-        });
-      }
-
-      // Sort by completion date (newest first)
-      filteredCompletions.sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt));
-
-      // Format completions to match the main table structure
-      const formattedReports = filteredCompletions.map((completion, index) => ({
-        id: completion.reportId || `completed-${index}`,
-        // incident_type: completion.incidentType || 'N/A',
-        location: completion.location || 'N/A',
-        description: completion.description || 'N/A',
-        created_at: completion.created_at || 'N/A',
-        date: completion.created_at || 'N/A',
-        department: 'N/A',
-        assigned_supervisor: completion.assigned_supervisor || 'N/A',
-        completed_at: completion.completedAt,
-        completed: true,
-        status: 'completed',
-        send_to: [parseInt(id)], // Current user was involved
-        // completedBy: completion.completedBy || 'N/A'
-      }));
-
-      setCompletedReports(formattedReports);
-    } catch (err) {
-      console.error('Error fetching completed reports:', err);
-      setCompletedReports([]);
-    } finally {
-      setLoadingCompleted(false);
-    }
-  }, [selectedMonth, selectedYear, id]);
+  }, [selectedYear, id]);
 
   useEffect(() => {
     // Count completed reports when month, year, or id changes
@@ -229,43 +140,12 @@ function Inbox() {
     }
   }, [getCompletedReportsCount, id]);
 
-  // Update filteredReports when completedReports changes and user is on completed filter
-  useEffect(() => {
-    if (selectedFilter === 'completed' && completedReports.length >= 0) {
-      setFilteredReports(completedReports);
-    }
-  }, [completedReports, selectedFilter]);
-
   // Role detection: Supervisor via cached Redux flag (no Firestore read)
   useEffect(() => {
     setIsSupervisor(user?.isSupervisor === true);
   }, [user?.isSupervisor]);
 
 
-  /*
-   * Disabled temporarily: Supervisor role detection via Firestore
-   * Kept here for reference/fallback. We're using the cached Redux flag instead.
-   *
-   * useEffect(() => {
-   *   const checkSupervisor = async () => {
-   *     try {
-   *       if (!id) { setIsSupervisor(false); return; }
-   *       const { doc, getDoc } = await import('firebase/firestore');
-   *       const { db } = await import('../firebase/firebaseConfig');
-   *       const supervisorsRef = doc(db, 'assigned_list', 'supervisors');
-   *       const supervisorsSnap = await getDoc(supervisorsRef);
-   *       if (!supervisorsSnap.exists()) { setIsSupervisor(false); return; }
-   *       const data = supervisorsSnap.data();
-   *       const list = Array.isArray(data?.supervisors_id) ? data.supervisors_id : [];
-   *       setIsSupervisor(list.map(String).includes(String(id)));
-   *     } catch (e) {
-   *       console.error('Error checking supervisor role:', e);
-   *       setIsSupervisor(false);
-   *     }
-   *   };
-   *   checkSupervisor();
-   * }, [id]);
-   */
 
   // Role detection: Chief via cached departments list from Redux (no Firestore read)
   useEffect(() => {
@@ -275,30 +155,8 @@ function Inbox() {
     setIsChief(match);
   }, [departments, id]);
 
-  /*
-   * Disabled temporarily: Chief role detection via Firestore departments queries
-   * Kept here for reference/fallback. We're using the cached departments list instead.
-   *
-   * useEffect(() => {
-   *   const checkChief = async () => {
-   *     try {
-   *       if (!id) { setIsChief(false); return; }
-   *       const { collection, getDocs, query, where } = await import('firebase/firestore');
-   *       const { db } = await import('../firebase/firebaseConfig');
-   *       const numId = parseInt(id);
-   *       let snap = await getDocs(query(collection(db, 'departments'), where('chief_code', '==', numId)));
-   *       if (snap.empty) {
-   *         snap = await getDocs(query(collection(db, 'departments'), where('chief_code', '==', String(id))));
-   *       }
-   *       setIsChief(!snap.empty);
-   *     } catch (e) {
-   *       console.error('Error checking chief role:', e);
-   *       setIsChief(false);
-   *     }
-   *   };
-   *   checkChief();
-   * }, [id]);
-   */
+
+
 
   // Apply default filter once roles and reports are known
   useEffect(() => {
@@ -382,11 +240,15 @@ function Inbox() {
         <div className="inbox-header-title-section">
           <div className="inbox-header-info">
             <span className="inbox-user-name"> {user?.displayName || user?.email || 'User'}</span>
-            <span className="inbox-total-reports-count">Assigned to me: {auditReports.length} Reports</span>
+            <div className="inbox-user-report-count">
+
+              <span className="inbox-total-reports-count">Assigned to me: {auditReports.length} Reports</span>
+              <span className="inbox-completed-count">Completed in {selectedYear === 'all' ? 'all years' : selectedYear}: {completedCount} Reports</span>
+            </div>
           </div>
         </div>
         <div className="inbox-header-buttons">
-          <button
+          {/* <button
             className="inbox-export-button"
             onClick={() => {
               try {
@@ -453,29 +315,20 @@ function Inbox() {
             <svg viewBox="0 0 24 24" fill="#FFFFFF" width="20" height="20">
               <path d="M5 20h14v-2H5m14-9h-4V3H9v6H5l7 7 7-7z" />
             </svg>
-          </button>
+          </button> */}
           <button
             className="inbox-refresh-button"
             onClick={async () => {
               setRefreshing(true);
               try {
-                if (selectedFilter === 'completed') {
-                  // Refresh completed reports and count
-                  await fetchCompletedReports();
-                  await getCompletedReportsCount();
-                  // Update cache state
-                  setCompletedReportsCached(true);
-                  setCachedCompletedFilters({ month: selectedMonth, year: selectedYear });
-                } else {
-                  // Refresh regular reports
-                  const freshReports = await getAuditReports();
-                  if (freshReports) {
-                    const filteredReports = applyFilters(freshReports, selectedFilter, selectedMonth, selectedYear);
-                    setFilteredReports(filteredReports);
-                  }
-                  // Also refresh completed count
-                  await getCompletedReportsCount();
+                // Refresh regular reports
+                const freshReports = await getAuditReports();
+                if (freshReports) {
+                  const filteredReports = applyFilters(freshReports, selectedFilter, selectedMonth, selectedYear);
+                  setFilteredReports(filteredReports);
                 }
+                // Also refresh completed count
+                await getCompletedReportsCount();
               } catch (error) {
                 console.error('Error refreshing data:', error);
               } finally {
@@ -547,30 +400,6 @@ function Inbox() {
         >
           All ({applyFilters(auditReports, 'all', selectedMonth, selectedYear).length})
         </button>
-        <button
-          className={`inbox-filter-button ${selectedFilter === 'completed' ? 'active' : ''}`}
-          onClick={async () => {
-            setSelectedFilter('completed');
-            
-            // Check if we have cached data for current filters
-            const currentFilters = { month: selectedMonth, year: selectedYear };
-            const filtersChanged = 
-              cachedCompletedFilters.month !== currentFilters.month || 
-              cachedCompletedFilters.year !== currentFilters.year;
-            
-            // Only fetch if not cached or filters changed
-            if (!completedReportsCached || filtersChanged) {
-              await fetchCompletedReports();
-              setCompletedReportsCached(true);
-              setCachedCompletedFilters(currentFilters);
-            }
-            // Don't set filteredReports here - let the useEffect handle it
-          }}
-          disabled={loadingCompleted}
-        >
-          {loadingCompleted ? 'Loading...' : `Completed (${completedCount})`}
-        </button>
-
 
         {/* Date Filters in same row */}
         <div className="inbox-date-filters-inline">
@@ -581,14 +410,8 @@ function Inbox() {
               value={selectedYear}
               onChange={async (e) => {
                 setSelectedYear(e.target.value);
-                if (selectedFilter === 'completed') {
-                  // Re-fetch completed reports with new year filter
-                  await fetchCompletedReports();
-                  setCachedCompletedFilters({ month: selectedMonth, year: e.target.value });
-                } else {
-                  const filteredReports = applyFilters(auditReports, selectedFilter, selectedMonth, e.target.value);
-                  setFilteredReports(filteredReports);
-                }
+                const filteredReports = applyFilters(auditReports, selectedFilter, selectedMonth, e.target.value);
+                setFilteredReports(filteredReports);
               }}
             >
               <option value="all">All Years</option>
@@ -604,14 +427,8 @@ function Inbox() {
               value={selectedMonth}
               onChange={async (e) => {
                 setSelectedMonth(e.target.value);
-                if (selectedFilter === 'completed') {
-                  // Re-fetch completed reports with new month filter
-                  await fetchCompletedReports();
-                  setCachedCompletedFilters({ month: e.target.value, year: selectedYear });
-                } else {
-                  const filteredReports = applyFilters(auditReports, selectedFilter, e.target.value, selectedYear);
-                  setFilteredReports(filteredReports);
-                }
+                const filteredReports = applyFilters(auditReports, selectedFilter, e.target.value, selectedYear);
+                setFilteredReports(filteredReports);
               }}
             >
               <option value="All">All Months</option>

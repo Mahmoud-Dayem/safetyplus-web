@@ -14,7 +14,8 @@ function AllAuditReports() {
   const navigate = useNavigate();
   const user = useSelector((state) => state.auth.user);
   const id = user?.companyId;
-  const [selectedMonth, setSelectedMonth] = useState(String(new Date().getMonth() + 1));
+  const [selectedMonth, setSelectedMonth] = useState('All');
+  // const [selectedMonth, setSelectedMonth] = useState(String(new Date().getMonth() + 1));
   const [selectedYear, setSelectedYear] = useState(String(new Date().getFullYear()));
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -26,6 +27,17 @@ function AllAuditReports() {
   const [refreshing, setRefreshing] = useState(false);
   const [loadingCompleted, setLoadingCompleted] = useState(false);
   const [completedReportsFilter, setCompletedReportsFilter] = useState({ month: '', year: '' });
+  // New states for dropdown approach
+  const [availableCompletedDates, setAvailableCompletedDates] = useState([]);
+  const [selectedCompletedDate, setSelectedCompletedDate] = useState('');
+  const [loadingAvailableDates, setLoadingAvailableDates] = useState(false);
+  const [showCompletedDropdown, setShowCompletedDropdown] = useState(false);
+  // Export modal states
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportStartDate, setExportStartDate] = useState('');
+  const [exportEndDate, setExportEndDate] = useState('');
+  const [includeCompletedReports, setIncludeCompletedReports] = useState(true);
+  const [exporting, setExporting] = useState(false);
  
   const applyFilters = useCallback((reports, statusFilter, monthFilter, yearFilter) => {
     let filtered = reports;
@@ -163,6 +175,212 @@ function AllAuditReports() {
     }
   }, []);
 
+  // New function to get available completed report dates
+  const getAvailableCompletedDates = useCallback(async () => {
+    try {
+      setLoadingAvailableDates(true);
+      
+      // Get all document IDs from audit_reports_closed collection
+      const closedReportsSnapshot = await getDocs(collection(db, 'audit_reports_closed'));
+      const availableDates = closedReportsSnapshot.docs
+        .map(doc => doc.id)
+        .filter(id => id.match(/^\d{4}-\d{2}-\d{2}$/)) // Only valid date format documents
+        .sort((a, b) => b.localeCompare(a)); // Sort descending (newest first)
+      
+      setAvailableCompletedDates(availableDates);
+      return availableDates;
+    } catch (err) {
+      console.error('Error fetching available completed dates:', err);
+      setError('Failed to load available dates');
+      return [];
+    } finally {
+      setLoadingAvailableDates(false);
+    }
+  }, []);
+
+  // New function to get completed reports for a specific date
+  const getCompletedReportsForDate = useCallback(async (dateKey) => {
+    try {
+      setLoadingCompleted(true);
+      
+      const closedDocRef = doc(db, 'audit_reports_closed', dateKey);
+      const closedDocSnap = await getDoc(closedDocRef);
+      
+      if (closedDocSnap.exists()) {
+        const closedData = closedDocSnap.data();
+        const reports = Array.isArray(closedData?.reports) ? closedData.reports : [];
+        
+        // Sort by completion date (most recent first)
+        reports.sort((a, b) => {
+          const dateA = new Date(a.completed_at || a.date || 0);
+          const dateB = new Date(b.completed_at || b.date || 0);
+          return dateB - dateA;
+        });
+        
+        setCompletedReports(reports);
+        setFilteredReports(reports);
+        return reports;
+      } else {
+        setCompletedReports([]);
+        setFilteredReports([]);
+        return [];
+      }
+    } catch (err) {
+      console.error(`Error fetching completed reports for ${dateKey}:`, err);
+      setError('Failed to load completed reports');
+      return [];
+    } finally {
+      setLoadingCompleted(false);
+    }
+  }, []);
+
+  // Export function for the modal
+  const handleExport = useCallback(async (startDate, endDate, includeCompleted) => {
+    try {
+      setExporting(true);
+      let allReportsToExport = [];
+      
+      // Filter regular audit reports by date range
+      const regularReports = (auditReports || []).filter(report => {
+        if (!report.date) return false;
+        const reportDate = new Date(report.date);
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999); // Include full end date
+        return reportDate >= start && reportDate <= end;
+      });
+      
+      allReportsToExport.push(...regularReports);
+      
+      // Add completed reports if requested
+      if (includeCompleted) {
+        // Generate date range for completed reports
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        const dateKeys = [];
+        
+        const currentDate = new Date(start);
+        while (currentDate <= end) {
+          const yyyy = currentDate.getFullYear();
+          const mm = String(currentDate.getMonth() + 1).padStart(2, '0');
+          const dd = String(currentDate.getDate()).padStart(2, '0');
+          dateKeys.push(`${yyyy}-${mm}-${dd}`);
+          currentDate.setDate(currentDate.getDate() + 1);
+        }
+        
+        // Fetch completed reports for date range
+        for (const dateKey of dateKeys) {
+          try {
+            const closedDocRef = doc(db, 'audit_reports_closed', dateKey);
+            const closedDocSnap = await getDoc(closedDocRef);
+            
+            if (closedDocSnap.exists()) {
+              const closedData = closedDocSnap.data();
+              const reports = Array.isArray(closedData?.reports) ? closedData.reports : [];
+              allReportsToExport.push(...reports);
+            }
+          } catch (docError) {
+            console.error(`Error fetching completed reports for ${dateKey}:`, docError);
+          }
+        }
+      }
+      
+      // Remove duplicates by ID
+      const uniqueReports = allReportsToExport.reduce((acc, current) => {
+        const existingReport = acc.find(report => report.id === current.id);
+        if (!existingReport) {
+          acc.push(current);
+        }
+        return acc;
+      }, []);
+      
+      // Sort by date (most recent first)
+      uniqueReports.sort((a, b) => {
+        const dateA = new Date(a.completed_at || a.date || 0);
+        const dateB = new Date(b.completed_at || b.date || 0);
+        return dateB - dateA;
+      });
+      
+      // Headers
+      const headers = [
+        'Report ID',
+        'Incident Type',
+        'Requested date',
+        'Closed date',
+        'Employee',
+        'Employee Name',
+        'Employee Department',
+        'Location Description',
+        'Description',
+        'Corrective Action',
+        'Responsible Department',
+        'Department Head',
+        'Department Head Comment',
+        'Responsible Department Supervisor',
+        'Department Supervisor Comment',
+        'Status'
+      ];
+      
+      const escape = (val) => {
+        const str = (val ?? '').toString();
+        return '"' + str.replace(/"/g, '""') + '"';
+      };
+      
+      const rows = uniqueReports.map((r) => {
+        const displayStatus = r?.completed ? 'completed' : (r?.status || 'pending');
+        const formattedDate = r?.date ? new Date(r.date).toLocaleDateString() : '';
+        const completedAt = r?.completed_at ? new Date(r.completed_at).toLocaleString() : '';
+        
+        return [
+          r?.id || '',
+          r?.incident_type || '',
+          formattedDate,
+          completedAt,
+          r?.emp_code || '',
+          r?.user_name || r?.full_name || '',
+          r?.department || '',
+          r?.location || '',
+          r?.description || '',
+          r?.corrective_action || '',
+          r?.assigned_department || '',
+          r?.assigned_chief || '',
+          r?.chief_comment || '',
+          r?.assigned_supervisor || '',
+          r?.supervisor_comment || '',
+          displayStatus
+        ];
+      });
+      
+      const csvContent = [headers, ...rows]
+        .map(cols => cols.map(escape).join(','))
+        .join('\r\n');
+        
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      
+      const startFormatted = new Date(startDate).toISOString().split('T')[0];
+      const endFormatted = new Date(endDate).toISOString().split('T')[0];
+      const completedSuffix = includeCompleted ? '_with_completed' : '_active_only';
+      link.download = `AuditReports_${startFormatted}_to_${endFormatted}${completedSuffix}.csv`;
+      
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      // Close modal
+      setShowExportModal(false);
+      
+    } catch (err) {
+      console.error('Export error:', err);
+      alert('Failed to export file.');
+    } finally {
+      setExporting(false);
+    }
+  }, [auditReports]);
+
   useEffect(() => {
     const getSafetyOfficers = async () => {
       try {
@@ -182,36 +400,9 @@ function AllAuditReports() {
           setIsAuthorized(false);
         }
 
-        //
-        // const { data, error } = await supabase
-        //   .from('safetyofficers')  // 👈 your table name
-        //   .select('*')              // fetch all columns
-
-        // if (error) {
-        //   console.error('Error fetching safety officers:', error)
-        //   setError('Failed to load authorization data')
-        //   return []
-
-
-        // Check if current user's company ID exists in safety officers array
-
-        //   const userAuthorized = data.some(officer => {
-
-
-        //   // Convert both to strings for comparison or use parseInt on id
-        //   return String(officer.emp_code) === String(id) || officer.emp_code === parseInt(id);
-        // });
-        // setIsAuthorized(userAuthorized);
-
-        // If authorized, fetch audit reports
-        // if (isAuthorized) {
-        //   console.log('==========xxx isAuthorized xxx=============');
-        //   console.log(isAuthorized);
-        //   console.log('====================================');
+   
           await getAuditReports();
-          // Note: Completed reports are now fetched only when the completed button is clicked
-        // }
-      } catch (err) {
+       } catch (err) {
         console.error('Error:', err)
         setError('Failed to load data')
       } finally {
@@ -303,114 +494,18 @@ function AllAuditReports() {
         <div className="all-audit-reports-header-buttons">
           <button
             className="all-audit-reports-export-button"
-            onClick={async () => {
-              try {
-                // Always export both regular reports and completed reports
-                let allReportsToExport = [];
-                
-                // Add regular audit reports
-                const regularReports = auditReports || [];
-                allReportsToExport.push(...regularReports);
-                
-                // Add completed reports (fetch if not already loaded)
-                let completedReportsToAdd = completedReports || [];
-                if (completedReportsToAdd.length === 0) {
-                  // Fetch completed reports for current month/year if not already loaded
-                  completedReportsToAdd = await getCompletedReports(selectedMonth, selectedYear);
-                }
-                allReportsToExport.push(...completedReportsToAdd);
-                
-                // Remove duplicates by ID (in case a report exists in both collections)
-                const uniqueReports = allReportsToExport.reduce((acc, current) => {
-                  const existingReport = acc.find(report => report.id === current.id);
-                  if (!existingReport) {
-                    acc.push(current);
-                  }
-                  return acc;
-                }, []);
-                
-                // Sort by date (most recent first)
-                uniqueReports.sort((a, b) => {
-                  const dateA = new Date(a.completed_at || a.date || 0);
-                  const dateB = new Date(b.completed_at || b.date || 0);
-                  return dateB - dateA;
-                });
-                
-                // Static headers (messages removed); include chief/supervisor comments
-                const headers = [
-                  'Report ID',
-                  'Incident Type',
-                  'Requested date',
-                  'Closed date',
-                  'Employee',
-                  'Employee Name',
-                  'Employee Department',
-                  'Location Description',
-                  'Description',
-                  'Corrective Action',
-                  'Responsible Department',
-                  'Department Head',
-                  'Department Head Comm',
-                  'Responsible Department Supervisor',
-                  'Department Supervisor Comment',
-                ];
-                // Final status column
-                headers.push('Status');
-                const escape = (val) => {
-                  const str = (val ?? '').toString();
-                  // Escape double quotes by doubling them, wrap in quotes
-                  return '"' + str.replace(/"/g, '""') + '"';
-                };
-                const rows = uniqueReports.map((r) => {
-                  const displayStatus = r?.completed ? 'completed' : (r?.status || 'pending');
-                  const formattedDate = r?.date ? new Date(r.date).toLocaleDateString() : '';
-                  const completedAt = r?.completed_at ? new Date(r.completed_at).toLocaleString() : '';
-                  const base = [
-                    r?.id || '',
-                    r?.incident_type || '',
-                    formattedDate,
-                    completedAt,
-                    r?.emp_code || '',
-                    r?.user_name || r?.full_name || '',
-                    r?.department || '',
-                    r?.location || '',
-                    r?.description || '',
-                    r?.corrective_action || '',
-                    r?.assigned_department || '',
-                    r?.assigned_chief || '',
-                    r?.chief_comment || '',
-                    r?.assigned_supervisor || '',
-                    r?.supervisor_comment || '',
-                  ];
-                  
-                  base.push(displayStatus);
-                  return base;
-                });
-                const csvContent = [headers, ...rows]
-                  .map(cols => cols.map(escape).join(','))
-                  .join('\r\n');
-                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-                const url = URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.href = url;
-                const today = new Date();
-                const yyyy = today.getFullYear();
-                const mm = String(today.getMonth() + 1).padStart(2, '0');
-                const dd = String(today.getDate()).padStart(2, '0');
-                
-                // Filename indicates all reports (active + completed)
-                link.download = `AllAuditReports_Complete_${yyyy}-${mm}-${dd}.csv`;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                URL.revokeObjectURL(url);
-              } catch (err) {
-                console.error('Export error:', err);
-                alert('Failed to export file.');
-              }
+            onClick={() => {
+              // Set default dates (last 30 days)
+              const endDate = new Date();
+              const startDate = new Date();
+              startDate.setDate(startDate.getDate() - 30);
+              
+              setExportEndDate(endDate.toISOString().split('T')[0]);
+              setExportStartDate(startDate.toISOString().split('T')[0]);
+              setShowExportModal(true);
             }}
-            title="Export all reports (active + completed) to Excel"
-            disabled={(!auditReports || auditReports.length === 0) && (!completedReports || completedReports.length === 0)}
+            title="Export reports to CSV"
+            disabled={exporting}
           >
             {/* Download icon */}
             <svg viewBox="0 0 24 24" fill="#FFFFFF" width="20" height="20">
@@ -422,14 +517,14 @@ function AllAuditReports() {
             onClick={async () => {
               setRefreshing(true);
               try {
-                if (selectedFilter === 'completed') {
-                  // Clear cache and refresh completed reports from audit_reports_closed
-                  setCompletedReports([]);
-                  setCompletedReportsFilter({ month: '', year: '' });
-                  const completedReportsData = await getCompletedReports(selectedMonth, selectedYear);
-                  setFilteredReports(completedReportsData);
-                } else {
-                  // Refresh regular audit reports
+                if (selectedFilter === 'completed' && selectedCompletedDate) {
+                  // Only refresh if selected date is today (historical data doesn't change)
+                  const today = new Date().toISOString().split('T')[0];
+                  if (selectedCompletedDate === today) {
+                    await getCompletedReportsForDate(selectedCompletedDate);
+                  }
+                } else if (selectedFilter !== 'completed') {
+                  // Refresh regular audit reports for non-completed filters
                   const freshReports = await getAuditReports();
                   // Re-apply current filters to the fresh data
                   if (freshReports) {
@@ -443,10 +538,22 @@ function AllAuditReports() {
                 setRefreshing(false);
               }
             }}
-            disabled={refreshing || (loadingCompleted && selectedFilter === 'completed')}
-            title="Refresh Data"
+            disabled={
+              refreshing || 
+              (selectedFilter === 'completed' && !selectedCompletedDate) ||
+              (selectedFilter === 'completed' && selectedCompletedDate && selectedCompletedDate !== new Date().toISOString().split('T')[0])
+            }
+            title={
+              selectedFilter === 'completed' && !selectedCompletedDate 
+                ? 'Select a date to enable refresh' 
+                : selectedFilter === 'completed' && selectedCompletedDate !== new Date().toISOString().split('T')[0]
+                  ? 'Refresh only available for today\'s completed reports'
+                : selectedFilter === 'completed' 
+                  ? 'Refresh today\'s completed reports' 
+                  : 'Refresh Data'
+            }
           >
-            <svg viewBox="0 0 24 24" fill="#FFFFFF" width="20" height="20" className={(refreshing || (loadingCompleted && selectedFilter === 'completed')) ? 'all-audit-reports-spinning' : ''}>
+            <svg viewBox="0 0 24 24" fill="#FFFFFF" width="20" height="20" className={refreshing ? 'all-audit-reports-spinning' : ''}>
               <path d="M17.65,6.35C16.2,4.9 14.21,4 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20C15.73,20 18.84,17.45 19.73,14H17.65C16.83,16.33 14.61,18 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6C13.66,6 15.14,6.69 16.22,7.78L13,11H20V4L17.65,6.35Z" />
             </svg>
           </button>
@@ -467,6 +574,8 @@ function AllAuditReports() {
           className={`all-audit-reports-filter-button ${selectedFilter === 'pending' ? 'all-audit-reports-active' : ''}`}
           onClick={() => {
             setSelectedFilter('pending');
+            setShowCompletedDropdown(false); // Hide completed dropdown
+            // Keep selectedCompletedDate and completedReports for caching
             const filteredReports = applyFilters(auditReports, 'pending', selectedMonth, selectedYear);
             setFilteredReports(filteredReports);
           }}
@@ -478,6 +587,8 @@ function AllAuditReports() {
           className={`all-audit-reports-filter-button ${selectedFilter === 'verifying' ? 'all-audit-reports-active' : ''}`}
           onClick={() => {
             setSelectedFilter('verifying');
+            setShowCompletedDropdown(false); // Hide completed dropdown
+            // Keep selectedCompletedDate and completedReports for caching
             const filteredReports = applyFilters(auditReports, 'verifying', selectedMonth, selectedYear);
             setFilteredReports(filteredReports);
           }}
@@ -488,6 +599,8 @@ function AllAuditReports() {
           className={`all-audit-reports-filter-button ${selectedFilter === 'assigned' ? 'all-audit-reports-active' : ''}`}
           onClick={() => {
             setSelectedFilter('assigned');
+            setShowCompletedDropdown(false); // Hide completed dropdown
+            // Keep selectedCompletedDate and completedReports for caching
             const filteredReports = applyFilters(auditReports, 'assigned', selectedMonth, selectedYear);
             setFilteredReports(filteredReports);
           }}
@@ -498,6 +611,8 @@ function AllAuditReports() {
           className={`all-audit-reports-filter-button ${selectedFilter === 'all' ? 'all-audit-reports-active' : ''}`}
           onClick={() => {
             setSelectedFilter('all');
+            setShowCompletedDropdown(false); // Hide completed dropdown
+            // Keep selectedCompletedDate and completedReports for caching
             const filteredReports = applyFilters(auditReports, 'all', selectedMonth, selectedYear);
             setFilteredReports(filteredReports);
           }}
@@ -508,23 +623,46 @@ function AllAuditReports() {
           className={`all-audit-reports-filter-button ${selectedFilter === 'completed' ? 'all-audit-reports-active' : ''}`}
           onClick={async () => {
             setSelectedFilter('completed');
-            // Check if we already have completed reports for current month/year
-            const needsFetch = completedReports.length === 0 || 
-                             completedReportsFilter.month !== selectedMonth || 
-                             completedReportsFilter.year !== selectedYear;
+            setShowCompletedDropdown(true);
             
-            if (needsFetch) {
-              // Fetch completed reports from audit_reports_closed collection
-              const completedReportsData = await getCompletedReports(selectedMonth, selectedYear);
-              setFilteredReports(completedReportsData);
-            } else {
-              // Use already cached completed reports
+            // If we have a previously selected date and cached data, use it
+            if (selectedCompletedDate && completedReports.length > 0) {
               setFilteredReports(completedReports);
+              return;
+            }
+            
+            // Fetch available dates if not already loaded
+            if (availableCompletedDates.length === 0) {
+              const dates = await getAvailableCompletedDates();
+              
+              // Auto-select today's date if available
+              const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+              if (dates.includes(today)) {
+                setSelectedCompletedDate(today);
+                await getCompletedReportsForDate(today);
+              } else {
+                // Clear current filtered reports to show dropdown
+                setFilteredReports([]);
+                setCompletedReports([]);
+              }
+            } else {
+              // If dates already loaded, check for today (only if no date selected)
+              if (!selectedCompletedDate) {
+                const today = new Date().toISOString().split('T')[0];
+                if (availableCompletedDates.includes(today)) {
+                  setSelectedCompletedDate(today);
+                  await getCompletedReportsForDate(today);
+                } else {
+                  // Clear current filtered reports to show dropdown
+                  setFilteredReports([]);
+                  setCompletedReports([]);
+                }
+              }
             }
           }}
-          disabled={loadingCompleted}
+          disabled={loadingAvailableDates}
         >
-          {loadingCompleted ? 'Loading...' : `Completed (${completedReports.length})`}
+          {loadingAvailableDates ? 'Loading...' : 'Completed'}
         </button>
 
         {/* Date Filters in same row */}
@@ -622,8 +760,58 @@ function AllAuditReports() {
         </div>
       </div>
 
+      {/* Completed Reports Date Selection Dropdown */}
+      {showCompletedDropdown && selectedFilter === 'completed' && (
+        <div className="all-audit-reports-completed-dropdown">
+          <div className="all-audit-reports-filter-group">
+            <label className="all-audit-reports-filter-label">Select Completion Date:</label>
+            <select
+              className="all-audit-reports-date-filter-select"
+              value={selectedCompletedDate}
+              onChange={async (e) => {
+                const dateKey = e.target.value;
+                setSelectedCompletedDate(dateKey);
+                if (dateKey) {
+                  await getCompletedReportsForDate(dateKey);
+                } else {
+                  setFilteredReports([]);
+                  setCompletedReports([]);
+                }
+              }}
+              disabled={loadingCompleted}
+            >
+              <option value="">Select a date...</option>
+              {availableCompletedDates.map(dateKey => {
+                // Format date for display
+                const date = new Date(dateKey);
+                const formatted = date.toLocaleDateString('en-US', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric'
+                });
+                return (
+                  <option key={dateKey} value={dateKey}>
+                    {formatted} ({dateKey})
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+          {loadingCompleted && (
+            <div className="all-audit-reports-loading-indicator">
+              <span>Loading completed reports...</span>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Reports: Cards or Table */}
-      {filteredReports.length === 0 ? (
+      {selectedFilter === 'completed' && showCompletedDropdown && !selectedCompletedDate ? (
+        <div className="all-audit-reports-empty-state">
+          <h3>Select a Completion Date</h3>
+          <p>Please select a date from the dropdown above to view completed reports.</p>
+        </div>
+      ) : filteredReports.length === 0 ? (
         <div className="all-audit-reports-empty-state">
           <h3>No {selectedFilter === 'all' ? 'Audit Reports' : selectedFilter.charAt(0).toUpperCase() + selectedFilter.slice(1) + ' Reports'} Found</h3>
           <p>{selectedFilter === 'all' ? 'No audit reports have been submitted yet.' : `No ${selectedFilter} reports found. Try selecting a different filter.`}</p>
@@ -694,6 +882,87 @@ function AllAuditReports() {
           
         
       }
+
+      {/* Export Modal */}
+      {showExportModal && (
+        <div className="all-audit-reports-modal-overlay">
+          <div className="all-audit-reports-modal">
+            <div className="all-audit-reports-modal-header">
+              <h3>Export Audit Reports</h3>
+              <button 
+                className="all-audit-reports-modal-close"
+                onClick={() => setShowExportModal(false)}
+                disabled={exporting}
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className="all-audit-reports-modal-body">
+              <div className="all-audit-reports-form-group">
+                <label htmlFor="exportStartDate">Start Date:</label>
+                <input
+                  type="date"
+                  id="exportStartDate"
+                  value={exportStartDate}
+                  onChange={(e) => setExportStartDate(e.target.value)}
+                  disabled={exporting}
+                />
+              </div>
+              
+              <div className="all-audit-reports-form-group">
+                <label htmlFor="exportEndDate">End Date:</label>
+                <input
+                  type="date"
+                  id="exportEndDate"
+                  value={exportEndDate}
+                  onChange={(e) => setExportEndDate(e.target.value)}
+                  disabled={exporting}
+                />
+              </div>
+              
+              <div className="all-audit-reports-form-group">
+                <label className="all-audit-reports-checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={includeCompletedReports}
+                    onChange={(e) => setIncludeCompletedReports(e.target.checked)}
+                    disabled={exporting}
+                  />
+                  Include completed reports
+                </label>
+              </div>
+              
+              {exportStartDate && exportEndDate && new Date(exportStartDate) > new Date(exportEndDate) && (
+                <div className="all-audit-reports-error-message">
+                  Start date must be before or equal to end date
+                </div>
+              )}
+            </div>
+            
+            <div className="all-audit-reports-modal-footer">
+              <button
+                className="all-audit-reports-modal-cancel"
+                onClick={() => setShowExportModal(false)}
+                disabled={exporting}
+              >
+                Cancel
+              </button>
+              <button
+                className="all-audit-reports-modal-export"
+                onClick={() => {
+                  if (exportStartDate && exportEndDate && new Date(exportStartDate) <= new Date(exportEndDate)) {
+                    handleExport(exportStartDate, exportEndDate, includeCompletedReports);
+                  }
+                }}
+                disabled={exporting || !exportStartDate || !exportEndDate || new Date(exportStartDate) > new Date(exportEndDate)}
+              >
+                {exporting ? 'Exporting...' : 'Export'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

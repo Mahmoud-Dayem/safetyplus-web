@@ -12,46 +12,7 @@ const HomeScreen = () => {
 
   const name = user?.displayName;
   const id = user?.companyId;
-  // const department = user?.department
-  // const fullName = user?.fullName
-  // const jobTitle = user?.jobTitle
-  // const stopcard = user?.stopcard
-  // const inbox = user?.inbox
-
-  // Fetch employee document and update Redux store
-  // useEffect(() => {
-  //   const fetchUserDocument = async () => {
-  //     if (!id) {
-  //       return;
-  //     }
-
-  //     try {
-  //       const userDocRef = doc(db, 'employees_collection', id);
-  //       const userDocSnap = await getDoc(userDocRef);
-
-  //       if (userDocSnap.exists()) {
-  //         const empData = userDocSnap.data();
-
-  //         // Combine first_name and last_name with space between
-  //         const fullName = `${empData.first_name || ''} ${empData.last_name || ''}`.trim();
-
-  //         // Dispatch to Redux to store department, fullName, jobTitle, and permissions
-  //         dispatch(updateUserProfile({
-  //           department: empData.department || null,
-  //           fullName: fullName || null,
-  //           jobTitle: empData.job_title || null,
-  //           stopcard: empData.stopcard === true, // default to false if not specified
-  //           inbox: empData.inbox === true, // default to false if not specified
-  //         }));
-  //       } else {
-  //       }
-  //     } catch (error) {
-  //       console.error('Error fetching user document:', error);
-  //     }
-  //   };
-
-  //   fetchUserDocument();
-  // }, [id, dispatch]);
+   
 
   // No Home banner needed; StopCard handles alerts before navigation
 
