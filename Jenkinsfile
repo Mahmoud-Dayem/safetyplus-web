@@ -15,6 +15,8 @@ pipeline {
                 sh '''
                   echo "$REACT_ENV" > .env
                   echo ".env file created"
+                  echo "---- .env content ----"
+                  cat .env
                 '''
             }
         }
@@ -59,9 +61,5 @@ pipeline {
             }
         }
     }
-     post {
-        always {
-            sh 'rm -f .env || true'
-        }
-    }
+    
 }
