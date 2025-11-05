@@ -10,14 +10,21 @@ pipeline {
                 git branch: 'auditreportstoreinfirestore', url: 'https://github.com/Mahmoud-Dayem/safetyplus-web.git'
             }
         }
-       stage('Create .env file') {
+       stage('Use Secret .env') {
             steps {
-                sh '''
-                  echo "$REACT_ENV" > .env
-                  echo ".env file created"
-                  echo "---- .env content ----"
-                  cat .env
-                '''
+                withCredentials([file(credentialsId: 'react-env', variable: 'ENV_FILE')]) {
+                    sh '''
+                        echo "Copying .env file..."
+                        cp "$ENV_FILE" .env
+                        echo ".env ready"
+
+                        echo "Check file exists:"
+                        ls -l .env
+
+                        echo "---- .env first line ----"
+                        head -n 1 .env
+                    '''
+                }
             }
         }
 
