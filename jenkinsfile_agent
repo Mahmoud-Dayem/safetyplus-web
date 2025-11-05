@@ -1,16 +1,24 @@
 pipeline {
-    agent any
-        environment {
+    agent {
+        docker {
+            image 'node:20'
+            args '-v $HOME/.npm:/root/.npm'
+        }
+    }
+
+    environment {
         REACT_ENV = credentials('react-env')
     }
 
     stages {
+
         stage('Checkout') {
             steps {
                 git branch: 'auditreportstoreinfirestore', url: 'https://github.com/Mahmoud-Dayem/safetyplus-web.git'
             }
         }
-       stage('Use Secret .env') {
+
+        stage('Use Secret .env') {
             steps {
                 withCredentials([file(credentialsId: 'react-env', variable: 'ENV_FILE')]) {
                     sh '''
@@ -40,17 +48,18 @@ pipeline {
             }
         }
 
- 
-         stage('Deploy to NGINX Docker') {
+        stage('Deploy to NGINX Docker') {
             steps {
                 sh '''
                 CONTAINER_NAME=react-nginx
 
-                # Ensure container exists
+                echo "Checking if NGINX container exists..."
                 docker ps --filter "name=$CONTAINER_NAME" | grep $CONTAINER_NAME
 
-                # Copy new build to NGINX container
+                echo "Removing old build files..."
                 docker exec $CONTAINER_NAME rm -rf /usr/share/nginx/html/*
+
+                echo "Copying new build files to NGINX..."
                 docker cp build/. $CONTAINER_NAME:/usr/share/nginx/html/
 
                 echo "✅ Deployment finished"
@@ -58,5 +67,4 @@ pipeline {
             }
         }
     }
-    
 }
