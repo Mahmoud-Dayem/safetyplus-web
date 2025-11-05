@@ -1,10 +1,10 @@
 import React, { useState } from 'react'
-import { supabase } from './supabaseClient'
+import { uploadImageToCloudinary } from '../utils/cloudinary';
 import { colors } from '../constants/color';
 import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import './AuditReport.css';
-import { setDoc, doc } from 'firebase/firestore';
+import { setDoc, doc, arrayUnion, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase/firebaseConfig';
 
 function AuditReport() {
@@ -28,8 +28,39 @@ function AuditReport() {
   const [loading, setLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [showImageOptions, setShowImageOptions] = useState(false);
+  const [showLocationModal, setShowLocationModal] = useState(false);
+  const [managementAuditLocation, setManagementAuditLocation] = useState('');
   const incident_type_list = ['Unsafe Condition', 'Unsafe Act', 'Near Miss', 'Environment Concern', 'Management Audit'];
-
+  const auditLocation =[
+    'Limestone Crusher Bldg, Operator Room, 211BC1/2 area and 1P1',
+    'Quarry & QWS Building Sorrounding, Fuel Station ',
+    'Surge Bin, Limestone Storage (stacker / Reclaimer) and Water source  Pump area',
+    'Clay Storage (Stacker/Reclaimer side) yard and Hazardous Substance Holding area',
+    'Gypsum Storage yard and 7P1',
+    'STP, Diesel Station and Light Vehicle shop',
+    'Additive Crusher Compressor Room, Additive & Gypsum Crusher',
+    '2P1 and Water Treatment Plant',
+    'Raw Material Transport Bldg',
+    'Power Plant facility',
+    'Raw Mill & Reject BE Building Reject ',
+    'RM Cyclone Building & RM Fan area',
+    'Preheater ID Fan, 3P1 and Main Baghouse',
+    'HFO/LFO Tanks & Pump area and LFO & HFO unloading area',
+    'Kiln Compressor Room and Boiler Room',
+    'Preheater (Top to Bottom)  and Raw Mix Silo top',
+    'Kiln & Cooler Area and ESP',
+    '491DP1, Off spec Silo top and Clinker Silo Top',
+    'Outside Feeding & Clinker Transport Building',
+    'Cement Mill & CM Feed Building',
+    '5P1 and Cement Silo Top to Bottom',
+    'CCR Building & 4P1',
+    'Refractory Store, RM Silo &  Cooler Ground area',
+    'Packing Plant and Cement Silo Ground area',
+    'Weighbridge area, Sales Gates and Sales Building',
+    'Technical Building and Canteen',
+    'Main Gate and Contractor accommodation',
+    'Warehouse facility & Workshop area'
+  ]
 
   const updateFormData = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -37,6 +68,28 @@ function AuditReport() {
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: null }));
     }
+  };
+
+  const handleIncidentTypeSelect = (type) => {
+    const previousType = formData.incident_type;
+    updateFormData('incident_type', type);
+    
+    if (type === 'Management Audit') {
+      // Always show modal for Management Audit (user might want to change location)
+      setShowLocationModal(true);
+    } else {
+      // If switching away from Management Audit, save current location and clear field
+      if (previousType === 'Management Audit' && formData.location) {
+        setManagementAuditLocation(formData.location);
+      }
+      updateFormData('location', '');
+    }
+  };
+
+  const handleLocationSelect = (location) => {
+    updateFormData('location', location);
+    setManagementAuditLocation(location); // Remember this selection
+    setShowLocationModal(false);
   };
 
   const handleImageSelect = (e) => {
@@ -117,6 +170,18 @@ function AuditReport() {
 
     if (!formData.date) {
       newErrors.date = 'Date is required';
+    } else {
+      // Check if date is within the last 7 days
+      const selectedDate = new Date(formData.date);
+      const today = new Date();
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(today.getDate() - 7);
+      
+      if (selectedDate > today) {
+        newErrors.date = 'Date cannot be in the future';
+      } else if (selectedDate < sevenDaysAgo) {
+        newErrors.date = 'Date must be within the last 7 days';
+      }
     }
 
     if (!formData.corrective_action.trim()) {
@@ -140,33 +205,29 @@ function AuditReport() {
         // Generate unique docId first (will be used for both Firestore doc and image filename)
         const docId = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
-        // Upload image to Supabase Storage if selected
+        // Upload image to Cloudinary if selected
         if (selectedImage) {
-          setUploadProgress(20);
-          const fileExt = selectedImage.name.split('.').pop();
-          const fileName = `${docId}_${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
-          const filePath = `${user?.companyId}/${fileName}`;
-
-          setUploadProgress(40);
-          const { error: uploadError } = await supabase.storage
-            .from('auditBucket')
-            .upload(filePath, selectedImage, {
-              cacheControl: '3600',
-              upsert: false
-            });
-
-          if (uploadError) {
-            console.error('Upload error:', uploadError);
+          setUploadProgress(10);
+          
+          try {
+            // Upload to Cloudinary with progress tracking and same filename format as Supabase
+            imageUrl = await uploadImageToCloudinary(
+              selectedImage,
+              (progress) => {
+                // Map Cloudinary progress (0-100) to our progress range (10-70)
+                const mappedProgress = 10 + (progress * 0.6);
+                setUploadProgress(Math.round(mappedProgress));
+              },
+              `audit_reports_hcc/${user?.companyId}`, // Organize by user/company
+              docId // Pass docId for filename: docId_randomString
+            );
+            
+            setUploadProgress(70);
+             
+          } catch (uploadError) {
+            console.error('Cloudinary upload error:', uploadError);
             throw new Error(`Failed to upload image: ${uploadError.message}`);
           }
-
-          setUploadProgress(60);
-          // Get public URL
-          const { data: urlData } = supabase.storage
-            .from('auditBucket')
-            .getPublicUrl(filePath);
-
-          imageUrl = urlData.publicUrl;
         }
 
 
@@ -206,12 +267,55 @@ function AuditReport() {
         // await firestore.collection('audit_reports').doc(docId).set(auditReportData);
         await setDoc(doc(db, 'audit_reports', docId), auditReportData);
 
+        // Also append a compact history entry into employees_collection/{employeeId}.my_reports
+        try {
+          const employeeId = String(user?.companyId || '');
+          if (employeeId) {
+            const historyRef = doc(db, 'employees_collection', employeeId);
+            const historyEntry = {
+              date: formData.date,
+              location: formData.location.toUpperCase(),
+              report_type: 'audit',
+              report_id: docId,
+            };
+            // Use setDoc with merge and arrayUnion to avoid a read and create doc/field if missing
+            await setDoc(
+              historyRef,
+              { my_reports: arrayUnion(historyEntry) },
+              { merge: true }
+            );
+          } else {
+            console.warn('Skipping history update: user.companyId is missing');
+          }
+        } catch (histErr) {
+          console.error('Failed to append to employees_collection.my_reports:', histErr);
+          // Non-fatal: report is already saved; continue flow
+        }
+
+        // Append full report data to daily aggregate document in audit_reports_daily/{YYYY-MM-DD}
+        try {
+          const today = new Date().toISOString().split('T')[0];
+          const dailyRef = doc(db, 'audit_reports_daily', today);
+          // Use full auditReportData (same shape as saved in audit_reports) and include id
+          const fullDailyEntry = { id: docId, ...auditReportData };
+          const dailySnap = await getDoc(dailyRef);
+          if (dailySnap.exists()) {
+            await updateDoc(dailyRef, { reports: arrayUnion(fullDailyEntry) });
+          } else {
+            await setDoc(dailyRef, { date: today, reports: [fullDailyEntry] });
+          }
+        } catch (dailyErr) {
+          console.error('Failed to append to audit_reports_daily:', dailyErr);
+          // Non-fatal: main report already saved
+        }
+
         setUploadProgress(100);
         // Show alert and navigate to home after user clicks OK
         alert('Audit report submitted successfully!');
         navigate('/home');
         // Reset form
-        setFormData({ location: '', description: '', date: '' });
+        setFormData({ location: '', description: '', date: '', corrective_action: '', incident_type: '' });
+        setManagementAuditLocation(''); // Clear remembered location
         removeImage();
       } catch (error) {
         console.error('Error submitting audit report:', error);
@@ -259,7 +363,7 @@ function AuditReport() {
                 className={`incident-type-button ${
                   formData.incident_type === type ? 'active' : ''
                 }`}
-                onClick={() => updateFormData('incident_type', type)}
+                onClick={() => handleIncidentTypeSelect(type)}
                 style={{
                   backgroundColor:
                     formData.incident_type === type
@@ -311,12 +415,17 @@ function AuditReport() {
 
         <div className="form-group">
           <label htmlFor="date" style={{ color: colors.text }}>
-            Date *
+            Date * (Last 7 days only)
           </label>
           <input
             id="date"
             type="date"
             value={formData.date}
+            min={(() => {
+              const sevenDaysAgo = new Date();
+              sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+              return sevenDaysAgo.toISOString().split('T')[0];
+            })()}
             max={new Date().toISOString().split('T')[0]}
             onChange={(e) => updateFormData('date', e.target.value)}
             style={{
@@ -481,6 +590,61 @@ function AuditReport() {
           {loading ? 'Submitting...' : 'Submit Audit Report'}
         </button>
       </div>
+
+      {/* Location Selection Modal */}
+      {showLocationModal && (
+        <div className="modal-overlay" onClick={() => setShowLocationModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 style={{ color: colors.text, margin: 0 }}>Select Audit Location</h3>
+              <button 
+                className="modal-close-button"
+                onClick={() => setShowLocationModal(false)}
+                style={{ color: colors.text }}
+              >
+                ×
+              </button>
+            </div>
+            <div className="modal-body">
+              <div className="location-list">
+                {auditLocation.map((location, index) => {
+                  const isSelected = location === managementAuditLocation || location === formData.location;
+                  return (
+                    <button
+                      key={index}
+                      className={`location-option ${isSelected ? 'selected' : ''}`}
+                      onClick={() => handleLocationSelect(location)}
+                      style={{
+                        backgroundColor: isSelected ? colors.primary : '#f8f9fa',
+                        color: isSelected ? 'white' : colors.text,
+                        borderColor: isSelected ? colors.primary : colors.border,
+                        fontWeight: isSelected ? '600' : 'normal'
+                      }}
+                    >
+                      {location}
+                      {isSelected && (
+                        <span style={{ marginLeft: '8px', fontSize: '14px' }}>✓</span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button 
+                className="cancel-button"
+                onClick={() => setShowLocationModal(false)}
+                style={{ 
+                  backgroundColor: colors.textSecondary,
+                  color: 'white'
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

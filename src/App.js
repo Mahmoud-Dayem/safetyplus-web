@@ -1,7 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { login } from './store/authSlice';
+import { storeUser } from './helper/authStorage';
+import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { getUser } from './helper/authStorage';
 import AuthScreen from './pages/AuthScreen';
 import HomeScreen from './pages/HomeScreen';
@@ -16,6 +18,8 @@ import AllAuditReports from './pages/AllAuditReports'
 import AuditReportDetails from './pages/AuditReportDetails'
 import AuditReportDetailsInbox from './pages/AuditReportDetailsInbox'
 import DataAnalytics from './pages/DataAnalytics'
+import AccessDenied from './components/AccessDenied'
+import { hydrateDepartmentsFromStorage, refreshDepartmentsIfStale, fetchAndCacheDepartments } from './store/departmentsSlice';
 
 // Protected Route component
 const ProtectedRoute = ({ children }) => {
@@ -28,10 +32,186 @@ const ProtectedRoute = ({ children }) => {
   return children;
 };
 
+// Permission-based Protected Route for StopCard features
+const StopCardProtectedRoute = ({ children }) => {
+  const user = useSelector(state => state.auth.user);
+  const dispatch = useDispatch();
+  const [loading, setLoading] = useState(true);
+  const [hasPermission, setHasPermission] = useState(false);
+  
+  useEffect(() => {
+    const checkStopCardPermission = async () => {
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+
+      // If stopcard permission is already loaded and true, allow access
+      if (user.stopcard === true) {
+        setHasPermission(true);
+        setLoading(false);
+        return;
+      }
+
+      // If we have a companyId but no stopcard permission loaded, fetch from Firestore
+      // if (user.companyId && user.stopcard !== true) {
+      //   try {
+      //     const { doc, getDoc } = await import('firebase/firestore');
+      //     const { db } = await import('./firebase/firebaseConfig');
+      //     const { updateUserProfile } = await import('./store/authSlice');
+          
+      //     const userDocRef = doc(db, 'employees_collection', user.companyId);
+      //     const userDocSnap = await getDoc(userDocRef);
+          
+      //     if (userDocSnap.exists()) {
+      //       const empData = userDocSnap.data();
+      //       const fullName = `${empData.first_name || ''} ${empData.last_name || ''}`.trim();
+            
+      //       // Update Redux with employee data
+      //       dispatch(updateUserProfile({
+      //         department: empData.department || null,
+      //         fullName: fullName || null,
+      //         jobTitle: empData.job_title || null,
+      //         stopcard: empData.stopcard === true,
+      //         inbox: empData.inbox === true,
+      //       }));
+            
+      //       // Check stopcard permission
+      //       setHasPermission(empData.stopcard === true);
+      //     } else {
+      //       setHasPermission(false);
+      //     }
+      //   } catch (error) {
+      //     console.error('Error checking stopcard permission:', error);
+      //     setHasPermission(false);
+      //   }
+      // } else {
+      //   setHasPermission(false);
+      // }
+      
+      setLoading(false);
+    };
+
+    checkStopCardPermission();
+  }, [user, dispatch]);
+  
+  if (!user) {
+    return <Navigate to="/auth" replace />;
+  }
+  
+  if (loading) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        minHeight: '100vh' 
+      }}>
+        <div>Checking permissions...</div>
+      </div>
+    );
+  }
+  
+  if (!hasPermission) {
+    return <AccessDenied feature="STOP Card features" />;
+  }
+  
+  return children;
+};
+
+// Permission-based Protected Route for Inbox features
+const InboxProtectedRoute = ({ children }) => {
+  const user = useSelector(state => state.auth.user);
+  const dispatch = useDispatch();
+  const [loading, setLoading] = useState(true);
+  const [hasPermission, setHasPermission] = useState(false);
+  
+  useEffect(() => {
+    const checkInboxPermission = async () => {
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+
+      // If inbox permission is already loaded and true, allow access
+      if (user.inbox === true) {
+        setHasPermission(true);
+        setLoading(false);
+        return;
+      }
+
+      // If we have a companyId but no inbox permission loaded, fetch from Firestore
+      // if (user.companyId && user.inbox !== true) {
+      //   try {
+      //     const { doc, getDoc } = await import('firebase/firestore');
+      //     const { db } = await import('./firebase/firebaseConfig');
+      //     const { updateUserProfile } = await import('./store/authSlice');
+          
+      //     const userDocRef = doc(db, 'employees_collection', user.companyId);
+      //     const userDocSnap = await getDoc(userDocRef);
+          
+      //     if (userDocSnap.exists()) {
+      //       const empData = userDocSnap.data();
+      //       const fullName = `${empData.first_name || ''} ${empData.last_name || ''}`.trim();
+            
+      //       // Update Redux with employee data
+      //       dispatch(updateUserProfile({
+      //         department: empData.department || null,
+      //         fullName: fullName || null,
+      //         jobTitle: empData.job_title || null,
+      //         stopcard: empData.stopcard === true,
+      //         inbox: empData.inbox === true,
+      //       }));
+            
+      //       // Check inbox permission
+      //       setHasPermission(empData.inbox === true);
+      //     } else {
+      //       setHasPermission(false);
+      //     }
+      //   } catch (error) {
+      //     console.error('Error checking inbox permission:', error);
+      //     setHasPermission(false);
+      //   }
+      // } else {
+      //   setHasPermission(false);
+      // }
+      
+      setLoading(false);
+    };
+
+    checkInboxPermission();
+  }, [user, dispatch]);
+  
+  if (!user) {
+    return <Navigate to="/auth" replace />;
+  }
+  
+  if (loading) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        minHeight: '100vh' 
+      }}>
+        <div>Checking permissions...</div>
+      </div>
+    );
+  }
+  
+  if (!hasPermission) {
+    return <AccessDenied feature="Inbox features" />;
+  }
+  
+  return children;
+};
+
 function App() {
   const dispatch = useDispatch();
   const [loading, setLoading] = useState(true);
   const user = useSelector(state => state.auth.user);
+  const departments = useSelector(state => state.departments.list);
+  const fetchedDepsOnLoginRef = useRef(false);
 
   // Update browser tab title with user name globally
   useEffect(() => {
@@ -50,11 +230,14 @@ function App() {
                   document.referrer.includes('android-app://');
     
     if (isPWA) {
-       // Add PWA-specific initialization here if needed
+       // Request persistent storage to reduce data eviction by the OS
+       if (navigator.storage && navigator.storage.persist) {
+         navigator.storage.persist().catch(() => {});
+       }
     }
   }, []);
 
-  // Restore user from localStorage on app mount
+  // Restore user from localStorage on app mount and also listen to Firebase auth state
   useEffect(() => {
     const restoreUser = async () => {
       try {
@@ -72,6 +255,53 @@ function App() {
     };
     
     restoreUser();
+
+    // Hydrate departments from localStorage for zero Firestore reads on mount
+    dispatch(hydrateDepartmentsFromStorage());
+
+    // Background refresh departments after initial mount if cache is stale.
+    // Delay to avoid counting as an "on mount" read and to keep first paint fast.
+    let refreshTimer = setTimeout(() => {
+      dispatch(refreshDepartmentsIfStale());
+    }, 1500);
+
+    // Also hydrate from Firebase if it has an existing session (important for PWA installs)
+    const auth = getAuth();
+    const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
+      if (fbUser) {
+        // If Redux already has a user, skip
+        const currentStored = await getUser();
+        if (!currentStored) {
+          // Try to enrich with companyId from users_by_uid mapping
+          let enriched = {
+            uid: fbUser.uid,
+            email: fbUser.email,
+            emailVerified: fbUser.emailVerified,
+            displayName: fbUser.displayName,
+            photoURL: fbUser.photoURL,
+            token: fbUser.accessToken,
+          };
+          try {
+            const { doc, getDoc } = await import('firebase/firestore');
+            const { db } = await import('./firebase/firebaseConfig');
+            const mapSnap = await getDoc(doc(db, 'users_by_uid', fbUser.uid));
+            if (mapSnap.exists()) {
+              const data = mapSnap.data();
+              enriched = {
+                ...enriched,
+                companyId: data.companyId,
+                isAdmin: false,
+                isPrivileged: false,
+              };
+            }
+          } catch (e) {
+            // Non-fatal; proceed with minimal info
+          }
+          dispatch(login(enriched));
+          await storeUser(enriched);
+        }
+      }
+    });
     
     // Also listen for storage changes (in case user logs in from another tab)
     const handleStorageChange = (e) => {
@@ -89,8 +319,24 @@ function App() {
     
     return () => {
       window.removeEventListener('storage', handleStorageChange);
+      unsubscribe && unsubscribe();
+      clearTimeout(refreshTimer);
     };
   }, [dispatch]);
+
+  // On login/signup: fetch a fresh departments copy only for supervisors or chiefs
+  useEffect(() => {
+    if (!user) return;
+    if (fetchedDepsOnLoginRef.current) return;
+    const isSupervisor = user?.isSupervisor === true;
+    const isChief = Array.isArray(departments)
+      ? departments.some(d => String(d?.chief_code) === String(user?.companyId))
+      : false;
+    if (isSupervisor || isChief) {
+      fetchedDepsOnLoginRef.current = true;
+      dispatch(fetchAndCacheDepartments());
+    }
+  }, [user, departments, dispatch]);
 
   // Show loading state while checking localStorage
   if (loading) {
@@ -124,9 +370,9 @@ function App() {
         <Route 
           path="/stopcard" 
           element={
-            <ProtectedRoute>
+            <StopCardProtectedRoute>
               <StopCard />
-            </ProtectedRoute>
+            </StopCardProtectedRoute>
           } 
         />
         <Route 
@@ -156,9 +402,9 @@ function App() {
         <Route 
           path="/inbox" 
           element={
-            <ProtectedRoute>
+            <InboxProtectedRoute>
               <Inbox/>
-            </ProtectedRoute>
+            </InboxProtectedRoute>
           } 
         />
         <Route 

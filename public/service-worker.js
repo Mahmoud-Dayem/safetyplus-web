@@ -5,7 +5,7 @@
 
 // Service worker for PWA functionality
 
-const CACHE_NAME = 'safetyplus-cache-v10'; // Increment for auth fix
+const CACHE_NAME = 'safetyplus-cache-v18'; // Increment for auth fix
 const urlsToCache = [
   '/static/js/bundle.js',
   '/static/css/main.css',
@@ -26,9 +26,8 @@ self.addEventListener('install', event => {
   // Perform install steps
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then(function(cache) {
-        console.log('Opened cache');
-        return cache.addAll(urlsToCache);
+    .then(function(cache) {
+         return cache.addAll(urlsToCache);
       })
   );
 });

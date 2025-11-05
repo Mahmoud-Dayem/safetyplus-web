@@ -14,17 +14,19 @@ function AllAuditReports() {
   const navigate = useNavigate();
   const user = useSelector((state) => state.auth.user);
   const id = user?.companyId;
-  const [selectedMonth, setSelectedMonth] = useState('All');
-  const [selectedYear, setSelectedYear] = useState('2025');
+  const [selectedMonth, setSelectedMonth] = useState(String(new Date().getMonth() + 1));
+  const [selectedYear, setSelectedYear] = useState(String(new Date().getFullYear()));
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [auditReports, setAuditReports] = useState([]);
+  const [completedReports, setCompletedReports] = useState([]);
   const [filteredReports, setFilteredReports] = useState([]);
   const [selectedFilter, setSelectedFilter] = useState('pending');
   const [refreshing, setRefreshing] = useState(false);
-  const [viewMode, setViewMode] = useState('table'); // 'card' | 'table'
-
+  const [loadingCompleted, setLoadingCompleted] = useState(false);
+  const [completedReportsFilter, setCompletedReportsFilter] = useState({ month: '', year: '' });
+ 
   const applyFilters = useCallback((reports, statusFilter, monthFilter, yearFilter) => {
     let filtered = reports;
 
@@ -37,10 +39,12 @@ function AllAuditReports() {
     } else if (statusFilter === 'verifying') {
       filtered = filtered.filter(report => !report.completed && report.status === 'verifying');
     } else if (statusFilter === 'completed') {
-      filtered = filtered.filter(report => report.completed);
+      // For completed reports, we no longer filter from the main collection
+      // as they are now fetched separately from audit_reports_closed
+      return reports; // Return as-is since completed reports are already filtered by date in getCompletedReports
     }
 
-    // Apply date filters
+    // Apply date filters for non-completed reports
     if (yearFilter !== 'all' || monthFilter !== 'All') {
       filtered = filtered.filter(report => {
         if (!report.date) return false;
@@ -70,8 +74,10 @@ function AllAuditReports() {
       const reportsData = reportsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
       setAuditReports(reportsData);
-      // Apply default filters (pending status, all months, current year)
-      const filteredReports = applyFilters(reportsData, 'pending', 'All', '2025');
+      // Apply default filters (pending status, current month, current year)
+      const currentMonth = String(new Date().getMonth() + 1);
+      const currentYear = String(new Date().getFullYear())
+      const filteredReports = applyFilters(reportsData, 'pending', currentMonth, currentYear);
       setFilteredReports(filteredReports);
       return reportsData;
     } catch (err) {
@@ -79,6 +85,83 @@ function AllAuditReports() {
       setError('Failed to load audit reports');
     }
   }, [applyFilters]);
+
+  const getCompletedReports = useCallback(async (monthFilter, yearFilter) => {
+    try {
+      setLoadingCompleted(true);
+      const allCompletedReports = [];
+      
+      // Calculate date range based on month and year filters
+      let startDate, endDate;
+      
+      if (yearFilter === 'all') {
+        // If year is 'all', fetch all years - this could be expensive, but we'll limit it
+        const currentYear = new Date().getFullYear();
+        startDate = new Date(currentYear - 2, 0, 1); // Start from 2 years ago
+        endDate = new Date(currentYear, 11, 31); // End at current year
+      } else {
+        const year = parseInt(yearFilter);
+        if (monthFilter === 'All') {
+          // Fetch entire year
+          startDate = new Date(year, 0, 1);
+          endDate = new Date(year, 11, 31);
+        } else {
+          // Fetch specific month
+          const month = parseInt(monthFilter) - 1; // Convert to 0-based index
+          startDate = new Date(year, month, 1);
+          endDate = new Date(year, month + 1, 0); // Last day of the month
+        }
+      }
+
+      // Generate list of date keys to fetch
+      const dateKeys = [];
+      const currentDate = new Date(startDate);
+      
+      while (currentDate <= endDate) {
+        const yyyy = currentDate.getFullYear();
+        const mm = String(currentDate.getMonth() + 1).padStart(2, '0');
+        const dd = String(currentDate.getDate()).padStart(2, '0');
+        dateKeys.push(`${yyyy}-${mm}-${dd}`);
+        
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+
+      // Fetch all documents for the date range
+      for (const dateKey of dateKeys) {
+        try {
+          const closedDocRef = doc(db, 'audit_reports_closed', dateKey);
+          const closedDocSnap = await getDoc(closedDocRef);
+          
+          if (closedDocSnap.exists()) {
+            const closedData = closedDocSnap.data();
+            const reports = Array.isArray(closedData?.reports) ? closedData.reports : [];
+            allCompletedReports.push(...reports);
+          }
+        } catch (docError) {
+          console.error(`Error fetching completed reports for ${dateKey}:`, docError);
+          // Continue with other dates even if one fails
+        }
+      }
+
+      // Sort by completion date (most recent first)
+      allCompletedReports.sort((a, b) => {
+        const dateA = new Date(a.completed_at || a.date || 0);
+        const dateB = new Date(b.completed_at || b.date || 0);
+        return dateB - dateA;
+      });
+
+      setCompletedReports(allCompletedReports);
+      // Track which filter combination we loaded
+      setCompletedReportsFilter({ month: monthFilter, year: yearFilter });
+      return allCompletedReports;
+    } catch (err) {
+      console.error('Error fetching completed reports:', err);
+      setError('Failed to load completed reports');
+      return [];
+    } finally {
+      setLoadingCompleted(false);
+    }
+  }, []);
 
   useEffect(() => {
     const getSafetyOfficers = async () => {
@@ -126,6 +209,7 @@ function AllAuditReports() {
         //   console.log(isAuthorized);
         //   console.log('====================================');
           await getAuditReports();
+          // Note: Completed reports are now fetched only when the completed button is clicked
         // }
       } catch (err) {
         console.error('Error:', err)
@@ -138,15 +222,15 @@ function AllAuditReports() {
     if (id) {
       getSafetyOfficers()
     }
-  }, [id, getAuditReports]);
+  }, [id, getAuditReports, selectedMonth, selectedYear]);
 
   // Show loading screen while fetching data
   if (loading) {
     return (
-      <div className="loading-container">
-        <div className="loading-content">
-          <div className="loading-spinner"></div>
-          <p className="loading-text">Loading authorization data...</p>
+      <div className="all-audit-reports-loading-container">
+        <div className="all-audit-reports-loading-content">
+          <div className="all-audit-reports-loading-spinner"></div>
+          <p className="all-audit-reports-loading-text">Loading authorization data...</p>
         </div>
       </div>
     )
@@ -155,8 +239,8 @@ function AllAuditReports() {
   // Show error if data failed to load
   if (error) {
     return (
-      <div className="error-container">
-        <div className="error-content">
+      <div className="all-audit-reports-error-container">
+        <div className="all-audit-reports-error-content">
           <h2>Error</h2>
           <p>{error}</p>
           <button onClick={() => window.location.reload()}>Retry</button>
@@ -169,23 +253,23 @@ function AllAuditReports() {
   if (!isAuthorized) {
 
     return (
-      <div className="unauthorized-container">
-        <div className="unauthorized-content">
-          <div className="unauthorized-icon">
+      <div className="all-audit-reports-unauthorized-container">
+        <div className="all-audit-reports-unauthorized-content">
+          <div className="all-audit-reports-unauthorized-icon">
             <svg viewBox="0 0 24 24" fill="#dc3545" width="80" height="80">
               <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
               <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z" />
             </svg>
           </div>
-          <h1 className="unauthorized-title">Access Denied</h1>
-          <p className="unauthorized-message">
+          <h1 className="all-audit-reports-unauthorized-title">Access Denied</h1>
+          <p className="all-audit-reports-unauthorized-message">
             You are not authorized to view this page.
           </p>
-          <p className="unauthorized-submessage">
+          <p className="all-audit-reports-unauthorized-submessage">
             Please contact your administrator if you believe this is an error.
           </p>
           <button
-            className="unauthorized-button"
+            className="all-audit-reports-unauthorized-button"
             onClick={() => navigate('/home')}
           >
             Return to Home
@@ -197,11 +281,11 @@ function AllAuditReports() {
 
 
   return (
-    <div className="audit-reports-container">
+    <div className="all-audit-reports-container">
       {/* Header */}
-      <div className="audit-reports-header">
+      <div className="all-audit-reports-header">
         <button
-          className="back-button"
+          className="all-audit-reports-back-button"
           onClick={() => navigate(-1)}
           style={{ backgroundColor: colors.primary }}
         >
@@ -209,19 +293,49 @@ function AllAuditReports() {
             <path d="M19 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" />
           </svg>
         </button>
-        <div className="header-title-section">
-          <h1 className="page-title">All Audit Reports</h1>
-          <div className="header-info">
-            <span className="user-name">Welcome, {user?.displayName || user?.email || 'User'}</span>
-            <span className="total-reports-count">Total: {auditReports.length} Reports</span>
+        <div className="all-audit-reports-header-title-section">
+          <h1 className="all-audit-reports-page-title">All Audit Reports</h1>
+          <div className="all-audit-reports-header-info">
+            <span className="all-audit-reports-user-name">Welcome, {user?.displayName || user?.email || 'User'}</span>
+            <span className="all-audit-reports-total-reports-count">Total: {auditReports.length} Reports</span>
           </div>
         </div>
-        <div className="header-buttons">
+        <div className="all-audit-reports-header-buttons">
           <button
-            className="export-button"
-            onClick={() => {
+            className="all-audit-reports-export-button"
+            onClick={async () => {
               try {
-                const toExport = auditReports || [];
+                // Always export both regular reports and completed reports
+                let allReportsToExport = [];
+                
+                // Add regular audit reports
+                const regularReports = auditReports || [];
+                allReportsToExport.push(...regularReports);
+                
+                // Add completed reports (fetch if not already loaded)
+                let completedReportsToAdd = completedReports || [];
+                if (completedReportsToAdd.length === 0) {
+                  // Fetch completed reports for current month/year if not already loaded
+                  completedReportsToAdd = await getCompletedReports(selectedMonth, selectedYear);
+                }
+                allReportsToExport.push(...completedReportsToAdd);
+                
+                // Remove duplicates by ID (in case a report exists in both collections)
+                const uniqueReports = allReportsToExport.reduce((acc, current) => {
+                  const existingReport = acc.find(report => report.id === current.id);
+                  if (!existingReport) {
+                    acc.push(current);
+                  }
+                  return acc;
+                }, []);
+                
+                // Sort by date (most recent first)
+                uniqueReports.sort((a, b) => {
+                  const dateA = new Date(a.completed_at || a.date || 0);
+                  const dateB = new Date(b.completed_at || b.date || 0);
+                  return dateB - dateA;
+                });
+                
                 // Static headers (messages removed); include chief/supervisor comments
                 const headers = [
                   'Report ID',
@@ -247,7 +361,7 @@ function AllAuditReports() {
                   // Escape double quotes by doubling them, wrap in quotes
                   return '"' + str.replace(/"/g, '""') + '"';
                 };
-                const rows = toExport.map((r) => {
+                const rows = uniqueReports.map((r) => {
                   const displayStatus = r?.completed ? 'completed' : (r?.status || 'pending');
                   const formattedDate = r?.date ? new Date(r.date).toLocaleDateString() : '';
                   const completedAt = r?.completed_at ? new Date(r.completed_at).toLocaleString() : '';
@@ -261,7 +375,7 @@ function AllAuditReports() {
                     r?.department || '',
                     r?.location || '',
                     r?.description || '',
-                    r?.correction_action || '',
+                    r?.corrective_action || '',
                     r?.assigned_department || '',
                     r?.assigned_chief || '',
                     r?.chief_comment || '',
@@ -283,7 +397,9 @@ function AllAuditReports() {
                 const yyyy = today.getFullYear();
                 const mm = String(today.getMonth() + 1).padStart(2, '0');
                 const dd = String(today.getDate()).padStart(2, '0');
-                link.download = `AuditReports_${yyyy}-${mm}-${dd}.csv`;
+                
+                // Filename indicates all reports (active + completed)
+                link.download = `AllAuditReports_Complete_${yyyy}-${mm}-${dd}.csv`;
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
@@ -293,8 +409,8 @@ function AllAuditReports() {
                 alert('Failed to export file.');
               }
             }}
-            title="Export all reports to Excel"
-            disabled={!auditReports || auditReports.length === 0}
+            title="Export all reports (active + completed) to Excel"
+            disabled={(!auditReports || auditReports.length === 0) && (!completedReports || completedReports.length === 0)}
           >
             {/* Download icon */}
             <svg viewBox="0 0 24 24" fill="#FFFFFF" width="20" height="20">
@@ -302,15 +418,24 @@ function AllAuditReports() {
             </svg>
           </button>
           <button
-            className="refresh-button"
+            className="all-audit-reports-refresh-button"
             onClick={async () => {
               setRefreshing(true);
               try {
-                const freshReports = await getAuditReports();
-                // Re-apply current filters to the fresh data
-                if (freshReports) {
-                  const filteredReports = applyFilters(freshReports, selectedFilter, selectedMonth, selectedYear);
-                  setFilteredReports(filteredReports);
+                if (selectedFilter === 'completed') {
+                  // Clear cache and refresh completed reports from audit_reports_closed
+                  setCompletedReports([]);
+                  setCompletedReportsFilter({ month: '', year: '' });
+                  const completedReportsData = await getCompletedReports(selectedMonth, selectedYear);
+                  setFilteredReports(completedReportsData);
+                } else {
+                  // Refresh regular audit reports
+                  const freshReports = await getAuditReports();
+                  // Re-apply current filters to the fresh data
+                  if (freshReports) {
+                    const filteredReports = applyFilters(freshReports, selectedFilter, selectedMonth, selectedYear);
+                    setFilteredReports(filteredReports);
+                  }
                 }
               } catch (error) {
                 console.error('Error refreshing data:', error);
@@ -318,15 +443,15 @@ function AllAuditReports() {
                 setRefreshing(false);
               }
             }}
-            disabled={refreshing}
+            disabled={refreshing || (loadingCompleted && selectedFilter === 'completed')}
             title="Refresh Data"
           >
-            <svg viewBox="0 0 24 24" fill="#FFFFFF" width="20" height="20" className={refreshing ? 'spinning' : ''}>
+            <svg viewBox="0 0 24 24" fill="#FFFFFF" width="20" height="20" className={(refreshing || (loadingCompleted && selectedFilter === 'completed')) ? 'all-audit-reports-spinning' : ''}>
               <path d="M17.65,6.35C16.2,4.9 14.21,4 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20C15.73,20 18.84,17.45 19.73,14H17.65C16.83,16.33 14.61,18 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6C13.66,6 15.14,6.69 16.22,7.78L13,11H20V4L17.65,6.35Z" />
             </svg>
           </button>
           <button
-            className="home-button"
+            className="all-audit-reports-home-button"
             onClick={() => navigate('/home')}
           >
             <svg viewBox="0 0 24 24" fill="#FFFFFF" width="20" height="20">
@@ -337,9 +462,9 @@ function AllAuditReports() {
       </div>
 
       {/* Filter Buttons */}
-      <div className="filter-buttons-container">
+      <div className="all-audit-reports-filter-buttons-container">
         <button
-          className={`filter-button ${selectedFilter === 'pending' ? 'active' : ''}`}
+          className={`all-audit-reports-filter-button ${selectedFilter === 'pending' ? 'all-audit-reports-active' : ''}`}
           onClick={() => {
             setSelectedFilter('pending');
             const filteredReports = applyFilters(auditReports, 'pending', selectedMonth, selectedYear);
@@ -350,7 +475,7 @@ function AllAuditReports() {
         </button>
 
         <button
-          className={`filter-button ${selectedFilter === 'verifying' ? 'active' : ''}`}
+          className={`all-audit-reports-filter-button ${selectedFilter === 'verifying' ? 'all-audit-reports-active' : ''}`}
           onClick={() => {
             setSelectedFilter('verifying');
             const filteredReports = applyFilters(auditReports, 'verifying', selectedMonth, selectedYear);
@@ -360,7 +485,7 @@ function AllAuditReports() {
           Waiting for Verification ({applyFilters(auditReports, 'verifying', selectedMonth, selectedYear).length})
         </button>
                 <button
-          className={`filter-button ${selectedFilter === 'assigned' ? 'active' : ''}`}
+          className={`all-audit-reports-filter-button ${selectedFilter === 'assigned' ? 'all-audit-reports-active' : ''}`}
           onClick={() => {
             setSelectedFilter('assigned');
             const filteredReports = applyFilters(auditReports, 'assigned', selectedMonth, selectedYear);
@@ -370,17 +495,7 @@ function AllAuditReports() {
           Assigned/Rectifying ({applyFilters(auditReports, 'assigned', selectedMonth, selectedYear).length})
         </button>
         <button
-          className={`filter-button ${selectedFilter === 'completed' ? 'active' : ''}`}
-          onClick={() => {
-            setSelectedFilter('completed');
-            const filteredReports = applyFilters(auditReports, 'completed', selectedMonth, selectedYear);
-            setFilteredReports(filteredReports);
-          }}
-        >
-          Completed ({applyFilters(auditReports, 'completed', selectedMonth, selectedYear).length})
-        </button>
-        <button
-          className={`filter-button ${selectedFilter === 'all' ? 'active' : ''}`}
+          className={`all-audit-reports-filter-button ${selectedFilter === 'all' ? 'all-audit-reports-active' : ''}`}
           onClick={() => {
             setSelectedFilter('all');
             const filteredReports = applyFilters(auditReports, 'all', selectedMonth, selectedYear);
@@ -389,19 +504,58 @@ function AllAuditReports() {
         >
           All ({applyFilters(auditReports, 'all', selectedMonth, selectedYear).length})
         </button>
+        <button
+          className={`all-audit-reports-filter-button ${selectedFilter === 'completed' ? 'all-audit-reports-active' : ''}`}
+          onClick={async () => {
+            setSelectedFilter('completed');
+            // Check if we already have completed reports for current month/year
+            const needsFetch = completedReports.length === 0 || 
+                             completedReportsFilter.month !== selectedMonth || 
+                             completedReportsFilter.year !== selectedYear;
+            
+            if (needsFetch) {
+              // Fetch completed reports from audit_reports_closed collection
+              const completedReportsData = await getCompletedReports(selectedMonth, selectedYear);
+              setFilteredReports(completedReportsData);
+            } else {
+              // Use already cached completed reports
+              setFilteredReports(completedReports);
+            }
+          }}
+          disabled={loadingCompleted}
+        >
+          {loadingCompleted ? 'Loading...' : `Completed (${completedReports.length})`}
+        </button>
 
         {/* Date Filters in same row */}
-        <div className="date-filters-inline">
-          <div className="filter-group">
-            <label className="filter-label">Year:</label>
+        <div className="all-audit-reports-date-filters-inline">
+          <div className="all-audit-reports-filter-group">
+            <label className="all-audit-reports-filter-label">Year:</label>
             <select
-              className="date-filter-select"
+              className="all-audit-reports-date-filter-select"
               value={selectedYear}
-              onChange={(e) => {
+              onChange={async (e) => {
                 setSelectedYear(e.target.value);
-                const filteredReports = applyFilters(auditReports, selectedFilter, selectedMonth, e.target.value);
-                setFilteredReports(filteredReports);
+                if (selectedFilter === 'completed') {
+                  // Check if we need to fetch new data for the new year
+                  const needsFetch = completedReportsFilter.month !== selectedMonth || 
+                                   completedReportsFilter.year !== e.target.value;
+                  
+                  if (needsFetch) {
+                    // Fetch completed reports with new year filter
+                    const completedReportsData = await getCompletedReports(selectedMonth, e.target.value);
+                    setFilteredReports(completedReportsData);
+                  } else {
+                    // Use cached data
+                    setFilteredReports(completedReports);
+                  }
+                } else {
+                  // Apply filters to regular audit reports
+                  const filteredReports = applyFilters(auditReports, selectedFilter, selectedMonth, e.target.value);
+                  setFilteredReports(filteredReports);
+                }
               }}
+              disabled={loadingCompleted && selectedFilter === 'completed'}
             >
               <option value="all">All Years</option>
               <option value="2025">2025</option>
@@ -409,16 +563,33 @@ function AllAuditReports() {
             </select>
           </div>
 
-          <div className="filter-group">
-            <label className="filter-label">Month:</label>
+          <div className="all-audit-reports-filter-group">
+            <label className="all-audit-reports-filter-label">Month:</label>
             <select
-              className="date-filter-select"
+              className="all-audit-reports-date-filter-select"
               value={selectedMonth}
-              onChange={(e) => {
+              onChange={async (e) => {
                 setSelectedMonth(e.target.value);
-                const filteredReports = applyFilters(auditReports, selectedFilter, e.target.value, selectedYear);
-                setFilteredReports(filteredReports);
+                if (selectedFilter === 'completed') {
+                  // Check if we need to fetch new data for the new month
+                  const needsFetch = completedReportsFilter.month !== e.target.value || 
+                                   completedReportsFilter.year !== selectedYear;
+                  
+                  if (needsFetch) {
+                    // Fetch completed reports with new month filter
+                    const completedReportsData = await getCompletedReports(e.target.value, selectedYear);
+                    setFilteredReports(completedReportsData);
+                  } else {
+                    // Use cached data
+                    setFilteredReports(completedReports);
+                  }
+                } else {
+                  // Apply filters to regular audit reports
+                  const filteredReports = applyFilters(auditReports, selectedFilter, e.target.value, selectedYear);
+                  setFilteredReports(filteredReports);
+                }
               }}
+              disabled={loadingCompleted && selectedFilter === 'completed'}
             >
               <option value="All">All Months</option>
               <option value="1">January</option>
@@ -437,104 +608,31 @@ function AllAuditReports() {
           </div>
 
           {/* View toggle button */}
-          <div className="filter-group">
-            <label className="filter-label">View:</label>
+          {/* <div className="all-audit-reports-filter-group">
+            <label className="all-audit-reports-filter-label">View:</label>
             <button
               type="button"
-              className="toggle-view-button"
+              className="all-audit-reports-toggle-view-button"
               onClick={() => setViewMode(prev => (prev === 'card' ? 'table' : 'card'))}
               title={viewMode === 'card' ? 'Switch to Table View' : 'Switch to Card View'}
             >
               {viewMode === 'card' ? 'Table View' : 'Card View'}
             </button>
-          </div>
+          </div> */}
         </div>
       </div>
 
       {/* Reports: Cards or Table */}
       {filteredReports.length === 0 ? (
-        <div className="empty-state">
+        <div className="all-audit-reports-empty-state">
           <h3>No {selectedFilter === 'all' ? 'Audit Reports' : selectedFilter.charAt(0).toUpperCase() + selectedFilter.slice(1) + ' Reports'} Found</h3>
           <p>{selectedFilter === 'all' ? 'No audit reports have been submitted yet.' : `No ${selectedFilter} reports found. Try selecting a different filter.`}</p>
         </div>
-      ) : (
-        <>
-          {viewMode === 'card' ? (
-            <div className="reports-cards-container">
-              {filteredReports.map((report, index) => (
-                <div key={index} className="audit-report-card">
-                  <div className="card-status-bar">
-                    <span className={`card-status-badge ${report.completed ? 'completed' : (report.status || 'pending')}`}>
-                      {report.completed ? 'completed' : (report.status || 'pending')}
-                    </span>
-                  </div>
-                  <div
-                    className="card-clickable-area"
-                    onClick={() => navigate('/audit-report-details', { state: { report } })}
-                  >
-                    <div className="card-header">
-                      <div className="employee-info">
-                        <div className="employee-name">
-                          { 
-                            `${report.full_name} Code: ${report.emp_code || 'N/A'}`
-                          }
-                        </div>
-                        {report.job_title && (
-                          <div className="employee-job-title">
-                            {report.job_title}
-                          </div>
-                        )}
-                        {report.department && (
-                          <div className="employee-department">
-                            {report.department}
-                          </div>
-                        )}
-                      </div>
-                      <div className="report-date">
-                        {report.date ? new Date(report.date).toLocaleDateString() : 'N/A'}
-                      </div>
-                    </div>
-
-                    <div className="card-content">
-                      <div className="location-section">
-                        <svg viewBox="0 0 24 24" fill="#666" width="16" height="16">
-                          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
-                        </svg>
-                        <span className="location-text">{report.location || 'N/A'}</span>
-                      </div>
-
-                      <div className="description-section">
-                        <p className="description-text">
-                          {report.description ?
-                            (report.description.length > 80 ?
-                              report.description.substring(0, 80) + '...' :
-                              report.description
-                            ) : 'No description available'
-                          }
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {report.image_url && (
-                    <div className="card-image">
-                      <img
-                        src={report.image_url}
-                        alt="Audit report"
-                        className="report-thumbnail"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          window.open(report.image_url, '_blank');
-                        }}
-                      />
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="reports-table-wrapper">
-              <table className="reports-table">
+      ) : 
+         
+          
+            <div className="all-audit-reports-table-wrapper">
+              <table className="all-audit-reports-table">
                 <thead>
                   <tr>
                     <th>Incident Type</th>
@@ -553,38 +651,49 @@ function AllAuditReports() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredReports.map((report) => {
-                    const displayStatus = report.completed ? 'completed' : (report.status || 'pending');
-                    return (
-                      <tr key={report.id}
-                          className="report-row"
-                          onClick={() => navigate('/audit-report-details', { state: { report } })}
-                          style={{ cursor: 'pointer' }}
-                      >
-                        <td>{report.incident_type || 'N/A'}</td>
-                        <td>{report.date ? new Date(report.date).toLocaleDateString() : 'N/A'}</td>
-                        <td>{report.completed_at ? new Date(report.completed_at).toLocaleString() : '—'}</td>
-                        <td>{report.emp_code || 'N/A'}</td>
-                        <td>{report.user_name || report.full_name || 'N/A'}</td>
-                        <td>{report.department || 'N/A'}</td>
-                        <td>{report.location || 'N/A'}</td>
-                        <td>{report.description || 'No description'}</td>
-                        <td>{report.correction_action || 'N/A'}</td>
-                        <td>{report.assigned_department || 'N/A'}</td>
-                        <td>{report.assigned_chief || 'N/A'}</td>
-                        <td>{report.assigned_supervisor || 'N/A'}</td>
-                        <td>
-                          <span className={`card-status-badge ${displayStatus}`}>{displayStatus}</span>
-                        </td>
-                      </tr>
-                    );
-                  })}
+                  {loadingCompleted && selectedFilter === 'completed' ? (
+                    <tr>
+                      <td colSpan="13" className="all-audit-reports-loading-row">
+                        <div className="all-audit-reports-loading-completed">
+                          <div className="all-audit-reports-loading-spinner"></div>
+                          <span>Loading completed reports...</span>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredReports.map((report) => {
+                      const displayStatus = report.completed ? 'completed' : (report.status || 'pending');
+                      return (
+                <tr key={report.id}
+                  className="all-audit-reports-row"
+                              onClick={() => navigate('/audit-report-details', { state: { report } })}
+                              style={{ cursor: 'pointer' }}
+                          >
+                            <td>{report.incident_type || 'N/A'}</td>
+                            <td>{report.date ? new Date(report.date).toLocaleDateString() : 'N/A'}</td>
+                            <td>{report.completed_at ? new Date(report.completed_at).toLocaleString() : '—'}</td>
+                            <td>{report.emp_code || 'N/A'}</td>
+                            <td>{report.user_name || report.full_name || 'N/A'}</td>
+                            <td>{report.department || 'N/A'}</td>
+                            <td>{report.location || 'N/A'}</td>
+                            <td>{report.description || 'No description'}</td>
+                            <td>{report.corrective_action || 'N/A'}</td>
+                            <td>{report.assigned_department || 'N/A'}</td>
+                            <td>{report.assigned_chief || 'N/A'}</td>
+                            <td>{report.assigned_supervisor || 'N/A'}</td>
+                            <td>
+                              <span className={`all-audit-reports-status-badge ${displayStatus}`}>{displayStatus}</span>
+                            </td>
+                          </tr>
+                        );
+                      })
+                  )}
                 </tbody>
               </table>
             </div>
-          )}
-        </>
-      )}
+          
+        
+      }
     </div>
   )
 }

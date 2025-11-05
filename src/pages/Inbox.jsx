@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { colors } from '../constants/color';
 import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
-import './AllAuditReports.css';
+import './inbox.css';
 import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firestore'
 import { db } from '../firebase/firebaseConfig';
 
@@ -12,18 +12,27 @@ function Inbox() {
   const user = useSelector((state) => state.auth.user);
   const id = user?.companyId;
   const [selectedMonth, setSelectedMonth] = useState('All');
-  const [selectedYear, setSelectedYear] = useState('2025');
+   // const [selectedMonth, setSelectedMonth] = useState(String(new Date().getMonth() + 1));
+
+  const [selectedYear, setSelectedYear] = useState(String(new Date().getFullYear()));
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [isAuthorized, setIsAuthorized] = useState(false);
   const [auditReports, setAuditReports] = useState([]);
   const [filteredReports, setFilteredReports] = useState([]);
   const [selectedFilter, setSelectedFilter] = useState('assigned');
   const [refreshing, setRefreshing] = useState(false);
+  const [completedCount, setCompletedCount] = useState(0);
   const [isChief, setIsChief] = useState(false);
   const [isSupervisor, setIsSupervisor] = useState(false);
+  const departments = useSelector((state) => state.departments.list);
   const [defaultFilterApplied, setDefaultFilterApplied] = useState(false);
-  const [viewMode, setViewMode] = useState('table'); // 'card' | 'table'
+  // const [viewMode, setViewMode] = useState('table'); // 'card' | 'table'
+
+  // Completed reports state
+  const [completedReports, setCompletedReports] = useState([]);
+  const [loadingCompleted, setLoadingCompleted] = useState(false);
+  const [completedReportsCached, setCompletedReportsCached] = useState(false);
+  const [cachedCompletedFilters, setCachedCompletedFilters] = useState({ month: '', year: '' });
 
   const applyFilters = useCallback((reports, statusFilter, monthFilter, yearFilter) => {
     let filtered = reports;
@@ -70,10 +79,13 @@ function Inbox() {
       );
       const reportsSnapshot = await getDocs(reportsQuery);
       const reportsData = reportsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
- 
+
       setAuditReports(reportsData);
       // Tentative default; may be adjusted after role detection below
-      const filteredReports = applyFilters(reportsData, 'assigned', 'All', '2025');
+      const currentMonth = String(new Date().getMonth() + 1);
+      const currentYear = String(new Date().getFullYear())
+
+      const filteredReports = applyFilters(reportsData, currentMonth, 'All', currentYear);
       setFilteredReports(filteredReports);
       return reportsData;
     } catch (err) {
@@ -82,45 +94,211 @@ function Inbox() {
     }
   }, [applyFilters, id]);
 
-  // Role detection: Supervisor via assigned_list/supervisors
-  useEffect(() => {
-    const checkSupervisor = async () => {
-      try {
-        if (!id) { setIsSupervisor(false); return; }
-        const supervisorsRef = doc(db, 'assigned_list', 'supervisors');
-        const supervisorsSnap = await getDoc(supervisorsRef);
-        if (!supervisorsSnap.exists()) { setIsSupervisor(false); return; }
-        const data = supervisorsSnap.data();
-        const list = Array.isArray(data?.supervisors_id) ? data.supervisors_id : [];
-        setIsSupervisor(list.map(String).includes(String(id)));
-      } catch (e) {
-        console.error('Error checking supervisor role:', e);
-        setIsSupervisor(false);
+  const getCompletedReportsCount = useCallback(async () => {
+    try {
+      if (!id) {
+        setCompletedCount(0);
+        return 0;
       }
-    };
-    checkSupervisor();
-  }, [id]);
 
-  // Role detection: Chief via departments collection (chief_code == user id)
-  useEffect(() => {
-    const checkChief = async () => {
-      try {
-        if (!id) { setIsChief(false); return; }
-        // Try numeric match first
-        const numId = parseInt(id);
-        let snap = await getDocs(query(collection(db, 'departments'), where('chief_code', '==', numId)));
-        if (snap.empty) {
-          // Fallback: try string match if stored as string in Firestore
-          snap = await getDocs(query(collection(db, 'departments'), where('chief_code', '==', String(id))));
-        }
-        setIsChief(!snap.empty);
-      } catch (e) {
-        console.error('Error checking chief role:', e);
-        setIsChief(false);
+      // Get user's completion stats from the user_completion_stats collection
+      const userStatsRef = doc(db, 'user_completion_stats', id.toString());
+      const userStatsSnap = await getDoc(userStatsRef);
+
+      if (!userStatsSnap.exists()) {
+        setCompletedCount(0);
+        return 0;
       }
-    };
-    checkChief();
-  }, [id]);
+
+      const userData = userStatsSnap.data();
+      const completions = Array.isArray(userData?.completions) ? userData.completions : [];
+
+      // Filter completions by selected month and year
+      const year = parseInt(selectedYear === 'all' ? new Date().getFullYear() : selectedYear);
+      const month = selectedMonth === 'All' ? null : parseInt(selectedMonth) - 1; // Convert to 0-based index
+
+      let filteredCompletions = completions;
+
+      if (selectedYear !== 'all' || selectedMonth !== 'All') {
+        filteredCompletions = completions.filter(completion => {
+          if (!completion.completedAt) return false;
+
+          const completionDate = new Date(completion.completedAt);
+          const completionYear = completionDate.getFullYear();
+          const completionMonth = completionDate.getMonth();
+
+          // Check year match
+          if (selectedYear !== 'all' && completionYear !== year) return false;
+
+          // Check month match
+          if (selectedMonth !== 'All' && completionMonth !== month) return false;
+
+          return true;
+        });
+      }
+
+      const totalCount = filteredCompletions.length;
+      setCompletedCount(totalCount);
+      return totalCount;
+    } catch (err) {
+      console.error('Error counting completed reports:', err);
+      setCompletedCount(0);
+      return 0;
+    }
+  }, [selectedMonth, selectedYear, id]);
+
+  // Function to fetch completed reports for display in main table
+  const fetchCompletedReports = useCallback(async () => {
+    try {
+      setLoadingCompleted(true);
+
+      if (!id) {
+        setCompletedReports([]);
+        return;
+      }
+
+      // Get user's completion stats from the user_completion_stats collection
+      const userStatsRef = doc(db, 'user_completion_stats', id.toString());
+      const userStatsSnap = await getDoc(userStatsRef);
+
+      if (!userStatsSnap.exists()) {
+        setCompletedReports([]);
+        return;
+      }
+
+      const userData = userStatsSnap.data();
+      const completions = Array.isArray(userData?.completions) ? userData.completions : [];
+
+      // Filter completions by selected month and year
+      const year = parseInt(selectedYear === 'all' ? new Date().getFullYear() : selectedYear);
+      const month = selectedMonth === 'All' ? null : parseInt(selectedMonth) - 1; // Convert to 0-based index
+
+      let filteredCompletions = completions;
+
+      if (selectedYear !== 'all' || selectedMonth !== 'All') {
+        filteredCompletions = completions.filter(completion => {
+          if (!completion.completedAt) return false;
+
+          const completionDate = new Date(completion.completedAt);
+          const completionYear = completionDate.getFullYear();
+          const completionMonth = completionDate.getMonth();
+
+          // Check year match
+          if (selectedYear !== 'all' && completionYear !== year) return false;
+
+          // Check month match
+          if (selectedMonth !== 'All' && completionMonth !== month) return false;
+
+          return true;
+        });
+      }
+
+      // Sort by completion date (newest first)
+      filteredCompletions.sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt));
+
+      // Format completions to match the main table structure
+      const formattedReports = filteredCompletions.map((completion, index) => ({
+        id: completion.reportId || `completed-${index}`,
+        // incident_type: completion.incidentType || 'N/A',
+        location: completion.location || 'N/A',
+        description: completion.description || 'N/A',
+        created_at: completion.created_at || 'N/A',
+        date: completion.created_at || 'N/A',
+        department: 'N/A',
+        assigned_supervisor: completion.assigned_supervisor || 'N/A',
+        completed_at: completion.completedAt,
+        completed: true,
+        status: 'completed',
+        send_to: [parseInt(id)], // Current user was involved
+        // completedBy: completion.completedBy || 'N/A'
+      }));
+
+      setCompletedReports(formattedReports);
+    } catch (err) {
+      console.error('Error fetching completed reports:', err);
+      setCompletedReports([]);
+    } finally {
+      setLoadingCompleted(false);
+    }
+  }, [selectedMonth, selectedYear, id]);
+
+  useEffect(() => {
+    // Count completed reports when month, year, or id changes
+    if (id) {
+      getCompletedReportsCount();
+    }
+  }, [getCompletedReportsCount, id]);
+
+  // Update filteredReports when completedReports changes and user is on completed filter
+  useEffect(() => {
+    if (selectedFilter === 'completed' && completedReports.length >= 0) {
+      setFilteredReports(completedReports);
+    }
+  }, [completedReports, selectedFilter]);
+
+  // Role detection: Supervisor via cached Redux flag (no Firestore read)
+  useEffect(() => {
+    setIsSupervisor(user?.isSupervisor === true);
+  }, [user?.isSupervisor]);
+
+
+  /*
+   * Disabled temporarily: Supervisor role detection via Firestore
+   * Kept here for reference/fallback. We're using the cached Redux flag instead.
+   *
+   * useEffect(() => {
+   *   const checkSupervisor = async () => {
+   *     try {
+   *       if (!id) { setIsSupervisor(false); return; }
+   *       const { doc, getDoc } = await import('firebase/firestore');
+   *       const { db } = await import('../firebase/firebaseConfig');
+   *       const supervisorsRef = doc(db, 'assigned_list', 'supervisors');
+   *       const supervisorsSnap = await getDoc(supervisorsRef);
+   *       if (!supervisorsSnap.exists()) { setIsSupervisor(false); return; }
+   *       const data = supervisorsSnap.data();
+   *       const list = Array.isArray(data?.supervisors_id) ? data.supervisors_id : [];
+   *       setIsSupervisor(list.map(String).includes(String(id)));
+   *     } catch (e) {
+   *       console.error('Error checking supervisor role:', e);
+   *       setIsSupervisor(false);
+   *     }
+   *   };
+   *   checkSupervisor();
+   * }, [id]);
+   */
+
+  // Role detection: Chief via cached departments list from Redux (no Firestore read)
+  useEffect(() => {
+    if (!id) { setIsChief(false); return; }
+    const list = Array.isArray(departments) ? departments : [];
+    const match = list.some((d) => String(d?.chief_code) === String(id));
+    setIsChief(match);
+  }, [departments, id]);
+
+  /*
+   * Disabled temporarily: Chief role detection via Firestore departments queries
+   * Kept here for reference/fallback. We're using the cached departments list instead.
+   *
+   * useEffect(() => {
+   *   const checkChief = async () => {
+   *     try {
+   *       if (!id) { setIsChief(false); return; }
+   *       const { collection, getDocs, query, where } = await import('firebase/firestore');
+   *       const { db } = await import('../firebase/firebaseConfig');
+   *       const numId = parseInt(id);
+   *       let snap = await getDocs(query(collection(db, 'departments'), where('chief_code', '==', numId)));
+   *       if (snap.empty) {
+   *         snap = await getDocs(query(collection(db, 'departments'), where('chief_code', '==', String(id))));
+   *       }
+   *       setIsChief(!snap.empty);
+   *     } catch (e) {
+   *       console.error('Error checking chief role:', e);
+   *       setIsChief(false);
+   *     }
+   *   };
+   *   checkChief();
+   * }, [id]);
+   */
 
   // Apply default filter once roles and reports are known
   useEffect(() => {
@@ -142,9 +320,6 @@ function Inbox() {
     const loadInboxData = async () => {
       try {
         setLoading(true);
-        // For Inbox, any authenticated user can see their assigned reports
-        setIsAuthorized(true);
-
         // Fetch assigned reports for current user
         await getAuditReports();
       } catch (err) {
@@ -157,16 +332,19 @@ function Inbox() {
 
     if (id) {
       loadInboxData()
+    } else {
+      // If no ID yet (Redux not loaded), stop loading
+      setLoading(false);
     }
   }, [id, getAuditReports]);
 
-  // Show loading screen while fetching data
-  if (loading) {
+  // Show loading screen while fetching data or waiting for user
+  if (loading || !id) {
     return (
-      <div className="loading-container">
-        <div className="loading-content">
-          <div className="loading-spinner"></div>
-          <p className="loading-text">Loading inbox data...</p>
+      <div className="inbox-loading-container">
+        <div className="inbox-loading-content">
+          <div className="inbox-loading-spinner"></div>
+          <p className="inbox-loading-text">{!id ? 'Loading user data...' : 'Loading inbox data...'}</p>
         </div>
       </div>
     )
@@ -175,8 +353,8 @@ function Inbox() {
   // Show error if data failed to load
   if (error) {
     return (
-      <div className="error-container">
-        <div className="error-content">
+      <div className="inbox-error-container">
+        <div className="inbox-error-content">
           <h2>Error</h2>
           <p>{error}</p>
           <button onClick={() => window.location.reload()}>Retry</button>
@@ -185,43 +363,15 @@ function Inbox() {
     )
   }
 
-  // Check authorization after data is loaded
-  if (!isAuthorized) {
-
-    return (
-      <div className="unauthorized-container">
-        <div className="unauthorized-content">
-          <div className="unauthorized-icon">
-            <svg viewBox="0 0 24 24" fill="#dc3545" width="80" height="80">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
-              <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z" />
-            </svg>
-          </div>
-          <h1 className="unauthorized-title">Access Denied</h1>
-          <p className="unauthorized-message">
-            You are not authorized to view the inbox.
-          </p>
-          <p className="unauthorized-submessage">
-            Please contact your administrator if you believe this is an error.
-          </p>
-          <button
-            className="unauthorized-button"
-            onClick={() => navigate('/home')}
-          >
-            Return to Home
-          </button>
-        </div>
-      </div>
-    )
-  }
+  // Authorization is handled by InboxProtectedRoute wrapper, so we can proceed directly to rendering
 
 
   return (
-    <div className="audit-reports-container">
+    <div className="inbox-container">
       {/* Header */}
-      <div className="audit-reports-header">
+      <div className="inbox-header">
         <button
-          className="back-button"
+          className="inbox-back-button"
           onClick={() => navigate(-1)}
           style={{ backgroundColor: colors.primary }}
         >
@@ -229,16 +379,15 @@ function Inbox() {
             <path d="M19 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" />
           </svg>
         </button>
-        <div className="header-title-section">
-          <h1 className="page-title">Inbox</h1>
-          <div className="header-info">
-            <span className="user-name">Welcome, {user?.displayName || user?.email || 'User'}</span>
-            <span className="total-reports-count">Assigned to me: {auditReports.length} Reports</span>
+        <div className="inbox-header-title-section">
+          <div className="inbox-header-info">
+            <span className="inbox-user-name"> {user?.displayName || user?.email || 'User'}</span>
+            <span className="inbox-total-reports-count">Assigned to me: {auditReports.length} Reports</span>
           </div>
         </div>
-        <div className="header-buttons">
+        <div className="inbox-header-buttons">
           <button
-            className="export-button"
+            className="inbox-export-button"
             onClick={() => {
               try {
                 const toExport = auditReports || [];
@@ -250,6 +399,7 @@ function Inbox() {
                   'Description',
                   'Status',
                   'Assigned Department',
+                  'Assigned Supervisor',
                   'Completed At',
                   'Rectified By',
                 ];
@@ -270,6 +420,7 @@ function Inbox() {
                     r?.description || '',
                     displayStatus,
                     r?.assigned_department || '',
+                    r?.assigned_supervisor || '',
                     completedAt,
                     r?.rectified_by || '',
                   ];
@@ -296,25 +447,36 @@ function Inbox() {
               }
             }}
             title="Export inbox reports to Excel"
-            disabled={!auditReports || auditReports.length === 0}
+            disabled={false}
+          // disabled={!auditReports || auditReports.length === 0}
           >
             <svg viewBox="0 0 24 24" fill="#FFFFFF" width="20" height="20">
               <path d="M5 20h14v-2H5m14-9h-4V3H9v6H5l7 7 7-7z" />
             </svg>
           </button>
           <button
-            className="refresh-button"
+            className="inbox-refresh-button"
             onClick={async () => {
               setRefreshing(true);
               try {
-                const freshReports = await getAuditReports();
-                if (freshReports) {
-                  const filteredReports = applyFilters(freshReports, selectedFilter, selectedMonth, selectedYear);
-                  setFilteredReports(filteredReports);
+                if (selectedFilter === 'completed') {
+                  // Refresh completed reports and count
+                  await fetchCompletedReports();
+                  await getCompletedReportsCount();
+                  // Update cache state
+                  setCompletedReportsCached(true);
+                  setCachedCompletedFilters({ month: selectedMonth, year: selectedYear });
+                } else {
+                  // Refresh regular reports
+                  const freshReports = await getAuditReports();
+                  if (freshReports) {
+                    const filteredReports = applyFilters(freshReports, selectedFilter, selectedMonth, selectedYear);
+                    setFilteredReports(filteredReports);
+                  }
+                  // Also refresh completed count
+                  await getCompletedReportsCount();
                 }
-                // Re-apply current filters after refresh
-                // const filteredReports = applyFilters(auditReports, selectedFilter, selectedMonth, selectedYear);
-               } catch (error) {
+              } catch (error) {
                 console.error('Error refreshing data:', error);
               } finally {
                 setRefreshing(false);
@@ -323,12 +485,12 @@ function Inbox() {
             disabled={refreshing}
             title="Refresh Data"
           >
-            <svg viewBox="0 0 24 24" fill="#FFFFFF" width="20" height="20" className={refreshing ? 'spinning' : ''}>
+            <svg viewBox="0 0 24 24" fill="#FFFFFF" width="20" height="20" className={refreshing ? 'inbox-spinning' : ''}>
               <path d="M17.65,6.35C16.2,4.9 14.21,4 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20C15.73,20 18.84,17.45 19.73,14H17.65C16.83,16.33 14.61,18 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6C13.66,6 15.14,6.69 16.22,7.78L13,11H20V4L17.65,6.35Z" />
             </svg>
           </button>
           <button
-            className="home-button"
+            className="inbox-home-button "
             onClick={() => navigate('/home')}
           >
             <svg viewBox="0 0 24 24" fill="#FFFFFF" width="20" height="20">
@@ -339,10 +501,10 @@ function Inbox() {
       </div>
 
       {/* Filter Buttons */}
-      <div className="filter-buttons-container">
+      <div className="inbox-filter-buttons">
         {(isChief || !isSupervisor) && (
           <button
-            className={`filter-button ${selectedFilter === 'assigned' ? 'active' : ''} ${isChief ? 'inbox-yellow' : ''}`}
+            className={`inbox-filter-button ${selectedFilter === 'assigned' ? 'active' : ''} ${isChief ? 'inbox-yellow' : ''}`}
             onClick={() => {
               setSelectedFilter('assigned');
               const filteredReports = applyFilters(auditReports, 'assigned', selectedMonth, selectedYear);
@@ -355,7 +517,7 @@ function Inbox() {
           </button>
         )}
         <button
-          className={`filter-button ${selectedFilter === 'rectifying' ? 'active' : ''} ${(!isChief && isSupervisor) ? 'inbox-green' : ''}`}
+          className={`inbox-filter-button ${selectedFilter === 'rectifying' ? 'active' : ''} ${(!isChief && isSupervisor) ? 'inbox-green' : ''}`}
           onClick={() => {
             setSelectedFilter('rectifying');
             const filteredReports = applyFilters(auditReports, 'rectifying', selectedMonth, selectedYear);
@@ -365,28 +527,18 @@ function Inbox() {
           {(!isChief && isSupervisor) ? 'Inbox' : 'Rectifying by Supervisor'} ({applyFilters(auditReports, 'rectifying', selectedMonth, selectedYear).length})
         </button>
         <button
-          className={`filter-button ${selectedFilter === 'verifying' ? 'active' : ''}`}
+          className={`inbox-filter-button ${selectedFilter === 'verifying' ? 'active' : ''}`}
           onClick={() => {
             setSelectedFilter('verifying');
             const filteredReports = applyFilters(auditReports, 'verifying', selectedMonth, selectedYear);
             setFilteredReports(filteredReports);
           }}
         >
-          <span className="filter-text-full">Waiting for Verification ({applyFilters(auditReports, 'verifying', selectedMonth, selectedYear).length})</span>
-          <span className="filter-text-short">Verifying ({applyFilters(auditReports, 'verifying', selectedMonth, selectedYear).length})</span>
+          <span className="inbox-filter-text-full">Waiting for Verification ({applyFilters(auditReports, 'verifying', selectedMonth, selectedYear).length})</span>
+          <span className="inbox-filter-text-short">Verifying ({applyFilters(auditReports, 'verifying', selectedMonth, selectedYear).length})</span>
         </button>
         <button
-          className={`filter-button ${selectedFilter === 'completed' ? 'active' : ''}`}
-          onClick={() => {
-            setSelectedFilter('completed');
-            const filteredReports = applyFilters(auditReports, 'completed', selectedMonth, selectedYear);
-            setFilteredReports(filteredReports);
-          }}
-        >
-          Completed ({applyFilters(auditReports, 'completed', selectedMonth, selectedYear).length})
-        </button>
-        <button
-          className={`filter-button ${selectedFilter === 'all' ? 'active' : ''}`}
+          className={`inbox-filter-button ${selectedFilter === 'all' ? 'active' : ''}`}
           onClick={() => {
             setSelectedFilter('all');
             const filteredReports = applyFilters(auditReports, 'all', selectedMonth, selectedYear);
@@ -395,18 +547,48 @@ function Inbox() {
         >
           All ({applyFilters(auditReports, 'all', selectedMonth, selectedYear).length})
         </button>
+        <button
+          className={`inbox-filter-button ${selectedFilter === 'completed' ? 'active' : ''}`}
+          onClick={async () => {
+            setSelectedFilter('completed');
+            
+            // Check if we have cached data for current filters
+            const currentFilters = { month: selectedMonth, year: selectedYear };
+            const filtersChanged = 
+              cachedCompletedFilters.month !== currentFilters.month || 
+              cachedCompletedFilters.year !== currentFilters.year;
+            
+            // Only fetch if not cached or filters changed
+            if (!completedReportsCached || filtersChanged) {
+              await fetchCompletedReports();
+              setCompletedReportsCached(true);
+              setCachedCompletedFilters(currentFilters);
+            }
+            // Don't set filteredReports here - let the useEffect handle it
+          }}
+          disabled={loadingCompleted}
+        >
+          {loadingCompleted ? 'Loading...' : `Completed (${completedCount})`}
+        </button>
+
 
         {/* Date Filters in same row */}
-        <div className="date-filters-inline">
-          <div className="filter-group">
-            <label className="filter-label">Year:</label>
+        <div className="inbox-date-filters-inline">
+          <div className="inbox-filter-group">
+            <label className="inbox-filter-label">Year:</label>
             <select
-              className="date-filter-select"
+              className="inbox-date-filter-select"
               value={selectedYear}
-              onChange={(e) => {
+              onChange={async (e) => {
                 setSelectedYear(e.target.value);
-                const filteredReports = applyFilters(auditReports, selectedFilter, selectedMonth, e.target.value);
-                setFilteredReports(filteredReports);
+                if (selectedFilter === 'completed') {
+                  // Re-fetch completed reports with new year filter
+                  await fetchCompletedReports();
+                  setCachedCompletedFilters({ month: selectedMonth, year: e.target.value });
+                } else {
+                  const filteredReports = applyFilters(auditReports, selectedFilter, selectedMonth, e.target.value);
+                  setFilteredReports(filteredReports);
+                }
               }}
             >
               <option value="all">All Years</option>
@@ -415,15 +597,21 @@ function Inbox() {
             </select>
           </div>
 
-          <div className="filter-group">
-            <label className="filter-label">Month:</label>
+          <div className="inbox-filter-group">
+            <label className="inbox-filter-label">Month:</label>
             <select
-              className="date-filter-select"
+              className="inbox-date-filter-select"
               value={selectedMonth}
-              onChange={(e) => {
+              onChange={async (e) => {
                 setSelectedMonth(e.target.value);
-                const filteredReports = applyFilters(auditReports, selectedFilter, e.target.value, selectedYear);
-                setFilteredReports(filteredReports);
+                if (selectedFilter === 'completed') {
+                  // Re-fetch completed reports with new month filter
+                  await fetchCompletedReports();
+                  setCachedCompletedFilters({ month: e.target.value, year: selectedYear });
+                } else {
+                  const filteredReports = applyFilters(auditReports, selectedFilter, e.target.value, selectedYear);
+                  setFilteredReports(filteredReports);
+                }
               }}
             >
               <option value="All">All Months</option>
@@ -443,125 +631,58 @@ function Inbox() {
           </div>
 
           {/* View toggle button */}
-          <div className="filter-group">
-            <label className="filter-label">View:</label>
-            <button
-              type="button"
-              className="toggle-view-button"
-              onClick={() => setViewMode(prev => (prev === 'card' ? 'table' : 'card'))}
-              title={viewMode === 'card' ? 'Switch to Table View' : 'Switch to Card View'}
-            >
-              {viewMode === 'card' ? 'Table View' : 'Card View'}
-            </button>
-          </div>
+
         </div>
       </div>
 
       {/* Reports: Cards or Table */}
       {filteredReports.length === 0 ? (
-        <div className="empty-state">
+        <div className="inbox-empty-state">
           <h3>No {selectedFilter === 'all' ? 'Assigned Reports' : selectedFilter.charAt(0).toUpperCase() + selectedFilter.slice(1) + ' Reports'} Found</h3>
           <p>{selectedFilter === 'all' ? 'No reports have been assigned to you yet.' : `No ${selectedFilter} reports found in your assignments.`}</p>
         </div>
       ) : (
-        <>
-          {viewMode === 'card' ? (
-            <div className="reports-cards-container">
-              {filteredReports.map((report, index) => (
-                <div key={index} className="audit-report-card">
-                  <div className="card-status-bar">
-                    <span className={`card-status-badge ${report.completed ? 'completed' : (report.status || 'pending')}`}>
-                      {report.completed ? 'completed' : (report.status || 'pending')}
-                    </span>
-                  </div>
-                  <div
-                    className="card-clickable-area"
+
+        <div className="inbox-reports-table-wrapper">
+          <table className="inbox-reports-table">
+            <thead>
+              <tr>
+                <th>Location</th>
+                <th>Description</th>
+                <th>Created At</th>
+                <th>Department</th>
+                <th>Assigned Supervisor</th>
+                <th>Status</th>
+                <th>Completed At</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredReports.map((report) => {
+                const displayStatus = report.completed ? 'completed' : (report.status || 'pending');
+                return (
+                  <tr key={report.id}
+                    className="inbox-report-row"
                     onClick={() => navigate('/audit-report-details-assigned', { state: { report } })}
+                    style={{ cursor: 'pointer' }}
                   >
-                    <div className="card-header">
-                      <div className="report-date">
-                        {report.date ? new Date(report.date).toLocaleDateString() : 'N/A'}
-                      </div>
-                    </div>
-
-                    <div className="card-content">
-                      <div className="location-section">
-                        <svg viewBox="0 0 24 24" fill="#666" width="16" height="16">
-                          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
-                        </svg>
-                        <span className="location-text">{report.location || 'N/A'}</span>
-                      </div>
-
-                      <div className="description-section">
-                        <p className="description-text">
-                          {report.description ?
-                            (report.description.length > 80 ?
-                              report.description.substring(0, 80) + '...' :
-                              report.description
-                            ) : 'No description available'
-                          }
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {report.image_url && (
-                    <div className="card-image">
-                      <img
-                        src={report.image_url}
-                        alt="Audit report"
-                        className="report-thumbnail"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          window.open(report.image_url, '_blank');
-                        }}
-                      />
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="reports-table-wrapper">
-              <table className="reports-table">
-                <thead>
-                  <tr>
-                    <th>Location</th>
-                    <th>Description</th>
-                    <th>Date</th>
-                    <th>Created At</th>
-                    <th>Department</th>
-                    <th>Status</th>
-                    <th>Completed At</th>
+                    <td>{report.location || 'N/A'}</td>
+                    <td>{report.description || 'No description'}</td>
+                    {/* <td>{report.date ? new Date(report.date).toLocaleDateString() : 'N/A'}</td> */}
+                    <td>{report.created_at ? report.created_at : 'N/A'}</td>
+                    <td>{report.assigned_department || '—'}</td>
+                    <td>{report.assigned_supervisor || '—'}</td>
+                    <td>
+                      <span className={`inbox-status-badge ${displayStatus}`}>{displayStatus}</span>
+                    </td>
+                    <td>{report.completed_at ? new Date(report.completed_at).toLocaleString() : '—'}</td>
                   </tr>
-                </thead>
-                <tbody>
-                  {filteredReports.map((report) => {
-                    const displayStatus = report.completed ? 'completed' : (report.status || 'pending');
-                    return (
-                      <tr key={report.id}
-                        className="report-row"
-                        onClick={() => navigate('/audit-report-details-assigned', { state: { report } })}
-                        style={{ cursor: 'pointer' }}
-                      >
-                        <td>{report.location || 'N/A'}</td>
-                        <td>{report.description || 'No description'}</td>
-                        <td>{report.date ? new Date(report.date).toLocaleDateString() : 'N/A'}</td>
-                        <td>{report.created_at ? new Date(report.created_at).toLocaleString() : 'N/A'}</td>
-                        <td>{report.assigned_department || '—'}</td>
-                        <td>
-                          <span className={`card-status-badge ${displayStatus}`}>{displayStatus}</span>
-                        </td>
-                        <td>{report.completed_at ? new Date(report.completed_at).toLocaleString() : '—'}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       )}
+
     </div>
   )
 }

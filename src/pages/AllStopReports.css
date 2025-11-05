@@ -576,6 +576,10 @@
 }
 
 @media (max-width: 480px) {
+  /* Prevent header/icon overlap */
+  .report-history-header { flex-wrap: wrap; gap: 8px; }
+  .header-right-container { width: 100%; display: flex; justify-content: center; gap: 8px; order: 3; }
+
   .reports-list {
     grid-template-columns: 1fr;
     gap: 12px;
@@ -648,10 +652,19 @@
     box-shadow: inset 0 0 10px rgba(0,0,0,0.1);
   }
 
-  .reports-table {
-    min-width: 850px;
-    font-size: 13px;
+  /* Mobile table: only Name (1), Company ID (2), Department (3), Area (5) */
+  .reports-table { table-layout: fixed !important; width: 100% !important; min-width: auto !important; font-size: 13px; }
+
+  .reports-table th:not(:nth-child(1)):not(:nth-child(2)):not(:nth-child(3)):not(:nth-child(5)),
+  .reports-table td:not(:nth-child(1)):not(:nth-child(2)):not(:nth-child(3)):not(:nth-child(5)) {
+    display: none !important;
   }
+
+  /* Column widths tuned for readability */
+  .reports-table th:nth-child(1), .reports-table td:nth-child(1) { width: 35% !important; word-break: break-word; }
+  .reports-table th:nth-child(2), .reports-table td:nth-child(2) { width: 15% !important; white-space: nowrap; }
+  .reports-table th:nth-child(3), .reports-table td:nth-child(3) { width: 25% !important; white-space: nowrap; }
+  .reports-table th:nth-child(5), .reports-table td:nth-child(5) { width: 25% !important; white-space: nowrap; }
 
   .reports-table th,
   .reports-table td {
@@ -677,7 +690,9 @@
   background: white;
   border-radius: 12px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  overflow: hidden;
+  /* Allow horizontal scroll when columns overflow so last columns (e.g., Suggestions) remain accessible */
+  overflow-x: auto;
+  overflow-y: hidden;
   margin-top: 20px;
 }
 
@@ -726,7 +741,7 @@
 
 /* Reporter Cell */
 .reporter-cell {
-  min-width: 160px;
+  min-width: 90px;
 }
 
 .reporter-info {
@@ -757,7 +772,7 @@
 .date-cell {
   font-weight: 500;
   color: #34c759;
-  min-width: 90px;
+  min-width: 70px;
 }
 
 /* Site Cell */
@@ -772,7 +787,7 @@
 
 /* Area Cell */
 .area-cell {
-  min-width: 100px;
+  min-width: 80px;
   color: #666;
 }
 
@@ -823,7 +838,7 @@
 /* Completion Cells */
 .completion-cell {
   text-align: center;
-  min-width: 80px;
+  min-width: 50px;
 }
 
 .percentage-badge {
@@ -1026,6 +1041,21 @@
     white-space: nowrap;
   }
   
+  /* Allow wrapping for long text cells */
+  .reports-table td.suggestions-cell,
+  .reports-table td.safe-acts-cell,
+  .reports-table td.unsafe-acts-cell {
+    white-space: normal;
+    word-break: break-word;
+  }
+
+  .reports-table td.safe-acts-cell .act-item,
+  .reports-table td.unsafe-acts-cell .act-item,
+  .reports-table td.suggestions-cell .suggestions-text {
+    white-space: normal;
+    word-break: break-word;
+  }
+  
   /* Header improvements for mobile */
   .header-user-info-row {
     flex-wrap: wrap;
@@ -1107,4 +1137,633 @@
   .empty-subtitle {
     font-size: 13px;
   }
+}
+
+/* ===== Overrides for AllStopReports header and controls ===== */
+/* Bright header theme and button visibility improvements */
+.audit-reports-header {
+  background: linear-gradient(135deg, #FF9500 0%, #FF7A00 100%);
+}
+
+.back-button,
+.home-button,
+.refresh-button,
+.export-button {
+  background: rgba(255, 255, 255, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #ffffff;
+}
+
+.back-button:hover,
+.home-button:hover,
+.refresh-button:hover:not(:disabled),
+.export-button:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.35);
+  transform: translateY(-2px);
+}
+
+.export-button:disabled {
+  opacity: 0.65;
+}
+
+/* Filters inside header */
+.filter-controls {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+}
+
+.filter-group label {
+  color: #ffffff;
+}
+
+.filter-select {
+  padding: 6px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  font-size: 0.9em;
+  min-width: 120px;
+}
+
+.filter-select option {
+  background: #2c2c2c;
+  color: #ffffff;
+}
+
+@media (max-width: 768px) {
+  .filter-controls {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+}
+
+/* Suggestions Cell Styles */
+.suggestions-cell {
+  max-width: 260px;
+  white-space: normal;
+  overflow: visible;
+  word-break: break-word;
+}
+
+.suggestions-text {
+  font-size: 0.9em;
+  color: #666;
+}
+
+.suggestions-cell:hover {
+  background: #f9f9f9;
+  position: relative;
+  z-index: 10;
+}
+
+.stop-reports-container {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+/* Filter Controls */
+.filter-controls {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.filter-group label {
+  font-size: 0.85em;
+  color: #ffffff;
+  font-weight: 500;
+}
+
+.filter-select {
+  padding: 6px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  font-size: 0.9em;
+  min-width: 120px;
+}
+
+.filter-select option {
+  background: #2c2c2c;
+  color: #ffffff;
+}
+
+.export-button, .home-button {
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-radius: 8px;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #ffffff;
+  font-size: 0.9em;
+  font-weight: 500;
+}
+
+.export-button:hover:not(:disabled), .home-button:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+}
+
+.export-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.search-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.search-input {
+  padding: 6px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  font-size: 0.9em;
+  min-width: 200px;
+}
+
+.search-input::placeholder {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.clear-search {
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-radius: 4px;
+  padding: 6px 8px;
+  cursor: pointer;
+  color: #ffffff;
+  font-size: 0.8em;
+}
+
+.clear-search:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.wide-button {
+  min-width: 120px;
+  padding: 12px 24px;
+}
+
+.acts-cell-content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.count-value {
+  font-weight: 600;
+  color: #333;
+  font-size: 1.1em;
+}
+
+.acts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.8em;
+  color: #666;
+  max-width: 260px;
+}
+
+.act-item {
+  line-height: 1.3;
+  white-space: normal;
+  overflow: visible;
+  word-break: break-word;
+}
+
+.more-acts {
+  font-style: italic;
+  color: #999;
+  font-size: 0.75em;
+}
+
+.safe-acts-cell .count-value {
+  color: #28a745;
+}
+
+.unsafe-acts-cell .count-value {
+  color: #dc3545;
+}
+
+/* ================= Scoped stop-* styles for AllStopReports (to avoid cross-page collisions) ================= */
+/* Container */
+.stop-container {
+  width: 100%;
+  height: 100vh;
+  background: linear-gradient(180deg, #F8F9FA 0%, #FFFFFF 100%);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Header */
+.stop-header {
+  background: linear-gradient(135deg, #FF9500 0%, #FF7A00 100%);
+  padding: 16px 20px;
+  display: grid;
+  grid-template-columns: auto auto 1fr auto; /* back | filters | title | actions */
+  grid-template-areas: "back filters title actions";
+  align-items: center;
+  column-gap: 12px;
+  row-gap: 8px;
+  box-shadow: 0 4px 20px rgba(255, 149, 0, 0.25);
+  min-height: 70px;
+  position: relative;
+  overflow: hidden;
+}
+
+.stop-header::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -10%;
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.stop-back-button {
+  grid-area: back;
+  padding: 8px;
+  border-radius: 20px;
+  background-color: rgba(255, 255, 255, 0.2);
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  z-index: 1000;
+}
+
+.stop-back-button:hover {
+  background-color: rgba(255, 255, 255, 0.3);
+  transform: translateX(-2px);
+}
+
+.stop-back-button:active {
+  background-color: rgba(255, 255, 255, 0.4);
+  transform: translateX(0);
+}
+
+.stop-header-title-section {
+  grid-area: title;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  justify-self: center;
+  text-align: center;
+}
+
+.stop-page-title {
+  color: #FFFFFF;
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.stop-header-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.stop-user-name {
+  color: rgba(255, 255, 255, 0.95);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.stop-total-reports-count {
+  color: #2c2c2c;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+.stop-header-buttons {
+  grid-area: actions;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-self: end;
+}
+
+/* Filter controls in header */
+.stop-filter-controls {
+  grid-area: filters;
+  display: flex;
+  gap: 15px;
+  align-items: center;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  width: auto;
+  max-width: none;
+}
+
+.stop-filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0; /* allow shrinking inside grid/flex */
+}
+
+.stop-filter-group label {
+  color: #ffffff;
+  font-size: 0.85em;
+  font-weight: 500;
+}
+
+.stop-filter-select {
+  padding: 6px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  font-size: 0.9em;
+  min-width: 120px;
+  width: auto;
+  max-width: 180px;
+  box-sizing: border-box;
+}
+
+.stop-filter-select option {
+  background: #2c2c2c;
+  color: #ffffff;
+}
+
+/* Header buttons */
+.stop-export-button,
+.stop-home-button {
+  background: rgba(255, 255, 255, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #ffffff;
+  border-radius: 8px;
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9em;
+  font-weight: 600;
+}
+
+.stop-export-button:hover:not(:disabled),
+.stop-home-button:hover {
+  background: rgba(255, 255, 255, 0.35);
+  transform: translateY(-2px);
+}
+
+.stop-export-button:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Loading state */
+.stop-loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  background: linear-gradient(135deg, #FFFFFF 0%, #FFF8F0 100%);
+  margin: 16px 20px;
+  border-radius: 16px;
+  box-shadow: 0 4px 16px rgba(255, 149, 0, 0.1);
+  border: 1px solid #FFE5CC;
+}
+
+.stop-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #F2F2F7;
+  border-top-color: #FF9500;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+/* Empty state */
+.stop-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 24px;
+  text-align: center;
+  background: linear-gradient(135deg, #FFFFFF 0%, #F9F9F9 100%);
+  border-radius: 16px;
+  margin: 20px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+/* Table container and base */
+.stop-reports-table-container {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  overflow-x: auto;
+  overflow-y: hidden;
+  margin: 20px;
+}
+
+.stop-reports-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.stop-reports-table thead {
+  background: linear-gradient(135deg, #FF9500 0%, #FF7A00 100%);
+}
+
+.stop-reports-table th {
+  color: white;
+  font-weight: 600;
+  padding: 16px 12px;
+  text-align: left;
+  font-size: 13px;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.stop-reports-table tbody tr {
+  border-bottom: 1px solid #f0f0f0;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.stop-reports-table tbody tr:hover {
+  background-color: #fff8f0;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(255, 149, 0, 0.1);
+}
+
+.stop-reports-table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.stop-reports-table td {
+  padding: 14px 12px;
+  vertical-align: middle;
+  color: #1c1c1e;
+}
+
+/* Mobile responsiveness for stop-* */
+@media (max-width: 768px) {
+  .stop-header { 
+    padding: 14px 16px; 
+    min-height: 65px; 
+    grid-template-columns: auto auto 1fr auto; /* back | filters | title | actions */
+    grid-template-areas: "back filters title actions";
+  }
+  .stop-page-title { font-size: 16px; }
+  .stop-user-name { font-size: 12px; }
+}
+
+@media (max-width: 480px) {
+  /* Prevent header/icon overlap */
+  .stop-header { 
+    padding: 12px; 
+    grid-template-columns: auto 1fr auto; 
+    grid-template-areas:
+      "back filters actions"
+      "title title title";
+    row-gap: 8px;
+  }
+  .stop-header-buttons { width: auto; display: flex; justify-content: flex-end; gap: 8px; }
+
+  .stop-back-button,
+  .stop-export-button,
+  .stop-home-button {
+    padding: 6px;
+    width: 32px;
+    height: 32px;
+  }
+
+  /* Hide button labels on mobile to avoid overlap; keep icons only */
+  .stop-export-button,
+  .stop-home-button {
+    font-size: 0; /* hides text nodes */
+    line-height: 0;
+    min-width: 32px;
+    overflow: hidden;
+  }
+  .stop-export-button svg,
+  .stop-home-button svg {
+    width: 20px;
+    height: 20px;
+    display: block;
+  }
+
+  /* Table responsive styles */
+  .stop-reports-table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 8px;
+    box-shadow: inset 0 0 10px rgba(0,0,0,0.1);
+    margin: 12px;
+  }
+
+  /* Mobile table: only Name (1), Department (3), Area (5) */
+  .stop-reports-table { table-layout: auto !important; width: 100% !important; font-size: 13px; }
+
+  .stop-reports-table th:not(:nth-child(1)):not(:nth-child(3)):not(:nth-child(5)),
+  .stop-reports-table td:not(:nth-child(1)):not(:nth-child(3)):not(:nth-child(5)) {
+    display: none !important;
+  }
+
+  /* Allow natural widths and wrapping for all visible columns */
+  .stop-reports-table th,
+  .stop-reports-table td {
+    white-space: normal !important;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    hyphens: auto;
+  }
+
+  .stop-reports-table th,
+  .stop-reports-table td {
+    padding: 10px 8px;
+    font-size: 12px;
+  }
+
+  /* Override legacy min-width on reporter-info for small screens */
+  .stop-reports-table .reporter-info { min-width: 0; }
+
+  /* Better table visual hierarchy on mobile */
+  .stop-reports-table tbody tr { border-bottom: 2px solid #f0f0f0; }
+  .stop-reports-table tbody tr:hover { background-color: rgba(255, 149, 0, 0.05); transform: none; }
+}
+
+@media (max-width: 360px) {
+  .stop-header { padding: 10px; min-height: 55px; }
+  .stop-page-title { font-size: 14px; }
+}
+
+/* --- Filter dropdown usability tweaks for small screens --- */
+@media (max-width: 480px) {
+  .stop-filter-controls { 
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    align-items: stretch;
+    width: 100%;
+    max-width: 100%;
+  }
+  .stop-filter-group { 
+    min-width: 0; 
+    width: 100%; 
+    overflow: hidden;
+  }
+  .stop-filter-select { 
+    width: 100%; 
+    max-width: 100%; 
+    font-size: 13px; 
+    padding: 8px 10px; 
+    white-space: nowrap; 
+    text-overflow: ellipsis; 
+    overflow: hidden; 
+  }
+  .stop-filter-group label {
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+  }
+}
+
+@media (max-width: 360px) {
+  .stop-filter-controls { grid-template-columns: 1fr; }
 }

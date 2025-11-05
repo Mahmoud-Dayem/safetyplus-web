@@ -25,6 +25,8 @@
   position: relative;
 }
 
+/* Removed status banner — alerts shown on StopCard before navigating home */
+
 /* Logout Button */
 .logout-button {
   position: absolute;
@@ -381,4 +383,7 @@
   .reports-button {
     max-width: 400px;
   }
+}
+.qa-icon {
+  color: #28a745; /* green */
 }

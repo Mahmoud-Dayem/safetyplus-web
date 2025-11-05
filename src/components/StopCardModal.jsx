@@ -113,6 +113,12 @@ const StopCardModal = ({ data, visible, setVisible }) => {
   const peopleConducted = data?.observationData?.peopleConducted ?? '—';
   const peopleObserved = data?.observationData?.peopleObserved ?? '—';
   const feedback = data?.feedback?.suggestions || 'No suggestions';
+  
+  // Get safe acts and unsafe acts lists
+  const safeActsList = data?.safetyActs?.safeActsList || [];
+  const unsafeActsList = data?.safetyActs?.unsafeActsList || [];
+  const safeActsCount = data?.safetyActs?.safeActsCount || 0;
+  const unsafeActsCount = data?.safetyActs?.unsafeActsCount || 0;
 
   if (!visible) return null;
 
@@ -134,16 +140,50 @@ const StopCardModal = ({ data, visible, setVisible }) => {
                 <p className="card-subtitle">Area: {area} {shift ? `| Shift: ${shift}` : ''}</p>
                 <p>Date: {date}</p>
                 {actionsCompletion != null && (
-                  <p>Actions Completion: {actionsCompletion}%</p>
+                  <p>Safe Actions: {actionsCompletion}%</p>
                 )}
                 {conditionsCompletion != null && (
-                  <p>Conditions Completion: {conditionsCompletion}%</p>
+                  <p>Safe Conditions: {conditionsCompletion}%</p>
                 )}
                 <p>Duration: {duration} mins</p>
                 <p>People Conducted: {peopleConducted}</p>
                 <p>People Observed: {peopleObserved}</p>
                 <p className="feedback">Feedback: {feedback}</p>
               </div>
+
+              {/* Safe Acts Section */}
+              {safeActsCount > 0 && (
+                <div className="section">
+                  <h3 className="section-title">Safe Acts Observed ({safeActsCount})</h3>
+                  <div className="group">
+                    {safeActsList.map((act, index) => (
+                      <div key={`safe-act-${index}`} className="qa-row">
+                        <svg className="qa-icon" viewBox="0 0 24 24" fill="#28a745" width="18" height="18">
+                          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                        </svg>
+                        <span className="qa-text">{index + 1}. {act}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Unsafe Acts Section */}
+              {unsafeActsCount > 0 && (
+                <div className="section">
+                  <h3 className="section-title">Unsafe Acts Observed ({unsafeActsCount})</h3>
+                  <div className="group">
+                    {unsafeActsList.map((act, index) => (
+                      <div key={`unsafe-act-${index}`} className="qa-row">
+                        <svg className="qa-icon" viewBox="0 0 24 24" fill="#dc3545" width="18" height="18">
+                          <path d="M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2zm5 13.59L15.59 17 12 13.41 8.41 17 7 15.59 10.59 12 7 8.41 8.41 7 12 10.59 15.59 7 17 8.41 13.41 12 17 15.59z"/>
+                        </svg>
+                        <span className="qa-text">{index + 1}. {act}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {data?.assessmentData ? (
                 <>

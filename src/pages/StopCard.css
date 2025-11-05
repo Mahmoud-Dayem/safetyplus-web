@@ -85,7 +85,7 @@
 }
 
 .home-button {
-  width: 40px;
+  width: 55px;
   height: 40px;
   background-color: rgba(255, 255, 255, 0.2);
   border-radius: 20px;
@@ -95,6 +95,18 @@
   justify-content: center;
   cursor: pointer;
   transition: background-color 0.2s;
+}
+
+.home-button.history-button {
+  width: auto;
+  min-width: 60px;
+  padding: 8px 12px;
+}
+
+.button-text {
+  color: #FFFFFF;
+  font-size: 14px;
+  font-weight: 500;
 }
 
 .home-button:hover {
@@ -846,7 +858,7 @@
 
   .header-icon-container,
   .home-button {
-    width: 36px;
+    width: 52px;
     height: 36px;
    }
 

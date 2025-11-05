@@ -167,6 +167,11 @@
   color: #da0606;
   border: 1px solid #c3e6cb;
 }
+.status-badge.rectifying {
+  background: #6dd9f4;
+  color: #09596c;
+  border: 1px solid #c3e6cb;
+}
 
 .assigned-department {
   font-weight: 500;
@@ -258,8 +263,7 @@
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+   letter-spacing: 0.5px;
   flex: 1 1 auto;
   min-width: 100px;
   max-width: 200px;
@@ -576,7 +580,7 @@
 
 .safety-officer-input:focus {
   outline: none;
-  border-color: #2c2c2c;
+  border-color: #22c302;
   box-shadow: 0 0 0 3px rgba(44, 44, 44, 0.1);
 }
 
@@ -1076,10 +1080,10 @@
     flex: 0 0 100% !important;
     min-width: 100% !important;
     max-width: 100% !important;
-    padding: 16px 14px !important;
-    font-size: 12px !important;
+    padding: 16px 32px !important;
+    font-size: 14px !important;
     margin: 0 !important;
-    border-radius: 8px !important;
+    border-radius: 12px !important;
    }
   
   .employee-select {
@@ -1164,9 +1168,9 @@
   }
   
   .send-message-button-bottom {
-    padding: 12px 18px;
-    font-size: 13px;
-    border-radius: 6px;
+    padding: 16px 32px;
+    font-size: 14px;
+    border-radius: 12px;
   }
   
   .verification-buttons {
