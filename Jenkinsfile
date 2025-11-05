@@ -31,10 +31,37 @@ pipeline {
             }
         }
 
-        stage('Archive Build') {
+        // stage('Remove .env') {
+        // steps {
+        // sh 'rm -f .env'
+        //     }
+        //    }
+
+        // stage('Archive Build') {
+        //     steps {
+        //         archiveArtifacts artifacts: 'build/**', fingerprint: true
+        //     }
+        // }
+         stage('Deploy to NGINX Docker') {
             steps {
-                archiveArtifacts artifacts: 'build/**', fingerprint: true
+                sh '''
+                CONTAINER_NAME=react-nginx
+
+                # Ensure container exists
+                docker ps --filter "name=$CONTAINER_NAME" | grep $CONTAINER_NAME
+
+                # Copy new build to NGINX container
+                docker exec $CONTAINER_NAME rm -rf /usr/share/nginx/html/*
+                docker cp build/. $CONTAINER_NAME:/usr/share/nginx/html/
+
+                echo "✅ Deployment finished"
+                '''
             }
+        }
+    }
+     post {
+        always {
+            sh 'rm -f .env || true'
         }
     }
 }
