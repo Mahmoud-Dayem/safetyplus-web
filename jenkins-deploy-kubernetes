@@ -1,0 +1,99 @@
+pipeline {
+    agent any
+
+    environment {
+        REACT_ENV = credentials('react-env')
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                echo "📦 Fetching source code..."
+                git branch: 'auditreportstoreinfirestore', url: 'https://github.com/Mahmoud-Dayem/safetyplus-web.git'
+            }
+        }
+
+        stage('Prepare .env') {
+            steps {
+                echo "⚙️ Preparing .env file..."
+                withCredentials([file(credentialsId: 'react-env', variable: 'ENV_FILE')]) {
+                    sh '''
+                        cp "$ENV_FILE" .env
+                        echo ".env file ready."
+                        head -n 5 .env || true
+                    '''
+                }
+            }
+        }
+
+        stage('Build React App') {
+            agent {
+                docker {
+                    image 'node:20'
+                    args '-v /var/run/docker.sock:/var/run/docker.sock --user root'
+                    reuseNode true
+                }
+            }
+            steps {
+                sh '''
+                    echo "🧹 Cleaning workspace..."
+                    rm -rf node_modules build package-lock.json
+                    npm cache clean --force
+
+                    echo "📦 Installing dependencies..."
+                    npm install
+
+                    echo "🏗️ Building React app..."
+                    npm run build
+
+                    echo "✅ Build complete!"
+                '''
+            }
+        }
+
+        stage('Archive Build') {
+            steps {
+                echo "📁 Archiving build artifacts..."
+                archiveArtifacts artifacts: 'build/**', fingerprint: true
+            }
+        }
+        stage('Build Docker Image for Kubernetes') {
+    steps {
+        echo "🐳 Building Docker image for Kubernetes..."
+        sh '''
+            docker build -t react-nginx .
+        '''
+    }
+}
+
+stage('Deploy to Kubernetes (kind)') {
+    steps {
+        echo "🚀 Deploying image to kind Kubernetes..."
+        sh '''
+            # Load image into kind cluster
+            kind load docker-image react-nginx
+
+            # Apply the Kubernetes manifests
+            kubectl apply -f k8s-deployment.yaml
+
+            echo "✅ Deployment applied. Checking status..."
+            kubectl get pods -l app=react-nginx
+        '''
+    }
+}
+
+ 
+    }
+
+    post {
+        always {
+            echo '✅ Pipeline completed!'
+        }
+        success {
+            echo '🎉 Build & Deploy succeeded! Visit: http://localhost:3000'
+        }
+        failure {
+            echo '❌ Build failed!'
+        }
+    }
+}
