@@ -71,8 +71,10 @@ stage('Deploy to Kubernetes (kind)') {
         echo "🚀 Deploying image to kind Kubernetes..."
         sh '''
             # Load image into kind cluster
-            kind load docker-image react-nginx --name react-nginx
-
+            CLUSTER_NAME=$(kind get clusters | head -n 1)
+            echo "Using kind cluster: $CLUSTER_NAME"
+            kind load docker-image react-nginx --name $CLUSTER_NAME
+ 
 
             # Apply the Kubernetes manifests
             kubectl apply -f k8s-deployment.yaml
