@@ -10,7 +10,7 @@ import { db } from '../firebase/firebaseConfig';
 function AuditReport() {
   const navigate = useNavigate();
   const user = useSelector((state) => state.auth.user);
-
+   //
   const department = user?.department;
   const fullName = user?.fullName;
   const jobTitle = user?.jobTitle;
