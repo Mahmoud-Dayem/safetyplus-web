@@ -86,46 +86,7 @@ const AuditReportDetails = () => {
         setIsCompleted(!!report.completed);
     }, [report]);
 
-    // Also lookup the same report inside audit_reports_daily/{YYYY-MM-DD} and log it (non-invasive)
-    // useEffect(() => {
-    //     if (!report) return;
-    //     const run = async () => {
-    //         try {
-    //             const rawDate = report.date || report.created_at;
-    //             const d = rawDate ? new Date(rawDate) : null;
-    //             if (!d || isNaN(d.getTime())) {
-    //                 console.log('audit_reports_daily: invalid or missing date on report, skipping');
-    //                 return;
-    //             }
-    //             const yyyy = d.getFullYear();
-    //             const mm = String(d.getMonth() + 1).padStart(2, '0');
-    //             const dd = String(d.getDate()).padStart(2, '0');
-    //             const dateKey = `${yyyy}-${mm}-${dd}`;
-
-    //             const dailyRef = doc(db, 'audit_reports_daily', dateKey);
-    //             const dailySnap = await getDoc(dailyRef);
-    //             if (!dailySnap.exists()) {
-    //                 console.log('audit_reports_daily: no daily doc for', dateKey);
-    //                 return;
-    //             }
-
-    //             const dailyData = dailySnap.data();
-    //             const reportsArr = Array.isArray(dailyData?.reports) ? dailyData.reports : [];
-    //             console.log('audit_reports_daily: reports for', dateKey, reportsArr);
-
-    //             const match = reportsArr.find(r => r?.id === report.id);
-    //             if (match) {
-    //                 console.log('audit_reports_daily: matched report entry', match);
-    //             } else {
-    //                 console.log('audit_reports_daily: no matching report with id', report.id);
-    //             }
-    //         } catch (err) {
-    //             console.error('audit_reports_daily: error fetching/logging daily doc', err);
-    //         }
-    //     };
-    //     run();
-    //     // Re-run when the report reference changes
-    // }, [report]);
+ 
 
     useEffect(() => {
         // Populate local state from cached Redux departments (0 reads)
@@ -232,15 +193,15 @@ const AuditReportDetails = () => {
                                 <button
                                     className="audit-details-mark-complete-button"
                                     onClick={async () => {
-                                         // Show confirmation dialog
+                                        // Show confirmation dialog
                                         const confirmed = window.confirm(
                                             'Are you sure you want to mark this report as completed? This action cannot be undone.'
                                         );
                                         if (!confirmed) {
-                                             return; // User cancelled
+                                            return; // User cancelled
                                         }
 
-                                         if (!safetyOfficer.trim()) {
+                                        if (!safetyOfficer.trim()) {
                                             // Highlight the input field
                                             const inputField = document.getElementById('safety-officer-input');
                                             if (inputField) {
@@ -267,10 +228,10 @@ const AuditReportDetails = () => {
                                                 return;
                                             }
                                             const currentData = reportSnap.data();
- 
+
                                             // Save original send_to array before any modifications alfredo id is 31674
                                             const originalSendTo = currentData.send_to ? [...currentData.send_to] : [];
- 
+
                                             // Add completion info with safety officer comment
                                             const completionMessage = safetyOfficer.trim() || 'Marked as completed by safety officer';
                                             const newMessage = {
@@ -333,7 +294,7 @@ const AuditReportDetails = () => {
                                                 }
 
                                                 closedWriteSuccess = true;
-                                             } catch (closedError) {
+                                            } catch (closedError) {
                                                 console.error("❌ Error saving to audit_reports_closed:", closedError);
                                                 alert('Failed to save to audit_reports_closed. Report will not be deleted from main collection.');
                                                 return; // Don't proceed with deletion
@@ -346,7 +307,7 @@ const AuditReportDetails = () => {
                                                 try {
                                                     const { deleteDoc } = await import('firebase/firestore');
                                                     await deleteDoc(reportRef);
- 
+
                                                     // Update user completion stats for all users in send_to array
                                                     // Use data with original send_to array before any modifications
                                                     const dataForStats = {
@@ -360,7 +321,51 @@ const AuditReportDetails = () => {
                                                 }
                                             }
 
-                                            setIsCompleted(true);
+                                            // Send completed report data to Google Sheets "completed" sheet
+                                            try {
+                                                const googleSheetsUrl = process.env.REACT_APP_AUDIT_GOOGLE_SHEETS_URL;
+                                                console.log('🔍 Mark Complete - Google Sheets URL:', googleSheetsUrl);
+                                                
+                                                if (googleSheetsUrl && googleSheetsUrl !== 'https://script.google.com/macros/s/YOUR_AUDIT_SCRIPT_ID/exec') {
+                                                    const completedReportData = {
+                                                        action: 'completed',
+                                                        newStatus:true,
+                                                        sheet:'completed',
+                                                        report_id: report.id,
+                                                        emp_code: currentData.emp_code,
+                                                        user_name: currentData.user_name,
+                                                        department: currentData.department,
+                                                        job_title: currentData.job_title,
+                                                        location: currentData.location,
+                                                        description: currentData.description,
+                                                        corrective_action: currentData.corrective_action,
+                                                        incident_type: currentData.incident_type,
+                                                        date: currentData.date,
+                                                        completed_at: new Date().toISOString(),
+                                                        completed_by: user?.displayName || user?.email || user?.id || 'unknown',
+                                                        completion_message: completionMessage,
+                                                        image_url: currentData.image_url,
+                                                        created_at: currentData.created_at
+                                                    };
+
+                                                    console.log('📤 Mark Complete - Sending data to Google Sheets:', completedReportData);
+
+                                                    const response = await fetch(googleSheetsUrl, {
+                                                        method: 'POST',
+                                                        headers: {
+                                                            'Content-Type': 'application/json',
+                                                        },
+                                                        body: JSON.stringify(completedReportData),
+                                                        // mode: 'cors'
+                                                    });
+
+                                                    console.log('✅ Mark Complete - Google Sheets response status:', response.status);
+                                                    console.log('✅ Completed report successfully sent to Google Sheets "completed" sheet');
+                                                }
+                                            } catch (googleSheetsError) {
+                                                console.error('Failed to send completed report to Google Sheets:', googleSheetsError);
+                                                // Non-fatal error - don't block the user flow
+                                            } setIsCompleted(true);
                                             alert('Report marked as completed, archived, and removed from active collection successfully!');
                                             // Navigate back to previous page
                                             navigate(-1);
@@ -707,7 +712,7 @@ const AuditReportDetails = () => {
                             <button
                                 className="audit-details-accept-button"
                                 onClick={async () => {
- 
+
 
 
                                     try {
@@ -726,10 +731,10 @@ const AuditReportDetails = () => {
                                         }
 
                                         const reportData = reportSnap.data();
- 
+
                                         // Save original send_to array before any modifications
                                         const originalSendToAccept = reportData.send_to ? [...reportData.send_to] : [];
- 
+
                                         // Create new message object - use custom message or default acceptance message
                                         const messageText = safetyOfficer.trim() || 'Verified and Accepted by safety officer';
                                         const newMessage = {
@@ -789,7 +794,7 @@ const AuditReportDetails = () => {
                                             }
 
                                             closedWriteSuccess = true;
-                                         } catch (closedError) {
+                                        } catch (closedError) {
                                             console.error("❌ Error saving to audit_reports_closed:", closedError);
                                             alert('Failed to save to audit_reports_closed. Report will not be deleted from main collection.');
                                             return; // Don't proceed with deletion
@@ -801,7 +806,7 @@ const AuditReportDetails = () => {
                                             try {
                                                 const { deleteDoc } = await import('firebase/firestore');
                                                 await deleteDoc(reportRef);
- 
+
                                                 // Update user completion stats for all users in send_to array
                                                 // Use data with original send_to array before any modifications
                                                 const dataForStatsAccept = {
@@ -813,6 +818,45 @@ const AuditReportDetails = () => {
                                                 console.error("❌ Error deleting report from audit_reports:", deleteError);
                                                 alert('Report was archived successfully but could not be deleted from main collection.');
                                             }
+                                        }
+
+                                        // Send completed report data to Google Sheets "completed" sheet
+                                        try {
+                                            const googleSheetsUrl = process.env.REACT_APP_AUDIT_GOOGLE_SHEETS_URL;
+                                            if (googleSheetsUrl && googleSheetsUrl !== 'https://script.google.com/macros/s/YOUR_AUDIT_SCRIPT_ID/exec') {
+                                                const completedReportData = {
+                                                    action: 'completed',
+                                                    report_id: report.id,
+                                                    emp_code: reportData.emp_code,
+                                                    user_name: reportData.user_name,
+                                                    department: reportData.department,
+                                                    job_title: reportData.job_title,
+                                                    location: reportData.location,
+                                                    description: reportData.description,
+                                                    corrective_action: reportData.corrective_action,
+                                                    incident_type: reportData.incident_type,
+                                                    date: reportData.date,
+                                                    completed_at: new Date().toISOString(),
+                                                    completed_by: user?.displayName || user?.email || user?.id || 'unknown',
+                                                    completion_message: messageText,
+                                                    image_url: reportData.image_url,
+                                                    created_at: reportData.created_at
+                                                };
+
+                                                await fetch(googleSheetsUrl, {
+                                                    method: 'POST',
+                                                    headers: {
+                                                        'Content-Type': 'application/json',
+                                                    },
+                                                    body: JSON.stringify(completedReportData),
+                                                    mode: 'no-cors'
+                                                });
+
+                                                console.log('Completed report successfully sent to Google Sheets "completed" sheet');
+                                            }
+                                        } catch (googleSheetsError) {
+                                            console.error('Failed to send completed report to Google Sheets:', googleSheetsError);
+                                            // Non-fatal error - don't block the user flow
                                         }
 
                                         alert('Report accepted, completed, and archived successfully!');

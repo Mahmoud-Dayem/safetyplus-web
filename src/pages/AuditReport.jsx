@@ -309,6 +309,33 @@ function AuditReport() {
           // Non-fatal: main report already saved
         }
 
+        // Send data to Google Sheets (after Firestore success)
+        try {
+          const googleSheetsUrl = process.env.REACT_APP_AUDIT_GOOGLE_SHEETS_URL;
+          if (googleSheetsUrl && googleSheetsUrl !== 'https://script.google.com/macros/s/YOUR_AUDIT_SCRIPT_ID/exec') {
+            const googleSheetsData = {
+              report_id: docId,
+              ...auditReportData
+            };
+            
+            await fetch(googleSheetsUrl, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(googleSheetsData),
+              mode: 'no-cors' // Required for Google Apps Script
+            });
+            
+            console.log('Audit report successfully sent to Google Sheets');
+          } else {
+            console.warn('Google Sheets URL not configured for audit reports');
+          }
+        } catch (googleSheetsError) {
+          console.error('Failed to send to Google Sheets:', googleSheetsError);
+          // Non-fatal error - don't block the user flow
+        }
+
         setUploadProgress(100);
         // Show alert and navigate to home after user clicks OK
         alert('Audit report submitted successfully!');
