@@ -1,4 +1,4 @@
-# SafetyPlus Web .
+# SafetyPlus Web 
 
 SafetyPlus is a workplace safety web app for creating, routing, and closing STOP Card and  audit reports. It captures observations, routes them to departments, tracks completion, mirrors data to Firestore, and can mirror selected events to Google Sheets.
 
