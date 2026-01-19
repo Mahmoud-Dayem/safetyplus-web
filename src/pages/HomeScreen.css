@@ -65,6 +65,39 @@
   font-weight: 600;
 }
 
+/* Admin Button */
+.admin-button {
+  position: absolute;
+  top: 45px;
+  right: 0;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 16px;
+  background-color: #f8f9fa;
+  border: 1px solid #ff9500;
+  gap: 5px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.admin-button:hover {
+  background-color: #fff3e6;
+  transform: translateY(-2px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.admin-button:active {
+  transform: translateY(0);
+}
+
+.admin-text {
+  font-size: 14px;
+  color: #ff9500;
+  font-weight: 600;
+}
+
 /* Compact User Info */
 .compact-user-info {
   display: flex;
@@ -124,8 +157,10 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1rem; /* relative to font size */
-  margin: 1vh 0; /* 8% of viewport height */
+  gap: 1rem;
+  /* relative to font size */
+  margin: 1vh 0;
+  /* 8% of viewport height */
 }
 
 
@@ -197,6 +232,7 @@
   cursor: pointer;
   transition: all 0.2s ease;
 }
+
 .reports-button-all {
   background-color: #545453;
   display: flex;
@@ -217,6 +253,7 @@
   transform: translateY(-2px);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
+
 .reports-button-all:hover {
   background-color: #787674;
   transform: translateY(-2px);
@@ -384,6 +421,8 @@
     max-width: 400px;
   }
 }
+
 .qa-icon {
-  color: #28a745; /* green */
+  color: #28a745;
+  /* green */
 }

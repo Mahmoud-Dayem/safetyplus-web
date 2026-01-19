@@ -18,17 +18,18 @@ import AllAuditReports from './pages/AllAuditReports'
 import AuditReportDetails from './pages/AuditReportDetails'
 import AuditReportDetailsInbox from './pages/AuditReportDetailsInbox'
 import DataAnalytics from './pages/DataAnalytics'
+import Admin from './pages/Admin';
 import AccessDenied from './components/AccessDenied'
 import { hydrateDepartmentsFromStorage, refreshDepartmentsIfStale, fetchAndCacheDepartments } from './store/departmentsSlice';
 
 // Protected Route component
 const ProtectedRoute = ({ children }) => {
   const user = useSelector(state => state.auth.user);
-  
+
   if (!user) {
     return <Navigate to="/auth" replace />;
   }
-  
+
   return children;
 };
 
@@ -38,7 +39,7 @@ const StopCardProtectedRoute = ({ children }) => {
   const dispatch = useDispatch();
   const [loading, setLoading] = useState(true);
   const [hasPermission, setHasPermission] = useState(false);
-  
+
   useEffect(() => {
     const checkStopCardPermission = async () => {
       if (!user) {
@@ -59,14 +60,14 @@ const StopCardProtectedRoute = ({ children }) => {
       //     const { doc, getDoc } = await import('firebase/firestore');
       //     const { db } = await import('./firebase/firebaseConfig');
       //     const { updateUserProfile } = await import('./store/authSlice');
-          
+
       //     const userDocRef = doc(db, 'employees_collection', user.companyId);
       //     const userDocSnap = await getDoc(userDocRef);
-          
+
       //     if (userDocSnap.exists()) {
       //       const empData = userDocSnap.data();
       //       const fullName = `${empData.first_name || ''} ${empData.last_name || ''}`.trim();
-            
+
       //       // Update Redux with employee data
       //       dispatch(updateUserProfile({
       //         department: empData.department || null,
@@ -75,7 +76,7 @@ const StopCardProtectedRoute = ({ children }) => {
       //         stopcard: empData.stopcard === true,
       //         inbox: empData.inbox === true,
       //       }));
-            
+
       //       // Check stopcard permission
       //       setHasPermission(empData.stopcard === true);
       //     } else {
@@ -88,34 +89,34 @@ const StopCardProtectedRoute = ({ children }) => {
       // } else {
       //   setHasPermission(false);
       // }
-      
+
       setLoading(false);
     };
 
     checkStopCardPermission();
   }, [user, dispatch]);
-  
+
   if (!user) {
     return <Navigate to="/auth" replace />;
   }
-  
+
   if (loading) {
     return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        minHeight: '100vh' 
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        minHeight: '100vh'
       }}>
         <div>Checking permissions...</div>
       </div>
     );
   }
-  
+
   if (!hasPermission) {
     return <AccessDenied feature="STOP Card features" />;
   }
-  
+
   return children;
 };
 
@@ -125,7 +126,7 @@ const InboxProtectedRoute = ({ children }) => {
   const dispatch = useDispatch();
   const [loading, setLoading] = useState(true);
   const [hasPermission, setHasPermission] = useState(false);
-  
+
   useEffect(() => {
     const checkInboxPermission = async () => {
       if (!user) {
@@ -146,14 +147,14 @@ const InboxProtectedRoute = ({ children }) => {
       //     const { doc, getDoc } = await import('firebase/firestore');
       //     const { db } = await import('./firebase/firebaseConfig');
       //     const { updateUserProfile } = await import('./store/authSlice');
-          
+
       //     const userDocRef = doc(db, 'employees_collection', user.companyId);
       //     const userDocSnap = await getDoc(userDocRef);
-          
+
       //     if (userDocSnap.exists()) {
       //       const empData = userDocSnap.data();
       //       const fullName = `${empData.first_name || ''} ${empData.last_name || ''}`.trim();
-            
+
       //       // Update Redux with employee data
       //       dispatch(updateUserProfile({
       //         department: empData.department || null,
@@ -162,7 +163,7 @@ const InboxProtectedRoute = ({ children }) => {
       //         stopcard: empData.stopcard === true,
       //         inbox: empData.inbox === true,
       //       }));
-            
+
       //       // Check inbox permission
       //       setHasPermission(empData.inbox === true);
       //     } else {
@@ -175,34 +176,34 @@ const InboxProtectedRoute = ({ children }) => {
       // } else {
       //   setHasPermission(false);
       // }
-      
+
       setLoading(false);
     };
 
     checkInboxPermission();
   }, [user, dispatch]);
-  
+
   if (!user) {
     return <Navigate to="/auth" replace />;
   }
-  
+
   if (loading) {
     return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        minHeight: '100vh' 
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        minHeight: '100vh'
       }}>
         <div>Checking permissions...</div>
       </div>
     );
   }
-  
+
   if (!hasPermission) {
     return <AccessDenied feature="Inbox features" />;
   }
-  
+
   return children;
 };
 
@@ -225,15 +226,15 @@ function App() {
 
   // Check if app is running as PWA
   useEffect(() => {
-    const isPWA = window.matchMedia('(display-mode: standalone)').matches || 
-                  window.navigator.standalone || 
-                  document.referrer.includes('android-app://');
-    
+    const isPWA = window.matchMedia('(display-mode: standalone)').matches ||
+      window.navigator.standalone ||
+      document.referrer.includes('android-app://');
+
     if (isPWA) {
-       // Request persistent storage to reduce data eviction by the OS
-       if (navigator.storage && navigator.storage.persist) {
-         navigator.storage.persist().catch(() => {});
-       }
+      // Request persistent storage to reduce data eviction by the OS
+      if (navigator.storage && navigator.storage.persist) {
+        navigator.storage.persist().catch(() => { });
+      }
     }
   }, []);
 
@@ -241,9 +242,9 @@ function App() {
   useEffect(() => {
     const restoreUser = async () => {
       try {
-         const storedUser = await getUser();
+        const storedUser = await getUser();
         if (storedUser) {
-           dispatch(login(storedUser));
+          dispatch(login(storedUser));
         } else {
           // console.log('No user found in storage - redirecting to auth');
         }
@@ -253,7 +254,7 @@ function App() {
         setLoading(false);
       }
     };
-    
+
     restoreUser();
 
     // Hydrate departments from localStorage for zero Firestore reads on mount
@@ -302,7 +303,7 @@ function App() {
         }
       }
     });
-    
+
     // Also listen for storage changes (in case user logs in from another tab)
     const handleStorageChange = (e) => {
       if (e.key === 'safetyplus_user_auth' && e.newValue) {
@@ -314,9 +315,9 @@ function App() {
         }
       }
     };
-    
+
     window.addEventListener('storage', handleStorageChange);
-    
+
     return () => {
       window.removeEventListener('storage', handleStorageChange);
       unsubscribe && unsubscribe();
@@ -341,11 +342,11 @@ function App() {
   // Show loading state while checking localStorage
   if (loading) {
     return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        minHeight: '100vh' 
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        minHeight: '100vh'
       }}>
         <div>Loading...</div>
       </div>
@@ -357,100 +358,108 @@ function App() {
       <Routes>
         {/* Public Route */}
         <Route path="/auth" element={<AuthScreen />} />
-        
+
         {/* Protected Routes */}
-        <Route 
-          path="/home" 
+        <Route
+          path="/home"
           element={
             <ProtectedRoute>
               <HomeScreen />
             </ProtectedRoute>
-          } 
+          }
         />
-        <Route 
-          path="/stopcard" 
+        <Route
+          path="/stopcard"
           element={
             <StopCardProtectedRoute>
               <StopCard />
             </StopCardProtectedRoute>
-          } 
+          }
         />
-        <Route 
-          path="/reports" 
+        <Route
+          path="/reports"
           element={
             <ProtectedRoute>
               <ReportHistory />
             </ProtectedRoute>
-          } 
+          }
         />
-        <Route 
-          path="/audits" 
+        <Route
+          path="/audits"
           element={
             <ProtectedRoute>
-              <AuditReport/>
+              <AuditReport />
             </ProtectedRoute>
-          } 
+          }
         />
-        <Route 
-          path="/AuditHistoryReports" 
+        <Route
+          path="/AuditHistoryReports"
           element={
             <ProtectedRoute>
-              <AuditHistoryReports/>
+              <AuditHistoryReports />
             </ProtectedRoute>
-          } 
+          }
         />
-        <Route 
-          path="/inbox" 
+        <Route
+          path="/inbox"
           element={
             <InboxProtectedRoute>
-              <Inbox/>
+              <Inbox />
             </InboxProtectedRoute>
-          } 
+          }
         />
-        <Route 
-          path="/viewallstopreports" 
+        <Route
+          path="/viewallstopreports"
           element={
             <ProtectedRoute>
-              <AllStopReports/>
+              <AllStopReports />
             </ProtectedRoute>
-          } 
+          }
         />
-        <Route 
-          path="/viewallauditreports" 
+        <Route
+          path="/viewallauditreports"
           element={
             <ProtectedRoute>
-              <AllAuditReports/>
+              <AllAuditReports />
             </ProtectedRoute>
-          } 
+          }
         />
-        <Route 
-          path="/audit-report-details" 
+        <Route
+          path="/audit-report-details"
           element={
             <ProtectedRoute>
-              <AuditReportDetails/>
+              <AuditReportDetails />
             </ProtectedRoute>
-          } 
+          }
         />
-        <Route 
-          path="/audit-report-details-assigned" 
+        <Route
+          path="/audit-report-details-assigned"
           element={
             <ProtectedRoute>
-              <AuditReportDetailsInbox/>
+              <AuditReportDetailsInbox />
             </ProtectedRoute>
-          } 
+          }
         />
-        <Route 
-          path="/data-analytics" 
+        <Route
+          path="/data-analytics"
           element={
             <ProtectedRoute>
-              <DataAnalytics/>
+              <DataAnalytics />
             </ProtectedRoute>
-          } 
+          }
         />
-        
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute>
+              <Admin />
+            </ProtectedRoute>
+          }
+        />
+
         {/* Default Route */}
         <Route path="/" element={<Navigate to="/auth" replace />} />
-        
+
         {/* Catch all - redirect to auth */}
         <Route path="*" element={<Navigate to="/auth" replace />} />
       </Routes>
