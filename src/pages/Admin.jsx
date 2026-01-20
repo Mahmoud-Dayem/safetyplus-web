@@ -9,6 +9,9 @@ import { db } from '../firebase/firebaseConfig';
 function Admin() {
     const navigate = useNavigate();
     const user = useSelector((state) => state.auth.user);
+    const departments = useSelector((state) => state.departments.list);
+
+
 
     const [formData, setFormData] = useState({
         first_name: '',
@@ -20,10 +23,11 @@ function Admin() {
         department: '',
         inbox: false,
         isChief: false,
-        stopcard: false
+        stopcard: false,
+        isSupervisor: false
     });
 
-    const [departments, setDepartments] = useState([]);
+    // const [departments, setDepartments] = useState([]);
     const [selectedDepartment, setSelectedDepartment] = useState(null);
     const [departmentDetails, setDepartmentDetails] = useState({
         chief_name: '',
@@ -37,28 +41,28 @@ function Admin() {
     const [isLoadingDepartments, setIsLoadingDepartments] = useState(true);
 
     // Fetch departments on component mount
-    useEffect(() => {
-        const fetchDepartments = async () => {
-            try {
-                const querySnapshot = await getDocs(collection(db, 'departments'));
-                const deptList = [];
-                querySnapshot.forEach((doc) => {
-                    deptList.push({
-                        id: doc.id,
-                        ...doc.data()
-                    });
-                });
-                setDepartments(deptList);
-            } catch (error) {
-                console.error('Error fetching departments:', error);
-                alert('Failed to load departments');
-            } finally {
-                setIsLoadingDepartments(false);
-            }
-        };
+    // useEffect(() => {
+    //     const fetchDepartments = async () => {
+    //         try {
+    //             const querySnapshot = await getDocs(collection(db, 'departments'));
+    //             const deptList = [];
+    //             querySnapshot.forEach((doc) => {
+    //                 deptList.push({
+    //                     id: doc.id,
+    //                     ...doc.data()
+    //                 });
+    //             });
+    //             setDepartments(deptList);
+    //         } catch (error) {
+    //             console.error('Error fetching departments:', error);
+    //             alert('Failed to load departments');
+    //         } finally {
+    //             setIsLoadingDepartments(false);
+    //         }
+    //     };
 
-        fetchDepartments();
-    }, []);
+    //     fetchDepartments();
+    // }, []);
 
     const handleInputChange = (e) => {
         const { name, value, type, checked } = e.target;
@@ -74,18 +78,18 @@ function Admin() {
     };
 
     const handleDepartmentChange = (e) => {
-        const deptId = e.target.value;
-        setFormData(prev => ({ ...prev, department: deptId }));
+        const deptCode = e.target.value;
+        setFormData(prev => ({ ...prev, department: deptCode }));
 
         // Find selected department and set details
-        const dept = departments.find(d => d.id === deptId);
+        const dept = departments.find(d => d.dept_code === deptCode);
         if (dept) {
             setSelectedDepartment(dept);
             setDepartmentDetails({
                 chief_name: dept.chief_name || '',
                 chief_code: dept.chief_code || '',
-                dept_code: dept.dept_code || dept.id || '',
-                dept_name: dept.dept_name || dept.name || ''
+                dept_code: dept.dept_code || '',
+                dept_name: dept.dept_name || ''
             });
         } else {
             setSelectedDepartment(null);
@@ -159,6 +163,7 @@ function Admin() {
                 // Permissions
                 inbox: formData.inbox,
                 isChief: formData.isChief,
+                isSupervisor: formData.isSupervisor,
                 stopcard: formData.stopcard,
             };
 
@@ -189,7 +194,8 @@ function Admin() {
                 department: '',
                 inbox: false,
                 isChief: false,
-                stopcard: false
+                stopcard: false,
+                isSupervisor: false
             });
 
             // Reset department details
@@ -330,14 +336,14 @@ function Admin() {
                                 value={formData.department}
                                 onChange={handleDepartmentChange}
                                 className={errors.department ? 'admin-error' : ''}
-                                disabled={isLoadingDepartments}
+                            // disabled={isLoadingDepartments}
                             >
-                                <option value="">
-                                    {isLoadingDepartments ? 'Loading departments...' : 'Select a department'}
+                                <option key="empty" value="">
+                                    {false ? 'Loading departments...' : 'Select a department'}
                                 </option>
                                 {departments.map((dept) => (
-                                    <option key={dept.id} value={dept.id}>
-                                        {dept.dept_name || dept.name || dept.id}
+                                    <option key={dept.dept_code} value={dept.dept_code}>
+                                        {dept.dept_name}
                                     </option>
                                 ))}
                             </select>
@@ -392,7 +398,18 @@ function Admin() {
                                     onChange={handleInputChange}
                                 />
                                 <span className="admin-checkbox-text">
-                                    <strong>Chief</strong> - User is a department chief
+                                    <strong>Chief</strong> - User is a chief
+                                </span>
+                            </label>
+                            <label className="admin-checkbox-label">
+                                <input
+                                    type="checkbox"
+                                    name="isSupervisor"
+                                    checked={formData.isSupervisor}
+                                    onChange={handleInputChange}
+                                />
+                                <span className="admin-checkbox-text">
+                                    <strong>Supervisor</strong> - User is a supervisor
                                 </span>
                             </label>
 
