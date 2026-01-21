@@ -3,15 +3,29 @@ import { colors } from '../constants/color';
 import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import './Admin.css';
-import { collection, addDoc, setDoc, doc, getDoc, getDocs } from 'firebase/firestore'
+import { collection, addDoc, setDoc, doc, getDoc, getDocs, arrayUnion, updateDoc } from 'firebase/firestore'
 import { db } from '../firebase/firebaseConfig';
 
 function Admin() {
     const navigate = useNavigate();
     const user = useSelector((state) => state.auth.user);
-    const departments = useSelector((state) => state.departments.list);
+    // const departments = useSelector((state) => state.departments.list);
+    const [disableIsChief, setDisableIsChief] = useState(false);
+    const [disableIsSupervisor, setDisableIsSupervisor] = useState(false);
+    const [departments, setDepartments] = useState([]);
 
 
+    const handleIsChiefChange = (e) => {
+        const checked = e.target.checked;
+        setFormData(prev => ({ ...prev, isChief: checked, stopcard: checked, inbox: checked }));
+        setDisableIsSupervisor(checked);
+    };
+
+    const handleIsSupervisorChange = (e) => {
+        const checked = e.target.checked;
+        setFormData(prev => ({ ...prev, isSupervisor: checked, stopcard: checked, inbox: checked }));
+        setDisableIsChief(checked);
+    };
 
     const [formData, setFormData] = useState({
         first_name: '',
@@ -33,7 +47,8 @@ function Admin() {
         chief_name: '',
         chief_code: '',
         dept_code: '',
-        dept_name: ''
+        dept_name: '',
+        dept_key: ''
     });
 
     const [errors, setErrors] = useState({});
@@ -41,28 +56,32 @@ function Admin() {
     const [isLoadingDepartments, setIsLoadingDepartments] = useState(true);
 
     // Fetch departments on component mount
-    // useEffect(() => {
-    //     const fetchDepartments = async () => {
-    //         try {
-    //             const querySnapshot = await getDocs(collection(db, 'departments'));
-    //             const deptList = [];
-    //             querySnapshot.forEach((doc) => {
-    //                 deptList.push({
-    //                     id: doc.id,
-    //                     ...doc.data()
-    //                 });
-    //             });
-    //             setDepartments(deptList);
-    //         } catch (error) {
-    //             console.error('Error fetching departments:', error);
-    //             alert('Failed to load departments');
-    //         } finally {
-    //             setIsLoadingDepartments(false);
-    //         }
-    //     };
+    useEffect(() => {
+        const fetchDepartments = async () => {
+            try {
+                const snap = await getDoc(doc(db, 'departments', 'all_departments'));
+                if (!snap.exists()) {
+                    return { list: [], updatedAt: Date.now() };
+                }
+                const data = snap.data();
+                // console.log(data.departments);
+                const list = Object.values(data.departments || {}).sort((a, b) =>
+                    String(a.dept_name || '').localeCompare(String(b.dept_name || ''))
+                );
 
-    //     fetchDepartments();
-    // }, []);
+
+                setDepartments(list);
+                // console.log(list);
+            } catch (error) {
+                console.error('Error fetching departments:', error);
+                alert('Failed to load departments');
+            } finally {
+                setIsLoadingDepartments(false);
+            }
+        };
+
+        fetchDepartments();
+    }, []);
 
     const handleInputChange = (e) => {
         const { name, value, type, checked } = e.target;
@@ -89,7 +108,8 @@ function Admin() {
                 chief_name: dept.chief_name || '',
                 chief_code: dept.chief_code || '',
                 dept_code: dept.dept_code || '',
-                dept_name: dept.dept_name || ''
+                dept_name: dept.dept_name || '',
+                dept_key: dept.dept_key || ''
             });
         } else {
             setSelectedDepartment(null);
@@ -97,7 +117,8 @@ function Admin() {
                 chief_name: '',
                 chief_code: '',
                 dept_code: '',
-                dept_name: ''
+                dept_name: '',
+                dept_key: ''
             });
         }
 
@@ -180,6 +201,32 @@ function Admin() {
 
             // Add to Firestore
             await setDoc(empCodeRef, userData);
+
+            // If isSupervisor is checked, add to all_departments supervisors list
+            if (formData.isSupervisor && formData.department) {
+                try {
+                    const allDepartmentsRef = doc(db, 'departments', 'all_departments');
+                    const supervisorData = {
+                        emp_code: parseInt(formData.emp_code),
+                        name: `${formData.first_name.trim()} ${formData.last_name.trim()}`
+                    };
+
+                    // Use arrayUnion to add to supervisors list without deleting old data
+                    await updateDoc(allDepartmentsRef,
+
+                        {
+                            [`departments.${departmentDetails.dept_key}.supervisors`]: arrayUnion(supervisorData)
+                        }
+                        // supervisors: arrayUnion(supervisorData)
+                    );
+
+                    console.log('Supervisor added to all_departments successfully');
+                } catch (error) {
+                    console.error('Error adding supervisor to all_departments:', error);
+                    // Don't fail the whole operation if this fails
+                    alert('User created but failed to add to supervisors list. Please check console.');
+                }
+            }
 
             alert('User created successfully!');
 
@@ -378,24 +425,15 @@ function Admin() {
                     <div className="admin-form-group">
                         <label className="admin-section-label">Permissions</label>
                         <div className="admin-checkbox-group">
-                            <label className="admin-checkbox-label">
-                                <input
-                                    type="checkbox"
-                                    name="inbox"
-                                    checked={formData.inbox}
-                                    onChange={handleInputChange}
-                                />
-                                <span className="admin-checkbox-text">
-                                    <strong>Inbox</strong> - User has inbox to receive reports
-                                </span>
-                            </label>
+
 
                             <label className="admin-checkbox-label">
                                 <input
                                     type="checkbox"
                                     name="isChief"
                                     checked={formData.isChief}
-                                    onChange={handleInputChange}
+                                    onChange={handleIsChiefChange}
+                                    disabled={disableIsChief}
                                 />
                                 <span className="admin-checkbox-text">
                                     <strong>Chief</strong> - User is a chief
@@ -406,7 +444,8 @@ function Admin() {
                                     type="checkbox"
                                     name="isSupervisor"
                                     checked={formData.isSupervisor}
-                                    onChange={handleInputChange}
+                                    onChange={handleIsSupervisorChange}
+                                    disabled={disableIsSupervisor}
                                 />
                                 <span className="admin-checkbox-text">
                                     <strong>Supervisor</strong> - User is a supervisor
@@ -422,6 +461,17 @@ function Admin() {
                                 />
                                 <span className="admin-checkbox-text">
                                     <strong>Stop Card</strong> - User is privileged for stop card
+                                </span>
+                            </label>
+                            <label className="admin-checkbox-label">
+                                <input
+                                    type="checkbox"
+                                    name="inbox"
+                                    checked={formData.inbox}
+                                    onChange={handleInputChange}
+                                />
+                                <span className="admin-checkbox-text">
+                                    <strong>Inbox</strong> - User has inbox to receive reports
                                 </span>
                             </label>
                         </div>
