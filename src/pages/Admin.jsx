@@ -32,7 +32,6 @@ function Admin() {
         last_name: '',
         emp_code: '',
         job_title: '',
-        email: '',
         phone: '',
         department: '',
         inbox: false,
@@ -173,7 +172,6 @@ function Admin() {
                 last_name: formData.last_name.trim(),
                 emp_code: String(formData.emp_code),
                 job_title: formData.job_title.trim(),
-                email: formData.email.trim() || null,
                 phone: formData.phone.trim() || null,
                 // department: formData.department,
                 // Department details
@@ -236,7 +234,6 @@ function Admin() {
                 last_name: '',
                 emp_code: '',
                 job_title: '',
-                email: '',
                 phone: '',
                 department: '',
                 inbox: false,
@@ -347,18 +344,6 @@ function Admin() {
                     </div>
 
                     <div className="admin-form-row">
-                        <div className="admin-form-group">
-                            <label htmlFor="email">Email</label>
-                            <input
-                                type="email"
-                                id="email"
-                                name="email"
-                                value={formData.email}
-                                onChange={handleInputChange}
-                                placeholder="Enter email (optional)"
-                            />
-                        </div>
-
                         <div className="admin-form-group">
                             <label htmlFor="phone">Phone Number</label>
                             <input
