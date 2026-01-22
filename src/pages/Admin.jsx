@@ -3,12 +3,12 @@ import { colors } from '../constants/color';
 import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import './Admin.css';
-import { collection, addDoc, setDoc, doc, getDoc, getDocs, arrayUnion, updateDoc } from 'firebase/firestore'
+import { setDoc, doc, getDoc, arrayUnion, updateDoc } from 'firebase/firestore'
 import { db } from '../firebase/firebaseConfig';
 
 function Admin() {
     const navigate = useNavigate();
-    const user = useSelector((state) => state.auth.user);
+    useSelector((state) => state.auth.user);
     // const departments = useSelector((state) => state.departments.list);
     const [disableIsChief, setDisableIsChief] = useState(false);
     const [disableIsSupervisor, setDisableIsSupervisor] = useState(false);
@@ -52,7 +52,6 @@ function Admin() {
 
     const [errors, setErrors] = useState({});
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [isLoadingDepartments, setIsLoadingDepartments] = useState(true);
 
     // Fetch departments on component mount
     useEffect(() => {
@@ -74,8 +73,6 @@ function Admin() {
             } catch (error) {
                 console.error('Error fetching departments:', error);
                 alert('Failed to load departments');
-            } finally {
-                setIsLoadingDepartments(false);
             }
         };
 

@@ -24,3 +24,5 @@ yarn-error.log*
 /uploadtofirestore
 .vercel
 PHISHING_APPEALS.md
+
+.vercel
