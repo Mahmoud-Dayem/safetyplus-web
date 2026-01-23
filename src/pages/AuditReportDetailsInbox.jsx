@@ -36,15 +36,23 @@ const AuditReportDetailsInbox = () => {
 
   // Determine chief/supervisors from cached departments in Redux (no Firestore read)
   const departments = useSelector(state => state.departments.list);
+  const departmentsLoading = useSelector(state => state.departments.loading);
+  
   useEffect(() => {
     if (!assignedDepartment) {
       setIsChief(false);
       setEmployeesUnderChief([]);
       return;
     }
+    
+    // Wait for departments to be loaded before checking
+    if (departmentsLoading || !Array.isArray(departments) || departments.length === 0) {
+      return;
+    }
+    
     setLoading(true);
     try {
-      const deptData = (Array.isArray(departments) ? departments : []).find(
+      const deptData = departments.find(
         d => String(d?.dept_name) === String(assignedDepartment)
       );
       if (deptData) {
@@ -58,7 +66,7 @@ const AuditReportDetailsInbox = () => {
     } finally {
       setLoading(false);
     }
-  }, [assignedDepartment, departments, user?.companyId]);
+  }, [assignedDepartment, departments, departmentsLoading, user?.companyId]);
 
   // Check if current user is a Supervisor using cached Redux flag (no Firestore fetch)
   useEffect(() => {

@@ -5,13 +5,11 @@
 
 // Service worker for PWA functionality
 
-const CACHE_NAME = 'safetyplus-cache-v22'; // Increment for auth fix
+const CACHE_NAME = 'safetyplus-cache-v23'; // Increment for auth fix
 const urlsToCache = [
-  '/static/js/bundle.js',
-  '/static/css/main.css',
   '/manifest.json',
   '/favicon.ico'
-]; // Removed '/' to avoid caching main HTML
+]; // Minimal cache to avoid 404 errors on hashed files
 
 // Skip waiting and claim clients immediately during development
 const isDevelopment = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
@@ -27,7 +25,23 @@ self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
     .then(function(cache) {
-         return cache.addAll(urlsToCache);
+         // Cache only files that definitely exist, ignore 404s
+         return Promise.all(
+           urlsToCache.map(url => {
+             return fetch(url)
+               .then(response => {
+                 if (response.ok) {
+                   return cache.put(url, response);
+                 }
+               })
+               .catch(() => {
+                 // Silently ignore fetch errors for optional cache files
+               });
+           })
+         );
+      })
+      .catch(error => {
+        console.warn('Service Worker cache installation error:', error);
       })
   );
 });

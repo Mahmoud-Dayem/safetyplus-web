@@ -27,6 +27,39 @@
 
 /* Removed status banner — alerts shown on StopCard before navigating home */
 
+/* Admin Button */
+.admin-button {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: 16px;
+  background-color: #f8f9fa;
+  border: 1px solid #ff9500;
+  gap: 5px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.admin-button:hover {
+  background-color: #fff3e6;
+  transform: translateY(-2px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.admin-button:active {
+  transform: translateY(0);
+}
+
+.admin-text {
+  font-size: 14px;
+  color: #ff9500;
+  font-weight: 600;
+}
+
 /* Logout Button */
 .logout-button {
   position: absolute;
@@ -35,7 +68,7 @@
   display: flex;
   flex-direction: row;
   align-items: center;
-  padding: 6px 10px;
+  padding: 2px 10px;
   border-radius: 16px;
   background-color: #f8f9fa;
   border: 1px solid #ff9500;
@@ -60,39 +93,6 @@
 }
 
 .logout-text {
-  font-size: 14px;
-  color: #ff9500;
-  font-weight: 600;
-}
-
-/* Admin Button */
-.admin-button {
-  position: absolute;
-  top: 45px;
-  right: 0;
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  padding: 6px 10px;
-  border-radius: 16px;
-  background-color: #f8f9fa;
-  border: 1px solid #ff9500;
-  gap: 5px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.admin-button:hover {
-  background-color: #fff3e6;
-  transform: translateY(-2px);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.admin-button:active {
-  transform: translateY(0);
-}
-
-.admin-text {
   font-size: 14px;
   color: #ff9500;
   font-weight: 600;
@@ -386,7 +386,7 @@
     font-size: 14px;
   }
 
-  .stop-card-button,
+.stop-card-button,
   .audit-button,
   .reports-button,
   .reports-button-all,

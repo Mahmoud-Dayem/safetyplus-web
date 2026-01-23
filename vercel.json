@@ -3,6 +3,14 @@
   "outputDirectory": "build",
   "routes": [
     {
+      "src": "/service-worker.js",
+      "dest": "/service-worker.js",
+      "headers": {
+        "Cache-Control": "no-cache",
+        "Content-Type": "application/javascript"
+      }
+    },
+    {
       "src": "/static/(.*)",
       "dest": "/static/$1"
     },

@@ -1,3 +1,4 @@
+// create audit report
 import React, { useState } from 'react'
 import { uploadImageToCloudinary } from '../utils/cloudinary';
 import { colors } from '../constants/color';
@@ -491,7 +492,7 @@ function AuditReport() {
             Corrective Action *
           </label>
           <textarea
-            id="correction-action"
+            id="corrective_action"
             placeholder="Enter Corrective Action..."
             value={formData.corrective_action}
             onChange={(e) => updateFormData('corrective_action', e.target.value)}
