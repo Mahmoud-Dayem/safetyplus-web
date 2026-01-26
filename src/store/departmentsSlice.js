@@ -97,6 +97,13 @@ const departmentsSlice = createSlice({
       state.status = 'idle';
       state.error = null;
     },
+    clearStoredData(state) {
+      // Clear reducer state
+      state.list = [];
+      state.updatedAt = null;
+      state.status = 'idle';
+      state.error = null;
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -141,7 +148,7 @@ const departmentsSlice = createSlice({
   },
 });
 
-export const { setDepartmentsFromCache, clearDepartments } = departmentsSlice.actions;
+export const { setDepartmentsFromCache, clearDepartments, clearStoredData } = departmentsSlice.actions;
 export default departmentsSlice.reducer;
 
 // Selectors
@@ -149,3 +156,15 @@ export const selectDepartments = (state) => state.departments.list;
 export const selectDepartmentsUpdatedAt = (state) => state.departments.updatedAt;
 export const selectDepartmentsIsStale = (state, ttl = DEPARTMENTS_TTL_MS) =>
   isTimestampStale(state.departments.updatedAt, ttl);
+
+/**
+ * Clears all stored department data from localStorage
+ * Call this function on logout to remove cached data
+ */
+export const clearDepartmentsLocalStorage = () => {
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch (error) {
+    console.error('Error clearing departments from localStorage:', error);
+  }
+};

@@ -33,6 +33,16 @@ const HomeScreen = () => {
         try {
           // Clear AsyncStorage
           dispatch(logout());
+          
+          // Import and call the clear functions
+          const { clearStoredData, clearDepartmentsLocalStorage } = await import('../store/departmentsSlice');
+          
+          // Clear stored data from reducer
+          dispatch(clearStoredData());
+          
+          // Clear localStorage
+          clearDepartmentsLocalStorage();
+          
           await removeUser();
 
           // Navigate to Auth screen

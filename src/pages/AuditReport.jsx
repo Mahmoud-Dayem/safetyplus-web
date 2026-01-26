@@ -509,7 +509,7 @@ function AuditReport() {
         </div>
 
         <div className="form-group">
-          <label htmlFor="image" style={{ color: colors.text }}>
+          <label htmlFor="image-file" style={{ color: colors.text }}>
             Upload Image (Optional)
           </label>
 

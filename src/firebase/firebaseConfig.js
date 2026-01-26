@@ -4,15 +4,12 @@ import { setDoc, doc, getDoc } from "firebase/firestore";
 
 import { getAuth, createUserWithEmailAndPassword, updateProfile, signInWithEmailAndPassword, sendPasswordResetEmail, setPersistence, browserLocalPersistence } from "firebase/auth";
 
-// Get environment variables (for web)
-// const getEnvVar = (key, fallback = '') => {
-//   try {
-//     return process.env[`REACT_APP_${key}`] || fallback;
-//   } catch (error) {
-//     console.warn(`Failed to load environment variable: ${key}`, error);
-//     return fallback;
-//   }
-// };
+// HMR fix: Prevent Firebase initialization from being re-run during hot reloads
+if (module.hot) {
+  module.hot.accept(() => {
+    // Accept module updates but preserve Firebase initialization state
+  });
+}
 
 
 

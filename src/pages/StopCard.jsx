@@ -791,7 +791,7 @@ const StopCard = () => {
             {/* Safe Acts Observed */}
             <div className="input-group">
               <div className="label-with-button">
-                <label className="input-label">Safe acts observed</label>
+                <label htmlFor="safeActsObserved-0" className="input-label">Safe acts observed</label>
                 <button onClick={addSafeAct} className="add-button">
                   <svg viewBox="0 0 24 24" fill={colors.primary || '#FF9500'} width="20" height="20">
                     <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
@@ -801,6 +801,8 @@ const StopCard = () => {
               {reportForm.safeActsObserved.map((act, index) => (
                 <div key={index} className="input-with-remove">
                   <input
+                    id={`safeActsObserved-${index}`}
+                    name={`safeActsObserved-${index}`}
                     className="text-input"
                     style={{ flex: 1 }}
                     value={act}
@@ -824,7 +826,7 @@ const StopCard = () => {
             {/* Unsafe Acts Observed */}
             <div className="input-group">
               <div className="label-with-button">
-                <label className="input-label">Unsafe acts observed</label>
+                <label htmlFor="unsafeActsObserved-0" className="input-label">Unsafe acts observed</label>
                 <button onClick={addUnsafeAct} className="add-button">
                   <svg viewBox="0 0 24 24" fill={colors.primary || '#FF9500'} width="20" height="20">
                     <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
@@ -834,6 +836,8 @@ const StopCard = () => {
               {reportForm.unsafeActsObserved.map((act, index) => (
                 <div key={index} className="input-with-remove">
                   <input
+                    id={`unsafeActsObserved-${index}`}
+                    name={`unsafeActsObserved-${index}`}
                     className="text-input"
                     style={{ flex: 1 }}
                     value={act}
@@ -856,8 +860,9 @@ const StopCard = () => {
 
             {/* Date */}
             <div className="input-group">
-              <label className="input-label">Date</label>
+              <label htmlFor="date" className="input-label">Date</label>
               <button
+                id="date"
                 className="date-picker-button"
                 onClick={() => setShowDatePicker(!showDatePicker)}
               >
@@ -971,8 +976,9 @@ const StopCard = () => {
 
             {/* Site */}
             <div className="input-group">
-              <label className="input-label">Site</label>
+              <label htmlFor="site" className="input-label">Site</label>
               <button
+                id="site"
                 className="dropdown-button"
                 onClick={() => setShowSiteDropdown(true)}
               >
@@ -987,8 +993,9 @@ const StopCard = () => {
 
             {/* Area */}
             <div className="input-group">
-              <label className="input-label">Area</label>
+              <label htmlFor="area" className="input-label">Area</label>
               <button
+                id="area"
                 className="dropdown-button"
                 onClick={() => setShowAreaDropdown(true)}
               >
@@ -1021,8 +1028,10 @@ const StopCard = () => {
 
             {/* Duration */}
             <div className="input-group">
-              <label className="input-label">Duration (minutes)</label>
+              <label htmlFor="duration" className="input-label">Duration (minutes)</label>
               <input
+                id="duration"
+                name="duration"
                 className="text-input"
                 value={reportForm.duration}
                 onChange={(e) => handleNumericInput('duration', e.target.value)}
@@ -1035,8 +1044,10 @@ const StopCard = () => {
 
             {/* People Conducted */}
             <div className="input-group">
-              <label className="input-label">Number of people conducted</label>
+              <label htmlFor="peopleConducted" className="input-label">Number of people conducted</label>
               <input
+                id="peopleConducted"
+                name="peopleConducted"
                 className="text-input"
                 value={reportForm.peopleConducted}
                 onChange={(e) => handleNumericInput('peopleConducted', e.target.value)}
@@ -1049,8 +1060,10 @@ const StopCard = () => {
 
             {/* People Observed */}
             <div className="input-group">
-              <label className="input-label">Number of people observed</label>
+              <label htmlFor="peopleObserved" className="input-label">Number of people observed</label>
               <input
+                id="peopleObserved"
+                name="peopleObserved"
                 className="text-input"
                 value={reportForm.peopleObserved}
                 onChange={(e) => handleNumericInput('peopleObserved', e.target.value)}
@@ -1063,8 +1076,10 @@ const StopCard = () => {
 
             {/* User Suggestions */}
             <div className="input-group">
-              <label className="input-label">Suggestions for improvement</label>
+              <label htmlFor="suggestions" className="input-label">Suggestions for improvement</label>
               <textarea
+                id="suggestions"
+                name="suggestions"
                 className="text-input multiline-input"
                 value={reportForm.suggestions}
                 onChange={(e) => updateReportForm('suggestions', e.target.value)}

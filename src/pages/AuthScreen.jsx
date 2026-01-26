@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { signup, signin, resetPassword } from "../firebase/firebaseConfig";
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase/firebaseConfig';
+import { fetchAndCacheDepartments } from '../store/departmentsSlice';
 import './AuthScreen.css';
 const AuthScreen = () => {
   const navigate = useNavigate();
@@ -133,6 +134,13 @@ const AuthScreen = () => {
 
         // Update Redux state
         dispatch(login(dispatchPayload));
+
+        // Fetch departments if user is chief or supervisor
+        const isSupervisor = result.isSupervisor === true;
+        const isChief = result.isChief === true;
+        if (isSupervisor || isChief) {
+          dispatch(fetchAndCacheDepartments());
+        }
 
         // Navigate to home screen after successful login
         navigate('/home');
@@ -294,13 +302,15 @@ const AuthScreen = () => {
           {/* Name Input - Only for Signup */}
           {!isLogin && !isForgotPassword && (
             <div className="input-group">
-              <label className="input-label">Full Name</label>
+              <label htmlFor="fullName" className="input-label">Full Name</label>
               <div className={`input-container ${errors.name ? 'input-error' : ''}`}>
                 <svg className="input-icon" viewBox="0 0 24 24" fill={colors.textSecondary}>
                   <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
                 </svg>
                 <input
                   type="text"
+                  id="fullName"
+                  name="fullName"
                   className="text-input"
                   value={formData.name}
                   onChange={(e) => updateFormData('name', e.target.value)}
@@ -314,13 +324,15 @@ const AuthScreen = () => {
 
           {/* Email Input */}
           <div className="input-group">
-            <label className="input-label">Email Address</label>
+            <label htmlFor="email" className="input-label">Email Address</label>
             <div className={`input-container ${errors.email ? 'input-error' : ''}`}>
               <svg className="input-icon" viewBox="0 0 24 24" fill={colors.textSecondary}>
                 <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z" />
               </svg>
               <input
                 type="email"
+                id="email"
+                name="email"
                 className="text-input"
                 value={formData.email}
                 onChange={(e) => updateFormData('email', e.target.value.toLowerCase())}
@@ -334,13 +346,15 @@ const AuthScreen = () => {
           {/* Password Input - Hide in forgot password mode */}
           {!isForgotPassword && (
             <div className="input-group">
-              <label className="input-label">Password</label>
+              <label htmlFor="password" className="input-label">Password</label>
               <div className={`input-container ${errors.password ? 'input-error' : ''}`}>
                 <svg className="input-icon" viewBox="0 0 24 24" fill={colors.textSecondary}>
                   <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z" />
                 </svg>
                 <input
                   type={showPassword ? "text" : "password"}
+                  id="password"
+                  name="password"
                   className="text-input"
                   value={formData.password}
                   onChange={(e) => updateFormData('password', e.target.value)}
@@ -368,13 +382,15 @@ const AuthScreen = () => {
           {/* Confirm Password Input - Only for Signup */}
           {!isLogin && !isForgotPassword && (
             <div className="input-group">
-              <label className="input-label">Confirm Password</label>
+              <label htmlFor="confirmPassword" className="input-label">Confirm Password</label>
               <div className={`input-container ${errors.confirmPassword ? 'input-error' : ''}`}>
                 <svg className="input-icon" viewBox="0 0 24 24" fill={colors.textSecondary}>
                   <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z" />
                 </svg>
                 <input
                   type={showConfirmPassword ? "text" : "password"}
+                  id="confirmPassword"
+                  name="confirmPassword"
                   className="text-input"
                   value={formData.confirmPassword}
                   onChange={(e) => updateFormData('confirmPassword', e.target.value)}
@@ -402,13 +418,15 @@ const AuthScreen = () => {
           {/* Company ID Input - Hide in forgot password mode */}
           {!isForgotPassword && (
             <div className="input-group">
-              <label className="input-label">Company ID</label>
+              <label htmlFor="companyId" className="input-label">Company ID</label>
               <div className={`input-container ${errors.companyId ? 'input-error' : ''}`}>
                 <svg className="input-icon" viewBox="0 0 24 24" fill={colors.textSecondary}>
                   <path d="M12 7V3H2v18h20V7H12zM6 19H4v-2h2v2zm0-4H4v-2h2v2zm0-4H4V9h2v2zm0-4H4V5h2v2zm4 12H8v-2h2v2zm0-4H8v-2h2v2zm0-4H8V9h2v2zm0-4H8V5h2v2zm10 12h-8v-2h2v-2h-2v-2h2v-2h-2V9h8v10zm-2-8h-2v2h2v-2zm0 4h-2v2h2v-2z" />
                 </svg>
                 <input
                   type="text"
+                  id="companyId"
+                  name="companyId"
                   className="text-input"
                   value={formData.companyId}
                   onChange={(e) => updateFormData('companyId', formatCompanyId(e.target.value))}
