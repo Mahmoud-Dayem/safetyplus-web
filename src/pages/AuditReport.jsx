@@ -23,12 +23,13 @@ function AuditReport() {
     date: '',
     
   });
-  const [selectedImage, setSelectedImage] = useState(null);
-  const [imagePreview, setImagePreview] = useState(null);
+  const [selectedImages, setSelectedImages] = useState([]);
+  const [imagePreviews, setImagePreviews] = useState([]);
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [showImageOptions, setShowImageOptions] = useState(false);
+  const MAX_IMAGES = 3;
   const [showLocationModal, setShowLocationModal] = useState(false);
   const [managementAuditLocation, setManagementAuditLocation] = useState('');
   const incident_type_list = ['Unsafe Condition', 'Unsafe Act', 'Near Miss', 'Environment Concern', 'Management Audit'];
@@ -96,6 +97,11 @@ function AuditReport() {
   const handleImageSelect = (e) => {
     const file = e.target.files[0];
     if (file) {
+      // Check if max images reached
+      if (selectedImages.length >= MAX_IMAGES) {
+        alert(`You can upload a maximum of ${MAX_IMAGES} images`);
+        return;
+      }
       // Validate file type
       if (!file.type.startsWith('image/')) {
         alert('Please select an image file');
@@ -106,11 +112,11 @@ function AuditReport() {
         alert('Image size must be less than 5MB');
         return;
       }
-      setSelectedImage(file);
+      setSelectedImages([...selectedImages, file]);
       // Create preview
       const reader = new FileReader();
       reader.onloadend = () => {
-        setImagePreview(reader.result);
+        setImagePreviews([...imagePreviews, reader.result]);
       };
       reader.readAsDataURL(file);
       // Clear error and hide options
@@ -124,6 +130,11 @@ function AuditReport() {
   const handleCameraCapture = (e) => {
     const file = e.target.files[0];
     if (file) {
+      // Check if max images reached
+      if (selectedImages.length >= MAX_IMAGES) {
+        alert(`You can upload a maximum of ${MAX_IMAGES} images`);
+        return;
+      }
       // Same validation as file upload
       if (!file.type.startsWith('image/')) {
         alert('Please capture a valid image');
@@ -133,11 +144,11 @@ function AuditReport() {
         alert('Image size must be less than 5MB');
         return;
       }
-      setSelectedImage(file);
+      setSelectedImages([...selectedImages, file]);
       // Create preview
       const reader = new FileReader();
       reader.onloadend = () => {
-        setImagePreview(reader.result);
+        setImagePreviews([...imagePreviews, reader.result]);
       };
       reader.readAsDataURL(file);
       // Clear error and hide options
@@ -148,9 +159,9 @@ function AuditReport() {
     }
   };
 
-  const removeImage = () => {
-    setSelectedImage(null);
-    setImagePreview(null);
+  const removeImage = (index) => {
+    setSelectedImages(selectedImages.filter((_, i) => i !== index));
+    setImagePreviews(imagePreviews.filter((_, i) => i !== index));
     setShowImageOptions(false);
   };
 
@@ -200,35 +211,43 @@ function AuditReport() {
 
       try {
 
-        let imageUrl = null;
-
-
-        // Generate unique docId first (will be used for both Firestore doc and image filename)
+        // Generate unique docId for the audit report
         const docId = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
-        // Upload image to Cloudinary if selected
-        if (selectedImage) {
+        let image_url_store = [];
+
+        // Upload images to Cloudinary if selected
+        if (selectedImages.length > 0) {
           setUploadProgress(10);
           
-          try {
-            // Upload to Cloudinary with progress tracking and same filename format as Supabase
-            imageUrl = await uploadImageToCloudinary(
-              selectedImage,
-              (progress) => {
-                // Map Cloudinary progress (0-100) to our progress range (10-70)
-                const mappedProgress = 10 + (progress * 0.6);
-                setUploadProgress(Math.round(mappedProgress));
-              },
-              `audit_reports_hcc/${user?.companyId}`, // Organize by user/company
-              docId // Pass docId for filename: docId_randomString
-            );
-            
-            setUploadProgress(70);
-             
-          } catch (uploadError) {
-            console.error('Cloudinary upload error:', uploadError);
-            throw new Error(`Failed to upload image: ${uploadError.message}`);
+          for (let i = 0; i < selectedImages.length; i++) {
+            const selectedImage = selectedImages[i];
+            try {
+              // Generate unique suffix for each image filename
+              const imageSuffix = `${Math.random().toString(36).slice(2, 8)}_${i}`;
+              
+              // Upload to Cloudinary with progress tracking
+              const imageUrl = await uploadImageToCloudinary(
+                selectedImage,
+                (progress) => {
+                  // Map progress across all images
+                  const perImageProgress = 60 / selectedImages.length;
+                  const currentImageProgress = (i * perImageProgress) + (progress * (perImageProgress / 100));
+                  const mappedProgress = 10 + currentImageProgress;
+                  setUploadProgress(Math.round(mappedProgress));
+                },
+                `audit_reports_hcc/${user?.companyId}`, // Organize by user/company
+                `${docId}_${imageSuffix}` // Pass filename with docId prefix
+              );
+              
+              image_url_store.push(imageUrl);
+            } catch (uploadError) {
+              console.error(`Cloudinary upload error for image ${i + 1}:`, uploadError);
+              throw new Error(`Failed to upload image ${i + 1}: ${uploadError.message}`);
+            }
           }
+          
+          setUploadProgress(70);
         }
 
 
@@ -246,7 +265,7 @@ function AuditReport() {
           date: formData.date,
           emp_code: user?.companyId,
           user_name: user?.displayName?.toUpperCase() || 'UNKNOWN',
-          image_url: imageUrl,
+          image_url_store: image_url_store,
           created_at: new Date().toLocaleString('en-US', { timeZone: 'Asia/Riyadh', hour12: false }),
           // Employee-specific fields from Redux
           department: department || '',
@@ -344,7 +363,8 @@ function AuditReport() {
         // Reset form
         setFormData({ location: '', description: '', date: '', corrective_action: '', incident_type: '' });
         setManagementAuditLocation(''); // Clear remembered location
-        removeImage();
+        setSelectedImages([]);
+        setImagePreviews([]);
       } catch (error) {
         console.error('Error submitting audit report:', error);
         alert(`Failed to submit audit report: ${error.message}`);
@@ -510,81 +530,89 @@ function AuditReport() {
 
         <div className="form-group">
           <label htmlFor="image-file" style={{ color: colors.text }}>
-            Upload Image (Optional)
+            Upload Images (Optional - Max {MAX_IMAGES})
           </label>
 
-          {!imagePreview ? (
-            <div className="image-upload-container">
-              {!showImageOptions ? (
-                <button
-                  type="button"
-                  className="image-upload-button"
-                  onClick={() => setShowImageOptions(true)}
-                >
-                  <svg viewBox="0 0 24 24" fill={colors.primary} width="24" height="24">
-                    <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z" />
-                  </svg>
-                  <span>Add Image</span>
-                  <span className="upload-hint">Max 5MB • JPG, PNG, GIF</span>
-                </button>
-              ) : (
-                <div className="image-options">
-                  <input
-                    id="image-file"
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageSelect}
-                    style={{ display: 'none' }}
-                  />
-                  <input
-                    id="image-camera"
-                    type="file"
-                    accept="image/*"
-                    capture="environment"
-                    onChange={handleCameraCapture}
-                    style={{ display: 'none' }}
-                  />
-
-                  <label htmlFor="image-file" className="option-button file-option">
-                    <svg viewBox="0 0 24 24" fill={colors.primary} width="20" height="20">
-                      <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" />
-                    </svg>
-                    <span>Choose File</span>
-                  </label>
-
-                  <label htmlFor="image-camera" className="option-button camera-option">
-                    <svg viewBox="0 0 24 24" fill={colors.primary} width="20" height="20">
-                      <path d="M4,4H7L9,2H15L17,4H20A2,2 0 0,1 22,6V18A2,2 0 0,1 20,20H4A2,2 0 0,1 2,18V6A2,2 0 0,1 4,4M12,7A5,5 0 0,0 7,12A5,5 0 0,0 12,17A5,5 0 0,0 17,12A5,5 0 0,0 12,7M12,9A3,3 0 0,1 15,12A3,3 0 0,1 12,15A3,3 0 0,1 9,12A3,3 0 0,1 12,9Z" />
-                    </svg>
-                    <span>Take Photo</span>
-                  </label>
-
+          <div className="image-upload-container">
+            {/* Display existing image previews */}
+            <div className="image-previews-grid">
+              {imagePreviews.map((preview, index) => (
+                <div key={index} className="image-preview-item">
+                  <img src={preview} alt={`Preview ${index + 1}`} className="image-preview" />
                   <button
                     type="button"
-                    className="cancel-option"
-                    onClick={() => setShowImageOptions(false)}
+                    onClick={() => removeImage(index)}
+                    className="remove-image-button"
+                    style={{ backgroundColor: colors.error }}
                   >
-                    Cancel
+                    <svg viewBox="0 0 24 24" fill="#fff" width="16" height="16">
+                      <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+                    </svg>
                   </button>
+                </div>
+              ))}
+
+              {/* Show add button if less than MAX_IMAGES */}
+              {selectedImages.length < MAX_IMAGES && (
+                <div className="image-add-slot">
+                  {!showImageOptions ? (
+                    <button
+                      type="button"
+                      className="image-upload-button"
+                      onClick={() => setShowImageOptions(true)}
+                    >
+                      <svg viewBox="0 0 24 24" fill={colors.primary} width="24" height="24">
+                        <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z" />
+                      </svg>
+                      <span>Add Image</span>
+                      <span className="upload-hint">Max 5MB • JPG, PNG, GIF</span>
+                    </button>
+                  ) : (
+                    <div className="image-options">
+                      <input
+                        id="image-file"
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageSelect}
+                        style={{ display: 'none' }}
+                      />
+                      <input
+                        id="image-camera"
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        onChange={handleCameraCapture}
+                        style={{ display: 'none' }}
+                      />
+
+                      <label htmlFor="image-file" className="option-button file-option">
+                        <svg viewBox="0 0 24 24" fill={colors.primary} width="20" height="20">
+                          <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" />
+                        </svg>
+                        <span>Choose File</span>
+                      </label>
+
+                      <label htmlFor="image-camera" className="option-button camera-option">
+                        <svg viewBox="0 0 24 24" fill={colors.primary} width="20" height="20">
+                          <path d="M4,4H7L9,2H15L17,4H20A2,2 0 0,1 22,6V18A2,2 0 0,1 20,20H4A2,2 0 0,1 2,18V6A2,2 0 0,1 4,4M12,7A5,5 0 0,0 7,12A5,5 0 0,0 12,17A5,5 0 0,0 17,12A5,5 0 0,0 12,7M12,9A3,3 0 0,1 15,12A3,3 0 0,1 12,15A3,3 0 0,1 9,12A3,3 0 0,1 12,9Z" />
+                        </svg>
+                        <span>Take Photo</span>
+                      </label>
+
+                      <button
+                        type="button"
+                        className="cancel-option"
+                        onClick={() => setShowImageOptions(false)}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
-          ) : (
-            <div className="image-preview-container">
-              <img src={imagePreview} alt="Preview" className="image-preview" />
-              <button
-                type="button"
-                onClick={removeImage}
-                className="remove-image-button"
-                style={{ backgroundColor: colors.error }}
-              >
-                <svg viewBox="0 0 24 24" fill="#fff" width="20" height="20">
-                  <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
-                </svg>
-                Remove Image
-              </button>
-            </div>
-          )}
+          </div>
+
           {errors.image && (
             <span className="error-text" style={{ color: colors.error }}>
               {errors.image}

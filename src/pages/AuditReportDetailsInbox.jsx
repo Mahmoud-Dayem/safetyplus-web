@@ -196,7 +196,25 @@ const AuditReportDetailsInbox = () => {
         </div>
 
         {/* Image Section */}
-        {report.image_url && (
+        {(Array.isArray(report.image_url_store) && report.image_url_store.length > 0) ? (
+          <div className="details-section">
+            <h3 className="section-title">Attached Images</h3>
+            <div className="image-container shareable" style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+              {report.image_url_store.map((imgUrl, idx) => (
+                <img
+                  key={idx}
+                  src={imgUrl}
+                  alt={`Audit report ${idx + 1}`}
+                  className="details-image"
+                  draggable={false}
+                  style={{ maxWidth: '220px', maxHeight: '220px', borderRadius: '8px', border: '1px solid #eee' }}
+                  onClick={e => e.preventDefault()}
+                  onContextMenu={e => e.preventDefault()}
+                />
+              ))}
+            </div>
+          </div>
+        ) : report.image_url ? (
           <div className="details-section">
             <h3 className="section-title">Attached Image</h3>
             <div className="image-container shareable">
@@ -205,8 +223,8 @@ const AuditReportDetailsInbox = () => {
                 alt="Audit report"
                 className="details-image"
                 draggable={false}
-                onClick={(e) => { e.preventDefault(); }}
-                onContextMenu={(e) => { e.preventDefault(); }}
+                onClick={e => e.preventDefault()}
+                onContextMenu={e => e.preventDefault()}
               />
               <button
                 type="button"
@@ -253,7 +271,7 @@ const AuditReportDetailsInbox = () => {
               <p className="image-caption">Share image via WhatsApp</p>
             </div>
           </div>
-        )}
+        ) : null}
 
         {/* Report Metadata */}
         <div className="details-section">
@@ -446,7 +464,7 @@ const AuditReportDetailsInbox = () => {
                     setSending(false);
                   }
                 }}
-                disabled={sending || !selectedEmployee || isCompleted || reportStatus === 'verifying'}
+                disabled={sending || !selectedEmployee || isCompleted || reportStatus === 'verifying' || reportStatus === 'rectifying'}
               >
                 {isCompleted ? 'Report Completed' : (sending ? 'Sending...' : 'Assign to Supervisor')}
               </button>

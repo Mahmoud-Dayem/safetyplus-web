@@ -27,6 +27,12 @@ const AuditReportDetails = () => {
     const [isReassigning, setIsReassigning] = useState(false);
     const user = useSelector(state => state.auth.user);
     const [assignedChief, setAssignedChief] = useState('');
+    const [editingField, setEditingField] = useState(null); // 'description' or 'corrective_action'
+    const [editValues, setEditValues] = useState({
+        description: '',
+        corrective_action: ''
+    });
+    const [savingEdit, setSavingEdit] = useState(false);
 
     // Helper function to update user completion counters (year-based)
     const updateUserCompletionStats = async (reportData) => {
@@ -101,6 +107,47 @@ const AuditReportDetails = () => {
         const selected = departments.find(d => d.dept_name === selectedDepartment);
         setAssignedChief(selected ? selected.chief_name : '');
     }, [selectedDepartment, departments]);
+
+    // Handle edit mode for description and corrective action
+    const startEditingField = (fieldName) => {
+        setEditingField(fieldName);
+        setEditValues({
+            ...editValues,
+            [fieldName]: report[fieldName] || ''
+        });
+    };
+
+    const cancelEdit = () => {
+        setEditingField(null);
+        setEditValues({
+            description: '',
+            corrective_action: ''
+        });
+    };
+
+    const saveEdit = async (fieldName) => {
+        try {
+            setSavingEdit(true);
+            const { updateDoc } = await import('firebase/firestore');
+            const reportRef = doc(db, 'audit_reports', report.id);
+            
+            // Update the field in Firestore
+            await updateDoc(reportRef, {
+                [fieldName]: editValues[fieldName]
+            });
+
+            // Update the local report object
+            report[fieldName] = editValues[fieldName];
+            
+            setEditingField(null);
+            alert(`${fieldName === 'description' ? 'Description' : 'Corrective Action'} updated successfully!`);
+        } catch (error) {
+            console.error(`Error saving ${fieldName}:`, error);
+            alert(`Failed to update ${fieldName}. Please try again.`);
+        } finally {
+            setSavingEdit(false);
+        }
+    };
 
     if (!report) {
         return (
@@ -432,26 +479,128 @@ const AuditReportDetails = () => {
 
                     {/* Description */}
                     <div className="audit-details-section">
-                        <h3 className="audit-details-section-title">Description</h3>
-                        <div className="audit-details-description-content">
-                            <p className="audit-details-full-description">
-                                {report.description || 'No description available'}
-                            </p>
+                        <div className="audit-details-section-header">
+                            <h3 className="audit-details-section-title">Description</h3>
+                            {editingField !== 'description' && (
+                                <button
+                                    className="audit-details-edit-button"
+                                    onClick={() => startEditingField('description')}
+                                    title="Edit Description"
+                                >
+                                    <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+                                        <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25z" />
+                                        <path d="M20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
+                                    </svg>
+                                </button>
+                            )}
                         </div>
+                        {editingField === 'description' ? (
+                            <div className="audit-details-edit-container">
+                                <textarea
+                                    className="audit-details-edit-textarea"
+                                    value={editValues.description}
+                                    onChange={(e) => setEditValues({ ...editValues, description: e.target.value })}
+                                    placeholder="Enter description..."
+                                    rows={5}
+                                />
+                                <div className="audit-details-edit-actions">
+                                    <button
+                                        className="audit-details-save-button"
+                                        onClick={() => saveEdit('description')}
+                                        disabled={savingEdit}
+                                    >
+                                        {savingEdit ? 'Saving...' : '✓ Save'}
+                                    </button>
+                                    <button
+                                        className="audit-details-cancel-button"
+                                        onClick={cancelEdit}
+                                        disabled={savingEdit}
+                                    >
+                                        ✕ Cancel
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="audit-details-description-content">
+                                <p className="audit-details-full-description">
+                                    {report.description || 'No description available'}
+                                </p>
+                            </div>
+                        )}
                     </div>
 
                     {/* Corrective Action */}
                     <div className="audit-details-section">
-                        <h3 className="audit-details-section-title">Corrective Action</h3>
-                        <div className="audit-details-description-content">
-                            <p className="audit-details-full-description">
-                                {report.corrective_action || 'No corrective action specified'}
-                            </p>
+                        <div className="audit-details-section-header">
+                            <h3 className="audit-details-section-title">Corrective Action</h3>
+                            {editingField !== 'corrective_action' && (
+                                <button
+                                    className="audit-details-edit-button"
+                                    onClick={() => startEditingField('corrective_action')}
+                                    title="Edit Corrective Action"
+                                >
+                                    <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+                                        <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25z" />
+                                        <path d="M20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
+                                    </svg>
+                                </button>
+                            )}
                         </div>
+                        {editingField === 'corrective_action' ? (
+                            <div className="audit-details-edit-container">
+                                <textarea
+                                    className="audit-details-edit-textarea"
+                                    value={editValues.corrective_action}
+                                    onChange={(e) => setEditValues({ ...editValues, corrective_action: e.target.value })}
+                                    placeholder="Enter corrective action..."
+                                    rows={5}
+                                />
+                                <div className="audit-details-edit-actions">
+                                    <button
+                                        className="audit-details-save-button"
+                                        onClick={() => saveEdit('corrective_action')}
+                                        disabled={savingEdit}
+                                    >
+                                        {savingEdit ? 'Saving...' : '✓ Save'}
+                                    </button>
+                                    <button
+                                        className="audit-details-cancel-button"
+                                        onClick={cancelEdit}
+                                        disabled={savingEdit}
+                                    >
+                                        ✕ Cancel
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="audit-details-description-content">
+                                <p className="audit-details-full-description">
+                                    {report.corrective_action || 'No corrective action specified'}
+                                </p>
+                            </div>
+                        )}
                     </div>
 
                     {/* Image Section */}
-                    {report.image_url && (
+                    {(Array.isArray(report.image_url_store) && report.image_url_store.length > 0) ? (
+                        <div className="audit-details-section">
+                            <h3 className="audit-details-section-title">Attached Images</h3>
+                            <div className="audit-details-image-container" style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+                                {report.image_url_store.map((imgUrl, idx) => (
+                                    <img
+                                        key={idx}
+                                        src={imgUrl}
+                                        alt={`Audit report ${idx + 1}`}
+                                        className="audit-details-image"
+                                        draggable={false}
+                                        style={{ maxWidth: '220px', maxHeight: '220px', borderRadius: '8px', border: '1px solid #eee' }}
+                                        onClick={e => e.preventDefault()}
+                                        onContextMenu={e => e.preventDefault()}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                    ) : report.image_url ? (
                         <div className="audit-details-section">
                             <h3 className="audit-details-section-title">Attached Image</h3>
                             <div className="audit-details-image-container">
@@ -460,13 +609,12 @@ const AuditReportDetails = () => {
                                     alt="Audit report"
                                     className="audit-details-image"
                                     draggable={false}
-                                    onClick={(e) => { e.preventDefault(); }}
-                                    onContextMenu={(e) => { e.preventDefault(); }}
+                                    onClick={e => e.preventDefault()}
+                                    onContextMenu={e => e.preventDefault()}
                                 />
-
                             </div>
                         </div>
-                    )}
+                    ) : null}
 
                     {/* Report Metadata */}
                     <div className="audit-details-section">
@@ -1022,6 +1170,14 @@ const AuditReportDetails = () => {
                         >
                             {isCompleted ? 'Report Completed' : (sending ? 'Reassigning...' : 'Reassign to Department')}
                         </button>
+                        {/* <button
+                            className="audit-details-reassign-button audit-details-reject-button"
+                            onClick={() => {
+                                console.log('Reject button clicked');
+                            }}
+                        >
+                            Reject
+                        </button> */}
                     </div>
                 )
             }

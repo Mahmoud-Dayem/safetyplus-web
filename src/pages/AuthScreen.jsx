@@ -64,7 +64,7 @@ const AuthScreen = () => {
       newErrors.password = 'Password must be at least 6 characters';
     }
     //
-    const companyIdRegex = /^3[0-9]{4}$/;
+    const companyIdRegex = /^[37][0-9]{4}$/;
     if (!formData.companyId) {
       newErrors.companyId = 'Company ID is required';
     } else if (!companyIdRegex.test(formData.companyId)) {
@@ -86,7 +86,7 @@ const AuthScreen = () => {
       }
 
       // Company ID validation
-      const companyIdRegex = /^3[0-9]{4}$/;
+      const companyIdRegex = /^[37][0-9]{4}$/;
       if (!formData.companyId) {
         newErrors.companyId = 'Company ID is required';
       } else if (!companyIdRegex.test(formData.companyId)) {
