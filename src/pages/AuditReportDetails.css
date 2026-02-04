@@ -1166,3 +1166,97 @@ opacity: 0.7;
   transform: none;
   box-shadow: none;
 }
+
+/* Print Button */
+.audit-details-print-button {
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-radius: 8px;
+  padding: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-right: 8px;
+}
+
+.audit-details-print-button:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+}
+
+/* Print Styles */
+@media print {
+  /* Hide elements that should not appear in PDF */
+  .no-print,
+  .audit-details-header,
+  .audit-details-back-button,
+  .audit-details-home-button,
+  .audit-details-print-button,
+  .audit-details-edit-mode-bar,
+  .audit-details-send-message-bottom,
+  .audit-details-mark-complete-container,
+  .audit-details-safety-officer-container,
+  .audit-details-reassign-button {
+    display: none !important;
+  }
+
+  /* Reset page styles for printing */
+  .audit-details-container {
+    padding: 0;
+    background: white;
+    min-height: auto;
+  }
+
+  .audit-details-content {
+    max-width: 100%;
+  }
+
+  .audit-details-card {
+    box-shadow: none;
+    border: 1px solid #ddd;
+  }
+
+  /* Ensure images print properly - reduced size for PDF */
+  .audit-details-image {
+    max-width: 300px !important;
+    max-height: 250px !important;
+    width: auto !important;
+    height: auto !important;
+    object-fit: contain;
+    page-break-inside: avoid;
+  }
+
+  .audit-details-image-thumb {
+    max-width: 600px !important;
+    max-height: 250px !important;
+  }
+
+  .audit-details-image-container {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    margin: 20px auto !important;
+    width: 100% !important;
+    text-align: center !important;
+  }
+
+  .audit-details-image-grid {
+    display: flex !important;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center !important;
+    width: 100% !important;
+    margin: 0 auto !important;
+  }
+
+  /* Center the section containing images */
+  .audit-details-section:has(.audit-details-image-container) {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* Avoid page breaks inside sections */
+  .audit-details-section {
+    page-break-inside: avoid;
+  }
+}
