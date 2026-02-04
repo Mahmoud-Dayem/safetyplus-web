@@ -5,7 +5,7 @@
 
 // Service worker for PWA functionality
 
-const CACHE_NAME = 'safetyplus-cache-v24'; // Increment for auth fix
+const CACHE_NAME = 'safetyplus-cache-v26'; // Increment for auth fix
 const urlsToCache = [
   '/manifest.json',
   '/favicon.ico'

@@ -360,14 +360,32 @@
   text-align: center;
 }
 
+.image-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+  align-items: start;
+  justify-items: center;
+}
+
 .details-image {
-  max-width: 100%;
+  width: 100%;
+  max-width: 900px;
   height: auto;
-  max-height: 400px;
+  max-height: 70vh;
+  object-fit: contain;
   border-radius: 12px;
   cursor: pointer;
   transition: transform 0.3s ease;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.details-image-thumb {
+  max-width: 360px;
+  max-height: 360px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid #eee;
 }
 
 .details-image:hover {

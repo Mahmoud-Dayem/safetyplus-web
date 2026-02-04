@@ -92,7 +92,7 @@ const AuditReportDetails = () => {
         setIsCompleted(!!report.completed);
     }, [report]);
 
- 
+
 
     useEffect(() => {
         // Populate local state from cached Redux departments (0 reads)
@@ -130,7 +130,7 @@ const AuditReportDetails = () => {
             setSavingEdit(true);
             const { updateDoc } = await import('firebase/firestore');
             const reportRef = doc(db, 'audit_reports', report.id);
-            
+
             // Update the field in Firestore
             await updateDoc(reportRef, {
                 [fieldName]: editValues[fieldName]
@@ -138,7 +138,7 @@ const AuditReportDetails = () => {
 
             // Update the local report object
             report[fieldName] = editValues[fieldName];
-            
+
             setEditingField(null);
             alert(`${fieldName === 'description' ? 'Description' : 'Corrective Action'} updated successfully!`);
         } catch (error) {
@@ -372,12 +372,12 @@ const AuditReportDetails = () => {
                                             try {
                                                 const googleSheetsUrl = process.env.REACT_APP_AUDIT_GOOGLE_SHEETS_URL;
                                                 console.log('🔍 Mark Complete - Google Sheets URL:', googleSheetsUrl);
-                                                
+
                                                 if (googleSheetsUrl && googleSheetsUrl !== 'https://script.google.com/macros/s/YOUR_AUDIT_SCRIPT_ID/exec') {
                                                     const completedReportData = {
                                                         action: 'completed',
-                                                        newStatus:true,
-                                                        sheet:'completed',
+                                                        newStatus: true,
+                                                        sheet: 'completed',
                                                         report_id: report.id,
                                                         emp_code: currentData.emp_code,
                                                         user_name: currentData.user_name,
@@ -585,15 +585,14 @@ const AuditReportDetails = () => {
                     {(Array.isArray(report.image_url_store) && report.image_url_store.length > 0) ? (
                         <div className="audit-details-section">
                             <h3 className="audit-details-section-title">Attached Images</h3>
-                            <div className="audit-details-image-container" style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+                            <div className="audit-details-image-container audit-details-image-grid">
                                 {report.image_url_store.map((imgUrl, idx) => (
                                     <img
                                         key={idx}
                                         src={imgUrl}
                                         alt={`Audit report ${idx + 1}`}
-                                        className="audit-details-image"
+                                        className="audit-details-image audit-details-image-thumb"
                                         draggable={false}
-                                        style={{ maxWidth: '220px', maxHeight: '220px', borderRadius: '8px', border: '1px solid #eee' }}
                                         onClick={e => e.preventDefault()}
                                         onContextMenu={e => e.preventDefault()}
                                     />
@@ -845,7 +844,55 @@ const AuditReportDetails = () => {
                             }}
                             disabled={sending || !selectedDepartment || isCompleted}
                         >
-                            {isCompleted ? 'Report Completed' : (sending ? 'Sending...' : 'Assign Department')}
+                            {isCompleted ? 'Report Completed' : (sending ? 'Sending...' : 'Assign')}
+                        </button>
+                        <button
+                            className="audit-details-reassign-button audit-details-reject-button"
+                            onClick={async () => {
+                                if (!safetyOfficer.trim()) {
+                                    const inputField = document.getElementById('safety-officer-input');
+                                    if (inputField) {
+                                        inputField.focus();
+                                        inputField.classList.add('audit-details-highlight-required');
+                                        setTimeout(() => {
+                                            inputField.classList.remove('audit-details-highlight-required');
+                                        }, 3000);
+                                    }
+                                    return;
+                                }
+
+                                console.log('Reject message:', safetyOfficer.trim());
+
+                                try {
+                                    setSending(true);
+
+                                    const { doc, updateDoc, arrayUnion } = await import('firebase/firestore');
+                                    const { db } = await import('../firebase/firebaseConfig');
+                                    const reportRef = doc(db, 'audit_reports', report.id);
+
+                                    const newMessage = {
+                                        id: user?.displayName || user?.id || 'unknown',
+                                        message: safetyOfficer.trim(),
+                                        timestamp: new Date().toISOString(),
+                                    };
+
+                                    await updateDoc(reportRef, {
+                                        messages: arrayUnion(newMessage),
+                                        status: 'rejected',
+                                    });
+
+                                    alert('Report rejected successfully.');
+                                    setSafetyOfficer('');
+                                    navigate('/viewallauditreports');
+                                } catch (error) {
+                                    console.error('Error rejecting report:', error);
+                                    alert('An error occurred while rejecting the report.');
+                                } finally {
+                                    setSending(false);
+                                }
+                            }}
+                        >
+                            Reject
                         </button>
                     </div>
 

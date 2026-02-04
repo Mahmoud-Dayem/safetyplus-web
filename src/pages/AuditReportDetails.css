@@ -282,7 +282,7 @@
   background-color: #f8f9fa;
   color: #6c757d;
   cursor: not-allowed;
-  opacity: 0.7;
+opacity: 0.7;
 }
 
 .audit-details-safety-officer-input:disabled::placeholder {
@@ -332,18 +332,36 @@
   text-align: center;
 }
 
+.audit-details-image-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+  align-items: start;
+  justify-items: center;
+}
+
 .audit-details-image {
-  max-width: 100%;
+  width: 100%;
+  max-width: 900px;
   height: auto;
-  max-height: 400px;
+  max-height: 70vh;
+  object-fit: contain;
   border-radius: 12px;
   cursor: pointer;
   transition: transform 0.3s ease;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
+.audit-details-image-thumb {
+  max-width: 360px;
+  max-height: 360px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid #eee;
+}
+
 .audit-details-image:hover {
-  transform: scale(1.02);
+  transform: scale(1.2);
 }
 
 .audit-details-image-caption {
@@ -672,10 +690,23 @@
   padding: 0 20px;
   display: flex;
   justify-content: center;
+  gap: 16px;
+}
+
+/* Make bottom action buttons equal width (Assign + Reject) */
+.audit-details-send-message-bottom .audit-details-send-message-button-bottom,
+.audit-details-send-message-bottom .audit-details-reassign-button.audit-details-reject-button {
+  flex: 1;
+  /* max-width: 100px; */
+  width: 100%;
+}
+
+.audit-details-send-message-bottom .audit-details-reassign-button.audit-details-reject-button {
+  margin-left: 0;
 }
 
 .audit-details-send-message-button-bottom {
-  max-width: 300px;
+  max-width: 200px;
   width: auto;
   background: linear-gradient(135deg, #2c2c2c 0%, #1a1a1a 100%);
   color: white;
@@ -717,11 +748,11 @@
 
 .audit-details-accept-button, .audit-details-reject-button {
   flex: 1;
-  max-width: 150px;
+  max-width: 200px;
   border: none;
   border-radius: 12px;
-  padding: 16px 24px;
-  font-size: 16px;
+  padding: 14px 24px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -785,7 +816,7 @@
   min-height: 100vh;
 }
 
-@media (max-width: 480px) {
+@media (max-width: 768px) {
   .audit-details-container {
     padding: 10px;
   }
@@ -826,9 +857,19 @@
   }
   
   .audit-details-send-message-button-bottom {
-    max-width: 250px;
+    max-width: none;
     padding: 14px 24px;
     font-size: 14px;
+  }
+
+  .audit-details-send-message-bottom {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .audit-details-send-message-bottom .audit-details-reassign-button.audit-details-reject-button {
+    max-width: none;
+    width: 100%;
   }
 }
 
