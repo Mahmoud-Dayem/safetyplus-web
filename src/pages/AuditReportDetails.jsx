@@ -27,12 +27,15 @@ const AuditReportDetails = () => {
     const [isReassigning, setIsReassigning] = useState(false);
     const user = useSelector(state => state.auth.user);
     const [assignedChief, setAssignedChief] = useState('');
-    const [editingField, setEditingField] = useState(null); // 'description' or 'corrective_action'
+    const [isEditMode, setIsEditMode] = useState(false);
     const [editValues, setEditValues] = useState({
         description: '',
-        corrective_action: ''
+        corrective_action: '',
+        location: '',
+        incident_type: ''
     });
     const [savingEdit, setSavingEdit] = useState(false);
+    const incident_type_list = ['Unsafe Condition', 'Unsafe Act', 'Near Miss', 'Environment Concern', 'Management Audit'];
 
     // Helper function to update user completion counters (year-based)
     const updateUserCompletionStats = async (reportData) => {
@@ -108,42 +111,52 @@ const AuditReportDetails = () => {
         setAssignedChief(selected ? selected.chief_name : '');
     }, [selectedDepartment, departments]);
 
-    // Handle edit mode for description and corrective action
-    const startEditingField = (fieldName) => {
-        setEditingField(fieldName);
+    // Handle edit mode for all editable fields
+    const startEditMode = () => {
+        setIsEditMode(true);
         setEditValues({
-            ...editValues,
-            [fieldName]: report[fieldName] || ''
+            description: report.description || '',
+            corrective_action: report.corrective_action || '',
+            location: report.location || '',
+            incident_type: report.incident_type || ''
         });
     };
 
     const cancelEdit = () => {
-        setEditingField(null);
+        setIsEditMode(false);
         setEditValues({
             description: '',
-            corrective_action: ''
+            corrective_action: '',
+            location: '',
+            incident_type: ''
         });
     };
 
-    const saveEdit = async (fieldName) => {
+    const saveAllEdits = async () => {
         try {
             setSavingEdit(true);
             const { updateDoc } = await import('firebase/firestore');
             const reportRef = doc(db, 'audit_reports', report.id);
 
-            // Update the field in Firestore
+            // Update all editable fields in one Firestore write
             await updateDoc(reportRef, {
-                [fieldName]: editValues[fieldName]
+                description: editValues.description,
+                corrective_action: editValues.corrective_action,
+                location: editValues.location,
+                incident_type: editValues.incident_type
             });
 
             // Update the local report object
-            report[fieldName] = editValues[fieldName];
+            report.description = editValues.description;
+            report.corrective_action = editValues.corrective_action;
+            report.location = editValues.location;
+            report.incident_type = editValues.incident_type;
 
-            setEditingField(null);
-            alert(`${fieldName === 'description' ? 'Description' : 'Corrective Action'} updated successfully!`);
+            setIsEditMode(false);
+            alert('All changes saved successfully!');
         } catch (error) {
-            console.error(`Error saving ${fieldName}:`, error);
-            alert(`Failed to update ${fieldName}. Please try again.`);
+            console.error('Error saving edits:', error);
+            alert('Failed to save changes. Please try again.');
         } finally {
             setSavingEdit(false);
         }
@@ -190,6 +203,44 @@ const AuditReportDetails = () => {
             {/* Report Content */}
             <div className="audit-details-content">
                 <div className="audit-details-card">
+                    {/* Edit Mode Toggle */}
+                    {!isCompleted && reportStatus === 'pending' && (
+                        <div className="audit-details-edit-mode-bar">
+                            {isEditMode ? (
+                                <>
+                                    <span className="audit-details-edit-mode-label">Editing Mode</span>
+                                    <div className="audit-details-edit-mode-actions">
+                                        <button
+                                            className="audit-details-save-all-button"
+                                            onClick={saveAllEdits}
+                                            disabled={savingEdit}
+                                        >
+                                            {savingEdit ? 'Saving...' : '✓ Save All Changes'}
+                                        </button>
+                                        <button
+                                            className="audit-details-cancel-all-button"
+                                            onClick={cancelEdit}
+                                            disabled={savingEdit}
+                                        >
+                                            ✕ Cancel
+                                        </button>
+                                    </div>
+                                </>
+                            ) : (
+                                <button
+                                    className="audit-details-edit-mode-button"
+                                    onClick={startEditMode}
+                                >
+                                    <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+                                        <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25z" />
+                                        <path d="M20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
+                                    </svg>
+                                    Edit Report Details
+                                </button>
+                            )}
+                        </div>
+                    )}
+
                     {/* Employee Information */}
                     <div className="audit-details-section">
                         <h3 className="audit-details-section-title">Employee Information</h3>
@@ -441,15 +492,27 @@ const AuditReportDetails = () => {
 
                     {/* Location & Date */}
                     <div className="audit-details-section">
-                        <h3 className="audit-details-section-title">Location & Date</h3>
+                        <div className="audit-details-section-header">
+                            <h3 className="audit-details-section-title">Location & Date</h3>
+                        </div>
                         <div className="audit-details-info-row">
                             <span className="audit-details-info-label">Location:</span>
-                            <span className="audit-details-info-value">
-                                <svg viewBox="0 0 24 24" fill="#666" width="16" height="16" className="audit-details-location-icon">
-                                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
-                                </svg>
-                                {report.location || 'N/A'}
-                            </span>
+                            {isEditMode ? (
+                                <input
+                                    type="text"
+                                    className="audit-details-edit-input"
+                                    value={editValues.location}
+                                    onChange={(e) => setEditValues({ ...editValues, location: e.target.value })}
+                                    placeholder="Enter location..."
+                                />
+                            ) : (
+                                <span className="audit-details-info-value">
+                                    <svg viewBox="0 0 24 24" fill="#666" width="16" height="16" className="audit-details-location-icon">
+                                        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+                                    </svg>
+                                    {report.location || 'N/A'}
+                                </span>
+                            )}
                         </div>
                         <div className="audit-details-info-row">
                             <span className="audit-details-info-label">Date:</span>
@@ -469,11 +532,28 @@ const AuditReportDetails = () => {
 
                     {/* Incident Type */}
                     <div className="audit-details-section">
-                        <h3 className="audit-details-section-title">Incident Type</h3>
+                        <div className="audit-details-section-header">
+                            <h3 className="audit-details-section-title">Incident Type</h3>
+                        </div>
                         <div className="audit-details-info-row">
-                            <span className="audit-details-info-value audit-details-incident-type-badge">
-                                {report.incident_type || 'N/A'}
-                            </span>
+                            {isEditMode ? (
+                                <select
+                                    className="audit-details-edit-select"
+                                    value={editValues.incident_type}
+                                    onChange={(e) => setEditValues({ ...editValues, incident_type: e.target.value })}
+                                >
+                                    <option value="">Select incident type...</option>
+                                    {incident_type_list.map((type) => (
+                                        <option key={type} value={type}>
+                                            {type}
+                                        </option>
+                                    ))}
+                                </select>
+                            ) : (
+                                <span className="audit-details-info-value audit-details-incident-type-badge">
+                                    {report.incident_type || 'N/A'}
+                                </span>
+                            )}
                         </div>
                     </div>
 
@@ -481,45 +561,15 @@ const AuditReportDetails = () => {
                     <div className="audit-details-section">
                         <div className="audit-details-section-header">
                             <h3 className="audit-details-section-title">Description</h3>
-                            {editingField !== 'description' && (
-                                <button
-                                    className="audit-details-edit-button"
-                                    onClick={() => startEditingField('description')}
-                                    title="Edit Description"
-                                >
-                                    <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
-                                        <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25z" />
-                                        <path d="M20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
-                                    </svg>
-                                </button>
-                            )}
                         </div>
-                        {editingField === 'description' ? (
-                            <div className="audit-details-edit-container">
-                                <textarea
-                                    className="audit-details-edit-textarea"
-                                    value={editValues.description}
-                                    onChange={(e) => setEditValues({ ...editValues, description: e.target.value })}
-                                    placeholder="Enter description..."
-                                    rows={5}
-                                />
-                                <div className="audit-details-edit-actions">
-                                    <button
-                                        className="audit-details-save-button"
-                                        onClick={() => saveEdit('description')}
-                                        disabled={savingEdit}
-                                    >
-                                        {savingEdit ? 'Saving...' : '✓ Save'}
-                                    </button>
-                                    <button
-                                        className="audit-details-cancel-button"
-                                        onClick={cancelEdit}
-                                        disabled={savingEdit}
-                                    >
-                                        ✕ Cancel
-                                    </button>
-                                </div>
-                            </div>
+                        {isEditMode ? (
+                            <textarea
+                                className="audit-details-edit-textarea"
+                                value={editValues.description}
+                                onChange={(e) => setEditValues({ ...editValues, description: e.target.value })}
+                                placeholder="Enter description..."
+                                rows={5}
+                            />
                         ) : (
                             <div className="audit-details-description-content">
                                 <p className="audit-details-full-description">
@@ -533,45 +583,15 @@ const AuditReportDetails = () => {
                     <div className="audit-details-section">
                         <div className="audit-details-section-header">
                             <h3 className="audit-details-section-title">Corrective Action</h3>
-                            {editingField !== 'corrective_action' && (
-                                <button
-                                    className="audit-details-edit-button"
-                                    onClick={() => startEditingField('corrective_action')}
-                                    title="Edit Corrective Action"
-                                >
-                                    <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
-                                        <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25z" />
-                                        <path d="M20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
-                                    </svg>
-                                </button>
-                            )}
                         </div>
-                        {editingField === 'corrective_action' ? (
-                            <div className="audit-details-edit-container">
-                                <textarea
-                                    className="audit-details-edit-textarea"
-                                    value={editValues.corrective_action}
-                                    onChange={(e) => setEditValues({ ...editValues, corrective_action: e.target.value })}
-                                    placeholder="Enter corrective action..."
-                                    rows={5}
-                                />
-                                <div className="audit-details-edit-actions">
-                                    <button
-                                        className="audit-details-save-button"
-                                        onClick={() => saveEdit('corrective_action')}
-                                        disabled={savingEdit}
-                                    >
-                                        {savingEdit ? 'Saving...' : '✓ Save'}
-                                    </button>
-                                    <button
-                                        className="audit-details-cancel-button"
-                                        onClick={cancelEdit}
-                                        disabled={savingEdit}
-                                    >
-                                        ✕ Cancel
-                                    </button>
-                                </div>
-                            </div>
+                        {isEditMode ? (
+                            <textarea
+                                className="audit-details-edit-textarea"
+                                value={editValues.corrective_action}
+                                onChange={(e) => setEditValues({ ...editValues, corrective_action: e.target.value })}
+                                placeholder="Enter corrective action..."
+                                rows={5}
+                            />
                         ) : (
                             <div className="audit-details-description-content">
                                 <p className="audit-details-full-description">
